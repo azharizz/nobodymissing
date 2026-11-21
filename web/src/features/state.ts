@@ -31,7 +31,7 @@ export type FieldEntry = {
 };
 export type Job = { id: string; type: string; payload: unknown; path: string | null; createdAt: number; state: JobState; retries: number };
 export type Help = { id: string; kind: string; spot: string; at: number; done: boolean };
-export type BatchItem = { id: string; kind: 'roster' | 'med'; personId?: string; image: ImageInput };
+export type BatchItem = { id: string; kind: 'roster' | 'med'; personId?: string; image: ImageInput; approved: boolean };
 
 export type State = {
   shelter: { id: string; name: string }; people: Person[]; cards: CareCard[]; round: Record<string, 'taken' | 'refused' | 'missing'>;

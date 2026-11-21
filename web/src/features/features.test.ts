@@ -100,4 +100,15 @@ describe('features (wired by FeatureFactory with test adapters)', () => {
     expect(r.cloud).toBe(false);
     expect(r.hits[0]).toEqual({ name: 'Pak Hasan Basri', ageBand: '80-89', shelterId: 'SD3', status: 'safe' });
   });
+
+  it('batch mode: an approved photo with no signal waits in the batch and is read when processed', async () => {
+    const { f } = await setup(() => ({ raw: '{"rows":[{"name":"Cut Nur","age":30,"confidence":0.9}]}', source: 'cloud' }), 'no_api');
+    f.store.set(s => ({ ...s, signal: 'no_signal' }));
+    expect((await f.roster.scan(IMG, true)).status).toBe('queued');
+    expect(f.store.get().batch).toHaveLength(1);
+    f.store.set(s => ({ ...s, signal: 'back' }));
+    await f.roster.processBatch();
+    expect(f.store.get().batch).toHaveLength(0);
+    expect(f.store.get().people.some(p => p.nameAsWritten === 'Cut Nur')).toBe(true);
+  });
 });

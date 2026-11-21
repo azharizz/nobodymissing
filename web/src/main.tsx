@@ -38,6 +38,8 @@ const scoutLoop = () => {
   setTimeout(scoutLoop, 1000 * (low ? features.rules.scout.lowBatteryIntervalSec : features.rules.scout.intervalSec));
 };
 scoutLoop();
+// Batch mode: read waiting photos when the device starts charging (generator hours).
+battery?.addEventListener?.('chargingchange', () => { if (battery.charging) features.roster.processBatch(); });
 addEventListener('online', () => features.scout.check());
 
 // Shelter Wi-Fi: the hub laptop publishes shown cards to the local server; phones on the hotspot read them.

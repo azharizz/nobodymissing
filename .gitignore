@@ -172,3 +172,5 @@ firestore-debug.log
 ui-debug.log
 dist/
 hub/hub-state.json
+test-results/
+playwright-report/

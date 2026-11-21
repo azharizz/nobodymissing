@@ -29,7 +29,7 @@ export function createFeatures(a: Adapters, rules: Rules = defaults, prompts: Re
   const careCard = createCareCard(d);
   const medicine = createMedicine(d, queue.enqueue);
   const field = createFieldCheck(d, queue.enqueue);
-  const scout = createScout(d, queue.flush);
+  const scout = createScout(d, queue.flush, roster.processBatch);
   const family = createFamilySearch(d);
 
   const views = {

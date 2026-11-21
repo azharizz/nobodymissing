@@ -13,7 +13,16 @@ export function createRoster(d: Deps, enqueue: (type: string, payload: unknown, 
       }));
       d.store.set(s => ({ ...s, people: [...s.people, ...drafts] }));
     }
+    // Batch mode (6.10): the photo waits on this device (memory only, never synced) until signal or "Process now".
+    if (r.status === 'queued') d.store.set(s => ({ ...s, batch: [...s.batch, { id: uid(), kind: 'roster', image, approved: staffApprovedCloud }] }));
     return r;
+  }
+
+  async function processBatch() {
+    for (const b of d.store.get().batch.filter(x => x.kind === 'roster')) {
+      d.store.set(s => ({ ...s, batch: s.batch.filter(x => x.id !== b.id) }));
+      await scan(b.image, b.approved); // re-queues itself if still offline
+    }
   }
 
   function confirm(id: string, patch: Partial<Pick<Person, 'nameAsWritten' | 'age' | 'flags' | 'status' | 'hidden'>>) {
@@ -31,5 +40,5 @@ export function createRoster(d: Deps, enqueue: (type: string, payload: unknown, 
     return id;
   };
 
-  return { scan, confirm, addPerson };
+  return { scan, confirm, addPerson, processBatch };
 }

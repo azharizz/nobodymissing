@@ -75,6 +75,7 @@ function People() {
     <section>
       {photo && <img className="source" src={photo.url} alt="Original list photo" />}
       <RouteNotice r={r} onCloud={() => photo && scan(photo.img, photo.url, true)} />
+      {s.batch.length > 0 && <div className="notice">⏳ {s.batch.length} photo(s) waiting <button onClick={() => f.roster.processBatch()}>▶ Process now</button></div>}
       {review.map(p => (
         <div key={p.id} className={`card ${p.needsReview ? 'uncertain' : ''}`}>
           <Badge source={p.inferredBy === 'staff' ? undefined : p.inferredBy} draft={p.needsReview} />
