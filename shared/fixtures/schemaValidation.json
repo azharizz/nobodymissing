@@ -1,0 +1,22 @@
+{
+  "rule": "Every AI output is parsed + schema-validated before it enters the domain (anti-corruption layer). Small models may wrap JSON in prose or code fences.",
+  "cases": [
+    { "name": "valid roster", "input": { "schema": "roster", "raw": "{\"rows\":[{\"name\":\"Hasan Basri\",\"age\":82,\"sex\":\"M\",\"flags\":[\"hard_of_hearing\"],\"notes\":null,\"confidence\":0.9}]}" }, "expected": { "valid": true } },
+    { "name": "JSON inside a code fence and prose", "input": { "schema": "roster", "raw": "Sure! Here it is:\n```json\n{\"rows\":[{\"name\":\"Rina\",\"confidence\":0.7}]}\n```" }, "expected": { "valid": true } },
+    { "name": "missing confidence", "input": { "schema": "roster", "raw": "{\"rows\":[{\"name\":\"Hasan\"}]}" }, "expected": { "valid": false } },
+    { "name": "age out of range", "input": { "schema": "roster", "raw": "{\"rows\":[{\"name\":\"Hasan\",\"age\":150,\"confidence\":0.9}]}" }, "expected": { "valid": false } },
+    { "name": "age not an integer", "input": { "schema": "roster", "raw": "{\"rows\":[{\"name\":\"Hasan\",\"age\":82.5,\"confidence\":0.9}]}" }, "expected": { "valid": false } },
+    { "name": "unknown flag", "input": { "schema": "roster", "raw": "{\"rows\":[{\"name\":\"Hasan\",\"flags\":[\"vip\"],\"confidence\":0.9}]}" }, "expected": { "valid": false } },
+    { "name": "rows not an array", "input": { "schema": "roster", "raw": "{\"rows\":\"Hasan\"}" }, "expected": { "valid": false } },
+    { "name": "not JSON at all", "input": { "schema": "roster", "raw": "I could not read the photo." }, "expected": { "valid": false } },
+    { "name": "valid announcement", "input": { "schema": "announcementCard", "raw": "{\"cards\":[{\"icon\":\"food\",\"title\":\"Food\",\"time\":\"15:00\",\"place\":\"Gym entrance\",\"detail\":null}]}" }, "expected": { "valid": true } },
+    { "name": "unknown icon", "input": { "schema": "announcementCard", "raw": "{\"cards\":[{\"icon\":\"pizza\",\"title\":\"Food\"}]}" }, "expected": { "valid": false } },
+    { "name": "title too long", "input": { "schema": "announcementCard", "raw": "{\"cards\":[{\"icon\":\"food\",\"title\":\"This title is far too long for a big screen card ok\"}]}" }, "expected": { "valid": false } },
+    { "name": "too many cards", "input": { "schema": "announcementCard", "raw": "{\"cards\":[{\"icon\":\"food\",\"title\":\"a\"},{\"icon\":\"food\",\"title\":\"b\"},{\"icon\":\"food\",\"title\":\"c\"},{\"icon\":\"food\",\"title\":\"d\"},{\"icon\":\"food\",\"title\":\"e\"}]}" }, "expected": { "valid": false } },
+    { "name": "valid care card", "input": { "schema": "careCard", "raw": "{\"meds\":[{\"nameAsWritten\":\"Amlodipine\",\"strength\":\"5 mg\",\"doseAsWritten\":\"1 tab\",\"timesPerDay\":1,\"timing\":\"after_meal\",\"qtyLeft\":2,\"confidence\":0.95}],\"conditions\":[\"hypertension\"],\"allergies\":[]}" }, "expected": { "valid": true } },
+    { "name": "care card bad timing enum", "input": { "schema": "careCard", "raw": "{\"meds\":[{\"nameAsWritten\":\"Amlodipine\",\"timing\":\"sometimes\",\"confidence\":0.9}]}" }, "expected": { "valid": false } },
+    { "name": "request qty negative", "input": { "schema": "request", "raw": "{\"items\":[{\"generic\":\"amlodipine\",\"qty\":-1}]}" }, "expected": { "valid": false } },
+    { "name": "field report valid", "input": { "schema": "fieldReport", "raw": "{\"people\":[{\"name\":\"Hasan\",\"age\":78,\"mobility\":3,\"medicalNeeds\":[\"insulin\"],\"waterAsReported\":\"knee-high\"}]}" }, "expected": { "valid": true } },
+    { "name": "top level is an array", "input": { "schema": "fieldReport", "raw": "[{\"name\":\"Hasan\"}]" }, "expected": { "valid": false } }
+  ]
+}

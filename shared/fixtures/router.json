@@ -1,0 +1,30 @@
+{
+  "rule": "InferenceRouter policy (6.3, 7). Uses defaults.json routerPolicy + accuracyBarPoints. Actions: device | device_draft | cloud | ask_staff | queue | block.",
+  "cases": [
+    { "name": "sensitive + device ready -> device only", "input": { "task": "roster_read", "ctx": { "onDeviceAvailable": true, "online": true, "privateMode": false, "staffApprovedCloud": false } }, "expected": { "action": "device", "mode": "only_on_device" } },
+    { "name": "sensitive, no device, online, not approved -> ask staff (never silent)", "input": { "task": "roster_read", "ctx": { "onDeviceAvailable": false, "online": true, "privateMode": false, "staffApprovedCloud": false } }, "expected": { "action": "ask_staff", "mode": null } },
+    { "name": "sensitive, no device, online, approved -> cloud", "input": { "task": "roster_read", "ctx": { "onDeviceAvailable": false, "online": true, "privateMode": false, "staffApprovedCloud": true } }, "expected": { "action": "cloud", "mode": "only_in_cloud" } },
+    { "name": "sensitive, no device, private mode -> block", "input": { "task": "care_card_read", "ctx": { "onDeviceAvailable": false, "online": true, "privateMode": true, "staffApprovedCloud": true } }, "expected": { "action": "block", "mode": null } },
+    { "name": "sensitive, no device, offline, approved -> queue", "input": { "task": "field_report", "ctx": { "onDeviceAvailable": false, "online": false, "privateMode": false, "staffApprovedCloud": true } }, "expected": { "action": "queue", "mode": null } },
+    { "name": "announcement, device ready -> prefer device", "input": { "task": "announcement", "ctx": { "onDeviceAvailable": true, "online": true, "privateMode": false, "staffApprovedCloud": false } }, "expected": { "action": "device", "mode": "prefer_on_device" } },
+    { "name": "announcement, no device, online -> cloud", "input": { "task": "announcement", "ctx": { "onDeviceAvailable": false, "online": true, "privateMode": false, "staffApprovedCloud": false } }, "expected": { "action": "cloud", "mode": "only_in_cloud" } },
+    { "name": "announcement, no device, offline -> queue (keyword icons meanwhile)", "input": { "task": "announcement", "ctx": { "onDeviceAvailable": false, "online": false, "privateMode": false, "staffApprovedCloud": false } }, "expected": { "action": "queue", "mode": null } },
+    { "name": "announcement, private mode, device ready -> device", "input": { "task": "announcement", "ctx": { "onDeviceAvailable": true, "online": true, "privateMode": true, "staffApprovedCloud": false } }, "expected": { "action": "device", "mode": "only_on_device" } },
+    { "name": "announcement, private mode, no device -> block", "input": { "task": "announcement", "ctx": { "onDeviceAvailable": false, "online": true, "privateMode": true, "staffApprovedCloud": false } }, "expected": { "action": "block", "mode": null } },
+    { "name": "Indonesian announcement: device measured 22 points worse -> cloud first", "input": { "task": "announcement_id", "ctx": { "onDeviceAvailable": true, "online": true, "privateMode": false, "staffApprovedCloud": false } }, "expected": { "action": "cloud", "mode": "prefer_in_cloud" } },
+    { "name": "Indonesian announcement offline -> device draft + recheck", "input": { "task": "announcement_id", "ctx": { "onDeviceAvailable": true, "online": false, "privateMode": false, "staffApprovedCloud": false } }, "expected": { "action": "device_draft", "mode": "only_on_device" } },
+    { "name": "Indonesian announcement private mode -> device draft", "input": { "task": "announcement_id", "ctx": { "onDeviceAvailable": true, "online": true, "privateMode": true, "staffApprovedCloud": false } }, "expected": { "action": "device_draft", "mode": "only_on_device" } },
+    { "name": "cloud-only supply request online", "input": { "task": "supply_request", "ctx": { "onDeviceAvailable": true, "online": true, "privateMode": false, "staffApprovedCloud": false } }, "expected": { "action": "cloud", "mode": "only_in_cloud" } },
+    { "name": "cloud-only supply request offline -> queue", "input": { "task": "supply_request", "ctx": { "onDeviceAvailable": true, "online": false, "privateMode": false, "staffApprovedCloud": false } }, "expected": { "action": "queue", "mode": null } },
+    { "name": "cloud-only supply request in private mode -> block", "input": { "task": "supply_request", "ctx": { "onDeviceAvailable": true, "online": true, "privateMode": true, "staffApprovedCloud": false } }, "expected": { "action": "block", "mode": null } },
+    { "name": "unknown task -> block", "input": { "task": "nope", "ctx": { "onDeviceAvailable": true, "online": true, "privateMode": false, "staffApprovedCloud": true } }, "expected": { "action": "block", "mode": null } }
+  ],
+  "guardCases": [
+    { "name": "API present and model available", "input": { "apiPresent": true, "availability": "available" }, "expected": true },
+    { "name": "API missing (SDK#10635 would silently use cloud)", "input": { "apiPresent": false, "availability": "available" }, "expected": false },
+    { "name": "still downloading", "input": { "apiPresent": true, "availability": "downloading" }, "expected": false },
+    { "name": "downloadable", "input": { "apiPresent": true, "availability": "downloadable" }, "expected": false },
+    { "name": "unavailable", "input": { "apiPresent": true, "availability": "unavailable" }, "expected": false },
+    { "name": "unknown status string", "input": { "apiPresent": true, "availability": "weird" }, "expected": false }
+  ]
+}

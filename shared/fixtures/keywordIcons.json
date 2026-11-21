@@ -1,0 +1,14 @@
+{
+  "rule": "Offline announcement icons from a deterministic keyword list (D11). Uses shared/rules/keywords.json.",
+  "cases": [
+    { "input": "Makan siang jam 12.00 di aula", "expected": { "icons": ["food"], "times": ["12:00"], "place": "aula" } },
+    { "input": "Pembagian air bersih pukul 15.00 di pintu depan", "expected": { "icons": ["water"], "times": ["15:00"], "place": "pintu depan" } },
+    { "input": "Dokter datang jam 9, obat untuk lansia", "expected": { "icons": ["doctor", "medicine"], "times": ["09:00"], "place": null } },
+    { "input": "Food at 3 pm at the gym entrance", "expected": { "icons": ["food"], "times": ["15:00"], "place": "the gym entrance" } },
+    { "input": "Awas banjir! Pindah ke lantai 2", "expected": { "icons": ["warning", "move"], "times": [], "place": null } },
+    { "input": "Hari ini tidak ada kegiatan", "expected": { "icons": [], "times": [], "place": null } },
+    { "input": "Popok bayi dan susu jam 08:30 dan 16.00 di dapur.", "expected": { "icons": ["baby"], "times": ["08:30", "16:00"], "place": "dapur" } },
+    { "input": "Genset nyala jam 18.00 sampai 22.00, charge HP di aula", "expected": { "icons": ["power"], "times": ["18:00", "22:00"], "place": "aula" } },
+    { "input": "Kairan medicine 25:99 near tent B", "expected": { "icons": ["medicine"], "times": [], "place": "tent B" } }
+  ]
+}

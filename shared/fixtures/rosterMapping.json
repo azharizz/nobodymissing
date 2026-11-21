@@ -1,0 +1,17 @@
+{
+  "rule": "Map validated AI roster rows into domain person drafts. Names kept as written, flags are suggestions, nothing is confirmed by AI, low confidence -> needs review, age >= elderlyAge adds 'elderly'.",
+  "cases": [
+    { "input": { "source": "device", "rows": [
+        { "name": "Hasan Basri", "age": 82, "sex": "M", "flags": ["hard_of_hearing"], "notes": "pakai kursi roda", "confidence": 0.92 },
+        { "name": "Rina", "age": 45, "sex": "F", "flags": ["deaf"], "notes": null, "confidence": 0.6 },
+        { "name": "Siti", "age": 70, "flags": ["elderly"], "confidence": 0.85 },
+        { "name": "Bayi Nur", "age": null, "confidence": 0.8 }
+      ] },
+      "expected": [
+        { "nameAsWritten": "Hasan Basri", "age": 82, "sex": "M", "suggestedFlags": ["hard_of_hearing", "elderly"], "notes": "pakai kursi roda", "needsReview": false, "inferredBy": "device", "confirmedBy": null },
+        { "nameAsWritten": "Rina", "age": 45, "sex": "F", "suggestedFlags": ["deaf"], "notes": null, "needsReview": true, "inferredBy": "device", "confirmedBy": null },
+        { "nameAsWritten": "Siti", "age": 70, "sex": null, "suggestedFlags": ["elderly"], "notes": null, "needsReview": false, "inferredBy": "device", "confirmedBy": null },
+        { "nameAsWritten": "Bayi Nur", "age": null, "sex": null, "suggestedFlags": [], "notes": null, "needsReview": false, "inferredBy": "device", "confirmedBy": null }
+      ] }
+  ]
+}

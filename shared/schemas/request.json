@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "required": ["items"],
+  "properties": {
+    "items": {
+      "type": "array", "maxItems": 50,
+      "items": {
+        "type": "object",
+        "required": ["generic", "qty"],
+        "properties": {
+          "generic": { "type": "string", "maxLength": 60 },
+          "strength": { "type": ["string", "null"], "maxLength": 30 },
+          "form": { "type": ["string", "null"], "maxLength": 20 },
+          "qty": { "type": "integer", "minimum": 0, "maximum": 100000 }
+        }
+      }
+    },
+    "note": { "type": ["string", "null"], "maxLength": 300 }
+  }
+}

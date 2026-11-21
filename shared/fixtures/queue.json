@@ -1,0 +1,26 @@
+{
+  "rule": "Outbox job queue state machine + sync priority (6.10). Uses defaults.json queuePriority.",
+  "transitionCases": [
+    { "name": "happy path", "input": { "events": ["start", "send", "ack"] }, "expected": { "state": "sent", "retries": 0 } },
+    { "name": "fail then retry", "input": { "events": ["start", "send", "fail", "retry", "start"] }, "expected": { "state": "processing", "retries": 1 } },
+    { "name": "cannot restart a sent job", "input": { "events": ["start", "send", "ack", "start"] }, "expected": { "error": true } },
+    { "name": "cannot ack a waiting job", "input": { "events": ["ack"] }, "expected": { "error": true } },
+    { "name": "fail from processing", "input": { "events": ["start", "fail"] }, "expected": { "state": "failed", "retries": 0 } }
+  ],
+  "orderCases": [
+    { "name": "can't-miss first, then shortages, family, roster, other; ties by createdAt",
+      "input": { "jobs": [
+        { "id": "j1", "type": "roster_merge", "createdAt": 1 },
+        { "id": "j2", "type": "other", "createdAt": 2 },
+        { "id": "j3", "type": "med_shortage", "createdAt": 3 },
+        { "id": "j4", "type": "cant_miss_alert", "createdAt": 9 },
+        { "id": "j5", "type": "family_update", "createdAt": 4 },
+        { "id": "j6", "type": "field_report", "createdAt": 5 },
+        { "id": "j7", "type": "unknown_type", "createdAt": 0 }
+      ] },
+      "expected": ["j6", "j4", "j3", "j5", "j1", "j7", "j2"] }
+  ],
+  "progressCases": [
+    { "input": { "states": ["sent", "sent", "waiting", "failed", "sending"] }, "expected": { "sent": 2, "total": 5, "waiting": 3 } }
+  ]
+}

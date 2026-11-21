@@ -1,0 +1,144 @@
+{
+  "_comment": "Remote Config defaults. Same JSON is bundled on web + Android so the app works offline. Keys are Remote Config parameter names.",
+  "currentEvent": "flood",
+  "elderlyAge": 65,
+  "reachAge": 75,
+  "reachFlags": [
+    "deaf",
+    "hard_of_hearing",
+    "lives_alone",
+    "foreign_language"
+  ],
+  "lowBatteryPercent": 20,
+  "noSignalTipMinutes": 10,
+  "shortageDays": 2,
+  "reviewConfidence": 0.8,
+  "accuracyBarPoints": 3,
+  "timeouts": {
+    "deviceMs": 8000,
+    "cloudMs": 15000
+  },
+  "scout": {
+    "intervalSec": 120,
+    "lowBatteryIntervalSec": 600,
+    "successesNeeded": 2,
+    "checkTimeoutMs": 4000
+  },
+  "models": {
+    "cloudAccurate": "gemini-3.8-flash",
+    "cloudLite": "gemini-3.5-flash-lite"
+  },
+  "cantMiss": {
+    "insulin": "insulin",
+    "insulin glargine": "insulin",
+    "insulin aspart": "insulin",
+    "levetiracetam": "epilepsy",
+    "phenytoin": "epilepsy",
+    "valproic acid": "epilepsy",
+    "carbamazepine": "epilepsy",
+    "warfarin": "anticoagulant",
+    "apixaban": "anticoagulant",
+    "rivaroxaban": "anticoagulant",
+    "home oxygen": "oxygen",
+    "dialysis": "dialysis"
+  },
+  "slotTimes": {
+    "1": [
+      "08:00"
+    ],
+    "2": [
+      "08:00",
+      "20:00"
+    ],
+    "3": [
+      "08:00",
+      "12:00",
+      "20:00"
+    ],
+    "4": [
+      "08:00",
+      "12:00",
+      "16:00",
+      "20:00"
+    ]
+  },
+  "queuePriority": {
+    "cant_miss_alert": 1,
+    "transfer_request": 1,
+    "med_shortage": 2,
+    "family_update": 3,
+    "roster_merge": 4,
+    "field_report": 1,
+    "other": 5
+  },
+  "routerPolicy": {
+    "roster_read": {
+      "sensitive": true,
+      "cloudOnly": false,
+      "schema": "roster",
+      "model": "cloudAccurate"
+    },
+    "care_card_read": {
+      "sensitive": true,
+      "cloudOnly": false,
+      "schema": "careCard",
+      "model": "cloudAccurate"
+    },
+    "field_report": {
+      "sensitive": true,
+      "cloudOnly": false,
+      "schema": "fieldReport",
+      "model": "cloudAccurate"
+    },
+    "announcement": {
+      "sensitive": false,
+      "cloudOnly": false,
+      "schema": "announcementCard",
+      "model": "cloudLite",
+      "deviceAccuracy": null,
+      "cloudAccuracy": null
+    },
+    "announcement_id": {
+      "sensitive": false,
+      "cloudOnly": false,
+      "schema": "announcementCard",
+      "model": "cloudAccurate",
+      "deviceAccuracy": 70,
+      "cloudAccuracy": 92
+    },
+    "translate": {
+      "sensitive": false,
+      "cloudOnly": false,
+      "schema": "translation",
+      "model": "cloudAccurate"
+    },
+    "supply_request": {
+      "sensitive": false,
+      "cloudOnly": true,
+      "schema": "request",
+      "model": "cloudAccurate"
+    }
+  },
+  "fieldPriority": {
+    "handDeep": 2,
+    "handMedium": 5,
+    "handShallow": 10,
+    "landslideHigh": 2,
+    "tsunamiZone": 3,
+    "unknownLocation": 3,
+    "pinNearby": 2,
+    "cantMiss": 3,
+    "cantMissLowSupply": 1,
+    "lowSupplyDays": 1,
+    "dailyMeds": 1,
+    "hearing": 1,
+    "dementia": 2,
+    "alone": 2,
+    "age75": 1,
+    "age85": 2,
+    "neverChecked": 2,
+    "contactOver24h": 1,
+    "p1": 9,
+    "p2": 5
+  }
+}

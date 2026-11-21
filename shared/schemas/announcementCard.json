@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "required": ["cards"],
+  "properties": {
+    "cards": {
+      "type": "array", "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": ["icon", "title"],
+        "properties": {
+          "icon": { "type": "string", "enum": ["food", "water", "medicine", "doctor", "move", "warning", "toilet", "info", "baby", "power"] },
+          "title": { "type": "string", "maxLength": 40 },
+          "time": { "type": ["string", "null"], "maxLength": 5 },
+          "place": { "type": ["string", "null"], "maxLength": 40 },
+          "detail": { "type": ["string", "null"], "maxLength": 100 }
+        }
+      }
+    }
+  }
+}

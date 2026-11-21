@@ -1,0 +1,33 @@
+{
+  "rule": "Deterministic drug-name matcher (6.9). Never auto-accepts: needsConfirm is always true.",
+  "cases": [
+    { "name": "exact generic + listed strength", "input": { "text": "Amlodipine", "strength": "5 mg" },
+      "expected": { "status": "matched", "generic": "amlodipine", "candidates": [], "lookAlikes": [], "strengthKnown": true, "needsConfirm": true } },
+    { "name": "brand name maps to generic", "input": { "text": "NORVASC", "strength": null },
+      "expected": { "status": "matched", "generic": "amlodipine", "candidates": [], "lookAlikes": [], "strengthKnown": null, "needsConfirm": true } },
+    { "name": "strength inside the name text, no space", "input": { "text": "amlodipine 10mg", "strength": null },
+      "expected": { "status": "matched", "generic": "amlodipine", "candidates": [], "lookAlikes": [], "strengthKnown": true, "needsConfirm": true } },
+    { "name": "Indonesian spelling is a candidate, not a match", "input": { "text": "amlodipin", "strength": "5 mg" },
+      "expected": { "status": "candidates", "generic": null, "candidates": ["amlodipine"], "lookAlikes": [], "strengthKnown": null, "needsConfirm": true } },
+    { "name": "look-alike warning: hydroxyzine vs hydralazine", "input": { "text": "Hydroxyzine", "strength": "25 mg" },
+      "expected": { "status": "matched", "generic": "hydroxyzine", "candidates": [], "lookAlikes": ["hydralazine"], "strengthKnown": true, "needsConfirm": true } },
+    { "name": "look-alike warning: prednisone vs prednisolone", "input": { "text": "prednisone", "strength": "5 mg" },
+      "expected": { "status": "matched", "generic": "prednisone", "candidates": [], "lookAlikes": ["prednisolone"], "strengthKnown": true, "needsConfirm": true } },
+    { "name": "mg vs mcg: strength not in the list", "input": { "text": "Levothyroxine", "strength": "50 mg" },
+      "expected": { "status": "matched", "generic": "levothyroxine", "candidates": [], "lookAlikes": [], "strengthKnown": false, "needsConfirm": true } },
+    { "name": "0.5 vs 5: strength not in the list", "input": { "text": "amlodipine", "strength": "0.5 mg" },
+      "expected": { "status": "matched", "generic": "amlodipine", "candidates": [], "lookAlikes": [], "strengthKnown": false, "needsConfirm": true } },
+    { "name": "mcg strength listed", "input": { "text": "levothyroxine", "strength": "50mcg" },
+      "expected": { "status": "matched", "generic": "levothyroxine", "candidates": [], "lookAlikes": [], "strengthKnown": true, "needsConfirm": true } },
+    { "name": "unknown name needs a pharmacist", "input": { "text": "Xyzzolam", "strength": null },
+      "expected": { "status": "unknown", "generic": null, "candidates": [], "lookAlikes": [], "strengthKnown": null, "needsConfirm": true } },
+    { "name": "multi-word generic", "input": { "text": "Insulin Glargine", "strength": "100 units/ml" },
+      "expected": { "status": "matched", "generic": "insulin glargine", "candidates": [], "lookAlikes": [], "strengthKnown": true, "needsConfirm": true } }
+  ],
+  "substitutionCases": [
+    { "name": "same ingredient, strength and form", "input": { "prescribed": { "generic": "amlodipine", "strength": "5 mg", "form": "tablet" }, "available": { "generic": "amlodipine", "strength": "5mg", "form": "tablet" } }, "expected": "same" },
+    { "name": "same ingredient, different strength", "input": { "prescribed": { "generic": "amlodipine", "strength": "5 mg", "form": "tablet" }, "available": { "generic": "amlodipine", "strength": "10 mg", "form": "tablet" } }, "expected": "different_strength_or_form" },
+    { "name": "same ingredient, different form", "input": { "prescribed": { "generic": "salbutamol", "strength": "2 mg", "form": "tablet" }, "available": { "generic": "salbutamol", "strength": "2 mg", "form": "syrup" } }, "expected": "different_strength_or_form" },
+    { "name": "different medicine, same purpose: ask a doctor", "input": { "prescribed": { "generic": "amlodipine", "strength": "5 mg", "form": "tablet" }, "available": { "generic": "lisinopril", "strength": "5 mg", "form": "tablet" } }, "expected": "ask_doctor" }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "rule": "Signal Scout: never trust the OS 'connected' flag; 'signal is back' only after N real checks succeed in a row (defaults.json scout.successesNeeded). Alert fires once per recovery.",
+  "cases": [
+    { "input": { "checks": [false, true, false, true, true, true, false, true, true] },
+      "expected": { "states": ["no_signal", "maybe", "no_signal", "maybe", "back", "back", "no_signal", "maybe", "back"], "alertAt": [4, 8] } }
+  ]
+}

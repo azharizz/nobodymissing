@@ -1,0 +1,15 @@
+{
+  "_comment": "Deterministic keyword -> icon list for offline announcements (no AI). Lowercase, whole-word match. Indonesian + English.",
+  "icons": {
+    "food":     ["makan", "makanan", "nasi", "sarapan", "food", "meal", "breakfast", "lunch", "dinner"],
+    "water":    ["air", "minum", "air bersih", "water", "drinking"],
+    "medicine": ["obat", "medicine", "medication", "insulin"],
+    "doctor":   ["dokter", "perawat", "puskesmas", "kesehatan", "doctor", "nurse", "medic", "clinic"],
+    "move":     ["pindah", "evakuasi", "move", "moving", "relocate", "bus"],
+    "warning":  ["awas", "bahaya", "peringatan", "banjir", "longsor", "warning", "danger", "flood", "landslide"],
+    "toilet":   ["toilet", "wc", "kamar mandi", "bathroom"],
+    "baby":     ["bayi", "popok", "susu", "baby", "diaper", "diapers", "formula"],
+    "power":    ["listrik", "genset", "charge", "power", "generator", "electricity"]
+  },
+  "placeWords": ["di", "at", "near", "dekat"]
+}

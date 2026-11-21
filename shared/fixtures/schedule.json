@@ -1,0 +1,41 @@
+{
+  "rule": "Medicine Round schedule, can't-miss alerts, shortages (6.9). Uses defaults.json slotTimes, cantMiss, shortageDays.",
+  "cases": [
+    { "name": "three evacuees, mixed medicines",
+      "input": { "cards": [
+        { "personId": "hasan", "meds": [
+          { "generic": "insulin glargine", "strength": "100 units/ml", "doseAsWritten": "10 units", "timesPerDay": 1, "qtyLeft": 1 },
+          { "generic": "amlodipine", "strength": "5 mg", "doseAsWritten": "1 tablet", "timesPerDay": 1, "qtyLeft": 2 } ] },
+        { "personId": "rina", "meds": [
+          { "generic": "metformin", "strength": "500 mg", "doseAsWritten": "1 tablet after meal", "timesPerDay": 2, "qtyLeft": 10 } ] },
+        { "personId": "sari", "meds": [
+          { "generic": "paracetamol", "strength": "500 mg", "doseAsWritten": "1 tablet", "timesPerDay": 3, "qtyLeft": 9 },
+          { "generic": "levetiracetam", "strength": "500 mg", "doseAsWritten": "1 tablet", "timesPerDay": 2, "qtyLeft": 3 },
+          { "generic": null, "strength": null, "doseAsWritten": "jamu", "timesPerDay": null, "qtyLeft": null } ] }
+      ] },
+      "expected": {
+        "counts": { "08:00": 5, "12:00": 1, "20:00": 3 },
+        "slot12": [ { "personId": "sari", "generic": "paracetamol", "doseAsWritten": "1 tablet" } ],
+        "alerts": [
+          { "personId": "hasan", "generic": "insulin glargine", "type": "insulin", "supplyDays": 1 },
+          { "personId": "sari", "generic": "levetiracetam", "type": "epilepsy", "supplyDays": 1 } ],
+        "shortages": [
+          { "generic": "amlodipine", "strength": "5 mg", "people": 1 },
+          { "generic": "insulin glargine", "strength": "100 units/ml", "people": 1 },
+          { "generic": "levetiracetam", "strength": "500 mg", "people": 1 } ],
+        "unscheduled": 1
+      } }
+  ],
+  "requestCases": [
+    { "name": "combine shortages from 3 shelters by generic + strength + form, counts only",
+      "input": { "shelters": [
+        { "shelterId": "SD3", "items": [ { "generic": "insulin glargine", "strength": "100 units/ml", "form": "pen", "qty": 2 }, { "generic": "amlodipine", "strength": "5 mg", "form": "tablet", "qty": 30 } ] },
+        { "shelterId": "MSJ1", "items": [ { "generic": "amlodipine", "strength": "5 mg", "form": "tablet", "qty": 60 } ] },
+        { "shelterId": "SD1", "items": [ { "generic": "amlodipine", "strength": "10 mg", "form": "tablet", "qty": 10 }, { "generic": "insulin glargine", "strength": "100 units/ml", "form": "pen", "qty": 1 } ] }
+      ] },
+      "expected": { "fromShelters": ["MSJ1", "SD1", "SD3"], "items": [
+        { "generic": "amlodipine", "strength": "10 mg", "form": "tablet", "qty": 10 },
+        { "generic": "amlodipine", "strength": "5 mg", "form": "tablet", "qty": 90 },
+        { "generic": "insulin glargine", "strength": "100 units/ml", "form": "pen", "qty": 3 } ] } }
+  ]
+}

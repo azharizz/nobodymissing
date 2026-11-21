@@ -1,0 +1,12 @@
+{
+  "rule": "QR courier (6.10 level 2): split a queue export into numbered QR-sized chunks; any order reassembles; a missing chunk returns null.",
+  "cases": [
+    { "input": { "payload": "abcdefghij", "size": 4 }, "expected": ["NM1|1/3|abcd", "NM1|2/3|efgh", "NM1|3/3|ij"] },
+    { "input": { "payload": "abc", "size": 10 }, "expected": ["NM1|1/1|abc"] }
+  ],
+  "joinCases": [
+    { "input": ["NM1|3/3|ij", "NM1|1/3|abcd", "NM1|2/3|efgh"], "expected": "abcdefghij" },
+    { "input": ["NM1|1/3|abcd", "NM1|3/3|ij"], "expected": null },
+    { "input": ["garbage"], "expected": null }
+  ]
+}

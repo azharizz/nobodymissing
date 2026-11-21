@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "required": ["rows"],
+  "properties": {
+    "rows": {
+      "type": "array", "maxItems": 60,
+      "items": {
+        "type": "object",
+        "required": ["name", "confidence"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 80 },
+          "age": { "type": ["integer", "null"], "minimum": 0, "maximum": 120 },
+          "sex": { "type": ["string", "null"], "enum": ["M", "F", null] },
+          "flags": { "type": "array", "maxItems": 10, "items": { "type": "string", "enum": ["hard_of_hearing", "deaf", "needs_meds", "wheelchair", "lives_alone", "foreign_language", "infant", "pregnant", "elderly", "cant_walk", "dementia"] } },
+          "notes": { "type": ["string", "null"], "maxLength": 200 },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "rule": "Cross-shelter roster merge (F3). Deterministic keys, no LLM. Old Indonesian spelling (oe, dj, tj, sj, nj) is normalised; honorifics removed; word order ignored; edit distance 1 allowed only for names of 5+ letters; ages within 2 years (or unknown).",
+  "normalizeCases": [
+    { "input": "Pak Hasan Basri", "expected": "hasan basri" },
+    { "input": "SOEKARNO", "expected": "sukarno" },
+    { "input": "Djoko  Santoso", "expected": "joko santoso" },
+    { "input": "Tjut Nyak Dhien", "expected": "cut nyak dhien" },
+    { "input": "Ibu Siti Aminah", "expected": "siti aminah" },
+    { "input": "Nurdin, M.", "expected": "nurdin m" },
+    { "input": "José Ramos", "expected": "jose ramos" },
+    { "input": "Bapak Sjahrir", "expected": "syahrir" }
+  ],
+  "groupCases": [
+    { "name": "merge across shelters",
+      "input": { "records": [
+        { "id": "a1", "shelterId": "SD3", "name": "Hasan Basri", "age": 82 },
+        { "id": "b1", "shelterId": "MSJ1", "name": "Pak Hasan Basri", "age": 81 },
+        { "id": "c1", "shelterId": "SD1", "name": "Hasan Basri", "age": 40 },
+        { "id": "d1", "shelterId": "MSJ1", "name": "Basri Hasan", "age": 82 },
+        { "id": "e1", "shelterId": "SD3", "name": "Siti Aminah", "age": null },
+        { "id": "f1", "shelterId": "SD1", "name": "Siti Aminnah", "age": 60 },
+        { "id": "g1", "shelterId": "SD3", "name": "Joko Santoso", "age": 50 },
+        { "id": "h1", "shelterId": "MSJ1", "name": "Djoko Santoso", "age": 51 },
+        { "id": "i1", "shelterId": "SD3", "name": "Rina", "age": 45 },
+        { "id": "j1", "shelterId": "SD1", "name": "Rini", "age": 45 }
+      ] },
+      "expected": [["a1", "b1", "d1"], ["c1"], ["e1", "f1"], ["g1", "h1"], ["i1"], ["j1"]] }
+  ],
+  "searchCases": [
+    { "name": "public family search returns minimal fields only and respects 'hide me'",
+      "input": { "query": "hasan", "records": [
+        { "id": "a1", "shelterId": "SD3", "name": "Hasan Basri", "age": 82, "status": "safe", "flags": ["hard_of_hearing"], "hidden": false },
+        { "id": "b1", "shelterId": "MSJ1", "name": "Pak Hasan", "age": 4, "status": "injured", "hidden": false },
+        { "id": "c1", "shelterId": "SD1", "name": "Hasan Ali", "age": null, "status": "moved", "hidden": true },
+        { "id": "d1", "shelterId": "SD1", "name": "Rina Hasanah", "age": 45, "status": "safe", "hidden": false }
+      ] },
+      "expected": [
+        { "name": "Hasan Basri", "ageBand": "80-89", "shelterId": "SD3", "status": "safe" },
+        { "name": "Pak Hasan", "ageBand": "0-9", "shelterId": "MSJ1", "status": "injured" }
+      ] }
+  ]
+}
