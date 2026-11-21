@@ -12,7 +12,12 @@ export function createAnnouncements(d: Deps, enqueue: (type: string, payload: un
   async function cards(id: string): Promise<'done' | 'queued' | 'failed'> {
     const a = get(id);
     const r = await d.router.run('announcement' + (a.lang === 'id' ? '_id' : ''), { text: a.text });
-    if ((r.status === 'ok' || r.status === 'draft') && r.data) { patch(id, { cards: r.data.cards, source: r.source!, draft: r.status === 'draft' }); return 'done'; }
+    if ((r.status === 'ok' || r.status === 'draft') && r.data) {
+      // Times come from the deterministic parser, never from the model's formatting ("8 am" -> 08:00).
+      const cards = (r.data.cards as NonNullable<Announcement['cards']>).map(c => ({ ...c, time: c.time ? keywordIcons(c.time, keywords).times[0] ?? null : null }));
+      patch(id, { cards, source: r.source!, draft: r.status === 'draft' });
+      return 'done';
+    }
     return r.status === 'queued' ? 'queued' : 'failed';
   }
 

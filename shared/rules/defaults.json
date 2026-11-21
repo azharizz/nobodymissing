@@ -15,7 +15,7 @@
   "reviewConfidence": 0.8,
   "accuracyBarPoints": 3,
   "timeouts": {
-    "deviceMs": 8000,
+    "deviceMs": 15000,
     "cloudMs": 15000
   },
   "scout": {

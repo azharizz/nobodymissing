@@ -111,4 +111,12 @@ describe('features (wired by FeatureFactory with test adapters)', () => {
     expect(f.store.get().batch).toHaveLength(0);
     expect(f.store.get().people.some(p => p.nameAsWritten === 'Cut Nur')).toBe(true);
   });
+
+  it('AI card times are normalised by the deterministic parser ("8 am" -> 08:00)', async () => {
+    const { f } = await setup(() => ({ raw: '{"cards":[{"icon":"medicine","title":"Medicine Round","time":"8 am","place":"Health Post"}]}', source: 'device' }));
+    f.store.set(s => ({ ...s, signal: 'back' }));
+    const a = await f.announcements.create('Medicine round at 8 am at the health post');
+    expect(a.cards![0].time).toBe('08:00');
+    expect(a.source).toBe('device');
+  });
 });

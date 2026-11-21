@@ -42,6 +42,7 @@ export function initFirebase(emulator: boolean): { app: FirebaseApp; db: Firesto
 export async function loadRemoteRules(app: FirebaseApp): Promise<{ rules: Rules; prompts: Record<string, string> }> {
   const rc = getRemoteConfig(app);
   rc.defaultConfig = { rules: JSON.stringify(defaults), promptPack: JSON.stringify(pack) };
+  rc.settings.minimumFetchIntervalMillis = import.meta.env.DEV ? 0 : 3_600_000;
   try { await fetchAndActivate(rc); } catch { /* offline: defaults */ }
   const parse = <T,>(k: string, fallback: T): T => { try { return JSON.parse(getValue(rc, k).asString()) as T; } catch { return fallback; } };
   return { rules: { ...defaults, ...parse('rules', defaults) }, prompts: parse('promptPack', pack).tasks };
