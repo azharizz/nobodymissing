@@ -1,5 +1,5 @@
 // F12-lite: hazard-aware Field Check list. Scoring is pure code (domain/priority); AI only structures notes.
-import pack from '../../../shared/regions/aceh-demo.json';
+import { regionPack as pack } from './regionData';
 import { distanceM, handAt, nearestHigher } from '../domain/regionPack';
 import { sortFieldList, type Event, type Tier } from '../domain/priority';
 import { type Deps, uid } from './deps';

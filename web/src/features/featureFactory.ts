@@ -13,12 +13,13 @@ import { createInferenceRouter } from './inferenceRouter';
 import { createQueue } from './queue';
 import { createRoster } from './roster';
 import { createScout } from './scout';
-import { createStore, type Job } from './state';
+import { createStore, type Job, type Seed } from './state';
+import { demoState } from '../demo/seed';
 
 export type Features = ReturnType<typeof createFeatures>;
 
-export function createFeatures(a: Adapters, rules: Rules = defaults, prompts: Record<string, string> = pack.tasks) {
-  const store = createStore(a.storage, a.clock.now());
+export function createFeatures(a: Adapters, rules: Rules = defaults, prompts: Record<string, string> = pack.tasks, seed?: Seed) {
+  const store = createStore(a.storage, a.clock.now(), seed);
   const router = createInferenceRouter(a.inference, rules, () => ({ online: store.get().signal === 'back', privateMode: store.get().privateMode }), prompts);
   const d: Deps = { store, router, rules, sync: a.sync, connectivity: a.connectivity, clock: a.clock };
 
@@ -48,6 +49,8 @@ export function createFeatures(a: Adapters, rules: Rules = defaults, prompts: Re
     setPrivate: (on: boolean) => store.set(s => ({ ...s, privateMode: on })),
     setLang: (lang: 'en' | 'id') => store.set(s => ({ ...s, lang })),
     help: (kind: string, spot: string) => store.set(s => ({ ...s, help: [...s.help, { id: crypto.randomUUID(), kind, spot, at: a.clock.now(), done: false }] })),
+    /** DEMO: replace this device's shelter with the synthetic Aceh shelter. */
+    loadDemo: () => store.set(s => ({ ...s, ...demoState(a.clock.now()), jobs: [], announcements: [], help: [], round: {} })),
     helpDone: (id: string) => store.set(s => ({ ...s, help: s.help.map(h => (h.id === id ? { ...h, done: true } : h)) })),
   };
 

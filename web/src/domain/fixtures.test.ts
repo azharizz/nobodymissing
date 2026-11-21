@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import rules from '../../../shared/rules/defaults.json';
 import keywords from '../../../shared/rules/keywords.json';
-import drugs from '../../../shared/drugs/demo-drugs.json';
+import drugs from '../../../shared/demo/drugs.json';
 import priorityFx from '../../../shared/fixtures/priority.json';
 import drugFx from '../../../shared/fixtures/drugMatcher.json';
 import scheduleFx from '../../../shared/fixtures/schedule.json';
@@ -28,7 +28,7 @@ import { mapRosterRows } from './rosterMapping';
 import { scoutStates } from './scout';
 import { chunk, join } from './courier';
 import { handAt, nearestHigher } from './regionPack';
-import pack from '../../../shared/regions/aceh-demo.json';
+import pack from '../../../shared/demo/region-aceh.json';
 import regionFx from '../../../shared/fixtures/regionPack.json';
 
 describe('priority', () => {

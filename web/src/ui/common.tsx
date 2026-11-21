@@ -32,7 +32,7 @@ export function StatusBar({ title }: { title: string }) {
       <span className="pill">{back ? (waiting ? `🎒 ${t.cloud}` : `📶 ${t.cloud}`) : `🏮 ${t.device}`}</span>
       {waiting > 0 && <span className="pill">⏳ {t.waiting} ({waiting})</span>}
       {s.privateMode && <span className="pill">🔒 Private</span>}
-      {f.env === 'demo' && <span className="pill">DEMO: canned AI, no Firebase</span>}
+      {f.env === 'demo' && <span className="pill">{t.demoBadge}</span>}
     </header>
   );
 }

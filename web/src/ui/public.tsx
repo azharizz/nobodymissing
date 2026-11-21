@@ -1,6 +1,6 @@
 // Big Screen (one auto-rotating page) + Public pages (News, Map, Help, Family) for deaf and elderly evacuees.
 import { useState, useSyncExternalStore } from 'react';
-import pack from '../../../shared/regions/aceh-demo.json';
+import { regionPack as pack } from '../features/regionData';
 import { nearestHigher } from '../domain/regionPack';
 import { ICON, QR, useAppState, useF, useT } from './common';
 import { Kit } from './Kit';

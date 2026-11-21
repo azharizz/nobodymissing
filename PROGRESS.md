@@ -116,7 +116,7 @@ Honest notes on test-first:
    - Photograph 10 synthetic BNPB-style sheets and write their ground truth.
    - Run the device path and the cloud path, then `node tools/eval/score.mjs truth.json device.json` (and the same for cloud).
    - Put the measured numbers into `routerPolicy.announcement_id` / `roster_read` (the current 70/92 are **placeholders**).
-7. **Region pack.** Follow `tools/region-pack/README.md` (needs GDAL) to replace the synthetic `aceh-demo.json` with real HAND/DEM data.
+7. **Region pack.** Follow `tools/region-pack/README.md` (needs GDAL) to replace the synthetic `demo/region-aceh.json` with real HAND/DEM data.
 8. **Android `id-ID` offline speech** check on the phone (only needed if speech input comes back; it is cut-line #1).
 9. Push the branch and open a PR yourself when you're happy. I did not push or publish anything.
 

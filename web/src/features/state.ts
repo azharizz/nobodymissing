@@ -1,8 +1,5 @@
 // App state + a tiny external store (read with useSyncExternalStore; no useEffect anywhere).
-import seed from '../../../shared/fixtures/demo-shelter.json';
-import drugs from '../../../shared/drugs/demo-drugs.json';
 import type { DrugMatch } from '../domain/drugMatcher';
-import { matchDrug } from '../domain/drugMatcher';
 import type { PriorityInput, Tier } from '../domain/priority';
 import type { JobState } from '../domain/queue';
 import type { SignalState } from '../domain/scout';
@@ -40,25 +37,22 @@ export type State = {
   lang: 'en' | 'id'; volunteerPos: { lat: number; lng: number } | null;
 };
 
-export function initialState(now: number): State {
+/** A real shelter starts empty: people come from scanned lists, never from bundled data. */
+export function initialState(): State {
   return {
-    shelter: seed.shelter,
-    people: seed.people.map(p => ({ ...p, sex: p.sex as 'M' | 'F', status: 'safe' as const, suggestedFlags: p.flags, notes: null, needsReview: false, inferredBy: 'staff' as const, confirmedBy: 'staff' as const })),
-    cards: seed.cards.map(c => ({ personId: c.personId, meds: c.meds.map(m => ({ ...m, match: matchDrug(m.nameAsWritten, m.strength, drugs.drugs), confirmedBy: m.confirmedBy as MedEntry['confirmedBy'] })) })),
-    round: {}, announcements: [], jobs: [], help: [], batch: [],
-    field: seed.field.map(f => ({
-      ...f, person: f.person as FieldEntry['person'], override: null, status: 'unchecked' as const,
-      lastContactAt: f.lastContactAt == null ? null : now - parseFloat(f.lastContactAt) * 3600_000,
-    })),
+    shelter: { id: 'shelter-1', name: 'Shelter' }, people: [], cards: [], round: {}, announcements: [], field: [], jobs: [], help: [], batch: [],
     privateMode: false, signal: 'no_signal', scoutRun: 0, scoutAlert: false, lastSignalAt: null, lang: 'en', volunteerPos: null,
   };
 }
 
+export type Seed = (now: number) => Partial<State>;
+
 export type Store = ReturnType<typeof createStore>;
 
 /** Photos (batch) stay in memory only: never persisted, never synced. */
-export function createStore(storage: StoragePort, now: number) {
-  let state: State = { ...initialState(now), ...(storage.load<Partial<State>>('state') ?? {}), batch: [], scoutAlert: false };
+export function createStore(storage: StoragePort, now: number, seed?: Seed) {
+  const saved = storage.load<Partial<State>>('state');
+  let state: State = { ...initialState(), ...(saved ?? seed?.(now) ?? {}), batch: [], scoutAlert: false };
   const listeners = new Set<() => void>();
   return {
     get: () => state,

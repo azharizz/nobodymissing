@@ -1,9 +1,11 @@
 // AdapterFactory: the only place adapters are constructed. Features get ports, never adapters.
 import type { Adapters, Env } from '../ports';
-import { demoReply, FakeConnectivity, FakeInference, MemoryStorage, MemorySync } from './fakes';
+import { demoReply } from '../demo/demoReply';
+import { FakeConnectivity, FakeInference, MemoryStorage, MemorySync } from './fakes';
 import { FetchConnectivity, LocalStorage } from './browser';
 
-export async function createAdapters(env: Env): Promise<Adapters> {
+/** shelterId: the shelter this device joined (from the join QR), used for the Firestore membership record. */
+export async function createAdapters(env: Env, shelterId = 'shelter-1'): Promise<Adapters> {
   const clock = { now: () => Date.now() };
   if (env === 'test') {
     return { env, clock, inference: new FakeInference(), sync: new MemorySync(), connectivity: new FakeConnectivity(), storage: new MemoryStorage() };
@@ -15,7 +17,7 @@ export async function createAdapters(env: Env): Promise<Adapters> {
   const { initFirebase } = await import('./firebaseApp');
   const { FirebaseAiLogicInference } = await import('./firebaseAiLogic');
   const { FirestoreSync } = await import('./firestoreSync');
-  const { app, db } = initFirebase(env === 'emulator');
+  const { app, db } = initFirebase(env === 'emulator', shelterId);
   const inference = new FirebaseAiLogicInference(app);
   return {
     env, clock, inference, prepareDevice: () => inference.prepareDevice(),

@@ -66,7 +66,7 @@ Firebase setup: copy `web/.env.example` to `web/.env.local` and fill in the valu
 ### Notes for judges
 - Views: `#/staff/today` (staff), `#/big` (Big Screen), `#/public/news` (evacuees). There is no login: a join QR is in Settings.
 - On-device needs Chrome ≥148 with Gemini Nano, or a Gemini Nano 4 phone (Pixel 10/11, Galaxy S26+). Otherwise the cloud fallback runs, and the badges show which path answered.
-- All data is **synthetic** (`shared/fixtures/demo-shelter.json`). The drug list is a demo and **not for clinical use**.
+- All data is **synthetic** (`shared/demo/shelter.json`). The drug list is a demo and **not for clinical use**.
 
 ## Privacy
 Medical data stays local by default. Only counts by generic name leave the device for supply requests. Public search returns name, age band, shelter and status only, and a person can ask staff to hide their entry. Laws to respect: Indonesia UU PDP (Law 27/2022), Japan APPI.

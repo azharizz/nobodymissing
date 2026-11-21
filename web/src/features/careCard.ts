@@ -1,6 +1,6 @@
 // F4 care card + F9 Medicine Round. Photo read on the device; drug names matched by deterministic code;
 // only confirmed medicines enter the round; requests leave the device as counts by generic name.
-import drugs from '../../../shared/drugs/demo-drugs.json';
+import { drugList as drugs } from './regionData';
 import { matchDrug } from '../domain/drugMatcher';
 import { buildSchedule, combineRequests } from '../domain/schedule';
 import type { ImageInput } from '../ports';

@@ -11,7 +11,7 @@ class FixturesTest {
     private fun load(path: String) = Json.parseToJsonElement(File("../../shared/$path").readText()).jsonObject
     private val rules = Rules.from(load("rules/defaults.json"))
     private val keywords = Keywords.from(load("rules/keywords.json"))
-    private val drugs = Drug.listFrom(load("drugs/demo-drugs.json"))
+    private val drugs = Drug.listFrom(load("demo/drugs.json"))
     private fun cases(file: String, key: String = "cases") = load("fixtures/$file")[key]!!.jsonArray.map { it.jsonObject }
     private val JsonObject.input get() = this["input"]!!
     private val JsonObject.expected get() = this["expected"]!!
@@ -155,7 +155,7 @@ class FixturesTest {
     }
 
     @Test fun regionPack() {
-        val pack = Pack.from(load("regions/aceh-demo.json"))
+        val pack = Pack.from(load("demo/region-aceh.json"))
         for (c in cases("regionPack.json", "handCases")) {
             val i = c.input.jsonObject
             assertEquals(c.name(), c.expected.jsonPrimitive.doubleOrNull, handAt(pack, i.d("lat")!!, i.d("lng")!!))

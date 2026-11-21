@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { createAdapters } from '../adapters/adapterFactory';
 import { FakeConnectivity, FakeInference, MemorySync } from '../adapters/fakes';
 import { createFeatures } from './featureFactory';
+import { demoState } from '../demo/seed';
 
 async function setup(reply?: ConstructorParameters<typeof FakeInference>[1], status = 'available') {
   const a = await createAdapters('test');
   a.inference = new FakeInference(status, reply);
-  return { a, f: createFeatures(a), inf: a.inference as FakeInference, sync: a.sync as MemorySync, net: a.connectivity as FakeConnectivity };
+  return { a, f: createFeatures(a, undefined, undefined, demoState), inf: a.inference as FakeInference, sync: a.sync as MemorySync, net: a.connectivity as FakeConnectivity };
 }
 const IMG = { mimeType: 'image/jpeg' as const, base64: 'AAAA' };
 
@@ -118,5 +119,15 @@ describe('features (wired by FeatureFactory with test adapters)', () => {
     const a = await f.announcements.create('Medicine round at 8 am at the health post');
     expect(a.cards![0].time).toBe('08:00');
     expect(a.source).toBe('device');
+  });
+
+  it('a real (non-demo) shelter starts empty; the synthetic demo loads only on request', async () => {
+    const a = await createAdapters('test');
+    const f = createFeatures(a);
+    expect(f.store.get().people).toEqual([]);
+    expect(f.store.get().field).toEqual([]);
+    f.settings.loadDemo();
+    expect(f.store.get().people.length).toBeGreaterThan(0);
+    expect(f.store.get().shelter.id).toBe('SD3');
   });
 });

@@ -16,10 +16,10 @@ class Shared(private val read: (String) -> String, remoteRules: String? = null) 
     val rules = Rules.from(defaults)
     val schemas = listOf("roster", "careCard", "announcementCard", "fieldReport", "request", "translation").associateWith { json("schemas/$it.json") }
     val prompts = json("prompts/pack.json")["tasks"]!!.jsonObject.mapValues { it.value.jsonPrimitive.content }
-    val drugs = Drug.listFrom(json("drugs/demo-drugs.json"))
+    val drugs = Drug.listFrom(json("demo/drugs.json"))
     val keywords = Keywords.from(json("rules/keywords.json"))
-    val pack = Pack.from(json("regions/aceh-demo.json"))
-    val demo = json("fixtures/demo-shelter.json")
+    val pack = Pack.from(json("demo/region-aceh.json"))
+    val demo = json("demo/shelter.json")
     companion object { fun from(c: Context, remoteRules: String? = null) = Shared({ c.assets.open(it).bufferedReader().readText() }, remoteRules) }
 }
 

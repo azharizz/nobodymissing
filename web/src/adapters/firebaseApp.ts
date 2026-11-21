@@ -7,14 +7,13 @@ import { connectFirestoreEmulator, doc, initializeFirestore, persistentLocalCach
 import { fetchAndActivate, getRemoteConfig, getValue } from 'firebase/remote-config';
 import defaults from '../../../shared/rules/defaults.json';
 import pack from '../../../shared/prompts/pack.json';
-import seed from '../../../shared/fixtures/demo-shelter.json';
 
 export type Rules = typeof defaults;
 const env = import.meta.env;
 
 export function hasFirebaseConfig() { return !!env.VITE_FIREBASE_API_KEY; }
 
-export function initFirebase(emulator: boolean): { app: FirebaseApp; db: Firestore } {
+export function initFirebase(emulator: boolean, shelterId: string): { app: FirebaseApp; db: Firestore } {
   const app = initializeApp({
     apiKey: env.VITE_FIREBASE_API_KEY, authDomain: env.VITE_FIREBASE_AUTH_DOMAIN, projectId: env.VITE_FIREBASE_PROJECT_ID,
     storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET, messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID, appId: env.VITE_FIREBASE_APP_ID,
@@ -33,7 +32,7 @@ export function initFirebase(emulator: boolean): { app: FirebaseApp; db: Firesto
   const role = q.get('role') ?? localStorage.getItem('nm:role') ?? 'organizer';
   try { localStorage.setItem('nm:role', role); } catch { /* private window */ }
   signInAnonymously(auth)
-    .then(c => setDoc(doc(db, 'shelters', q.get('join') ?? seed.shelter.id, 'members', c.user.uid), { role, joinedAt: Date.now() }))
+    .then(c => setDoc(doc(db, 'shelters', shelterId, 'members', c.user.uid), { role, joinedAt: Date.now() }))
     .catch(() => { /* offline or already a member: retried on next start */ });
   return { app, db };
 }

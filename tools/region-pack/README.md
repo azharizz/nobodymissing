@@ -1,6 +1,6 @@
 # Region pack builder (PRODUCT.md 6.13)
 
-Builds `shared/regions/<id>.json` for one bounding box. The demo pack `aceh-demo.json` is **synthetic** (illustrative HAND values).
+Builds `shared/regions/<id>.json` for one bounding box. The demo pack `demo/region-aceh.json` is **synthetic** (illustrative HAND values).
 
 Real build (PENDING HUMAN: needs internet + GDAL):
 

@@ -4,18 +4,23 @@ import { createAdapters } from './adapters/adapterFactory';
 import { createFeatures } from './features/featureFactory';
 import type { Env } from './ports';
 import { App } from './ui/App';
+import { demoState } from './demo/seed';
 import { FeaturesCtx } from './ui/common';
 import './ui/styles.css';
 
 const env: Env = import.meta.env.VITE_USE_EMULATOR === 'true' ? 'emulator' : import.meta.env.VITE_FIREBASE_API_KEY ? 'prod' : 'demo';
-const adapters = await createAdapters(env);
+// Join QR: #/staff/today?join=SD3&role=medic -> this device belongs to that shelter.
+const join = new URLSearchParams(location.hash.split('?')[1] ?? '').get('join');
+const savedShelter = (() => { try { return JSON.parse(localStorage.getItem('nm:state') ?? 'null')?.shelter?.id as string | undefined; } catch { return undefined; } })();
+const adapters = await createAdapters(env, join ?? savedShelter ?? (env === 'demo' ? 'SD3' : 'shelter-1'));
 let remote: { rules?: any; prompts?: Record<string, string> } = {};
 if (env !== 'demo') {
   const { loadRemoteRules } = await import('./adapters/firebaseApp');
   const { getApp } = await import('firebase/app');
   remote = await loadRemoteRules(getApp());
 }
-const features = createFeatures(adapters, remote.rules, remote.prompts);
+const features = createFeatures(adapters, remote.rules, remote.prompts, env === 'demo' ? demoState : undefined);
+if (join && features.store.get().shelter.id !== join) features.store.set(s => ({ ...s, shelter: { id: join, name: `Shelter ${join}` } }));
 
 // Signal Scout loop: real checks on an interval (Remote Config), longer when the battery is low.
 let lastAlert = false, lastNews = 0;
