@@ -15,7 +15,9 @@ service cloud.firestore {
         allow create: if signedIn() && request.auth.uid == uid && request.resource.data.role in ['volunteer', 'medic', 'organizer', 'scout'];
         allow delete: if member(shelterId) && role(shelterId) == 'organizer';
       }
-      match /{doc=**} { allow read, write: if member(shelterId); }
+      // Everything else in the shelter is for members, except the members list itself (no self-promotion).
+      match /{col}/{id} { allow read, write: if member(shelterId) && col != 'members'; }
+      match /{col}/{id}/{rest=**} { allow read, write: if member(shelterId) && col != 'members'; }
     }
     // Public family search index: minimal fields only, no flags, no health data.
     match /public/{id} {
