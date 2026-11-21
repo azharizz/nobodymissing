@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kit, the calm firefighter cat (lantern pose). Same original SVG as web/src/ui/Kit.tsx, Apache-2.0. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="48dp" android:height="48dp" android:viewportWidth="64" android:viewportHeight="64">
+  <path android:fillColor="#6b5a4a" android:pathData="M14,26 L18,10 L26,20 Z M50,26 L46,10 L38,20 Z" android:strokeColor="#222222" android:strokeWidth="1.5" />
+  <path android:fillColor="#d9b48f" android:pathData="M17,30 a15,15 0 1,0 30,0 a15,15 0 1,0 -30,0 Z" android:strokeColor="#222222" android:strokeWidth="1.5" />
+  <path android:fillColor="#d7261e" android:pathData="M15,24 Q32,6 49,24 L49,21 Q32,2 15,21 Z" android:strokeColor="#222222" android:strokeWidth="1.5" />
+  <path android:fillColor="#ffd400" android:pathData="M29,11 h6 v6 h-6 Z" android:strokeColor="#222222" android:strokeWidth="1.5" />
+  <path android:fillColor="#222222" android:pathData="M24,30 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0 Z M36,30 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0 Z" />
+  <path android:fillColor="#f28c00" android:pathData="M18,45 Q32,40 46,45 L48,62 L16,62 Z" android:strokeColor="#222222" android:strokeWidth="1.5" />
+  <path android:fillColor="#ffd400" android:pathData="M46,48 h8 v10 h-8 Z" android:strokeColor="#222222" android:strokeWidth="1.5" />
+  <path android:fillColor="#00000000" android:strokeColor="#222222" android:strokeWidth="1.5" android:pathData="M29,36 Q32,38 35,36" />
+  <path android:fillColor="#00000000" android:strokeColor="#e8ff3a" android:strokeWidth="3" android:pathData="M18,52 L46,52" />
+  <path android:fillColor="#00000000" android:strokeColor="#222222" android:strokeWidth="1" android:pathData="M20,34 L12,34 M20,37 L13,37 M44,34 L52,34 M44,37 L51,37 M50,44 L50,48" />
+</vector>

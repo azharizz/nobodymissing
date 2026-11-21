@@ -49,8 +49,37 @@ class FeaturesTest {
     }
 
     @Test fun familySearchLocalMinimalFields() {
-        val f = features(FakeInference("unavailable"))
+        val f = features(FakeInference("unavailable")).also { it.loadDemo() }
         assertEquals("80-89", f.familySearch("Hasan").single().ageBand)
+    }
+}
+
+class ParityTest {
+    private val shared = Shared({ File("../../shared/$it").readText() })
+    private fun features() = FeatureFactory.create(Adapters("test", FakeInference("unavailable"), MemorySync(), FakeConnectivity(false)), shared)
+
+    @Test fun realShelterStartsEmptyDemoLoadsOnRequest() {
+        val f = features()
+        assertTrue(f.people.isEmpty()); assertTrue(f.field.isEmpty()); assertTrue(f.meds.isEmpty())
+        f.loadDemo()
+        assertTrue(f.people.isNotEmpty()); assertEquals("SD3", f.shelterId.value)
+    }
+
+    @Test fun sharedStringsInBothLanguages() {
+        val f = features()
+        assertEquals("Today", f.t("today"))
+        f.lang.value = "id"
+        assertEquals("Hari ini", f.t("today"))
+        assertEquals("Hari ini: 2 di perangkat · 1 cloud · 0 menunggu", f.t("counter", "device" to 2, "cloud" to 1, "waiting" to 0))
+    }
+
+    @Test fun qrCourierHandsTheQueueToTheScout() {
+        val worker = features(); val scout = features()
+        worker.enqueue("family_update", "public", mapOf("name" to "Hasan", "age" to 80))
+        assertEquals(1, scout.importChunks(worker.exportChunks(40)))
+        assertEquals("family_update", scout.jobs.single().type)
+        assertEquals("Hasan", scout.jobs.single().payload["name"])
+        assertEquals(0, scout.importChunks(worker.exportChunks(40)))  // idempotent: same job id is skipped
     }
 }
 

@@ -37,7 +37,8 @@ Look-alike drug names → a deterministic matcher, look-alike warnings and human
 Ports & adapters, with one shared domain and the same golden fixtures on both platforms:
 
 ```
-shared/      rules (= Remote Config defaults), schemas, prompt pack, demo drug list, region pack, golden fixtures (synthetic only)
+shared/      rules (= Remote Config defaults), schemas, prompt pack, i18n (UI strings, EN/ID, read by web + Android), golden fixtures
+shared/demo/ DEMO ONLY: synthetic Aceh shelter, synthetic region pack, demo drug list (not for clinical use)
 web/src/     domain/ (pure) · ports/ · adapters/ (Firebase AI Logic, Firestore, App Check, Auth, Remote Config, fakes, AdapterFactory)
              features/ (InferenceRouter + factory, FeatureFactory, roster, careCard, announcements, fieldCheck, scout, queue, familySearch) · ui/
 android/app/ same layering in Kotlin + Jetpack Compose; JUnit runs shared/fixtures
@@ -66,7 +67,7 @@ Firebase setup: copy `web/.env.example` to `web/.env.local` and fill in the valu
 ### Notes for judges
 - Views: `#/staff/today` (staff), `#/big` (Big Screen), `#/public/news` (evacuees). There is no login: a join QR is in Settings.
 - On-device needs Chrome ≥148 with Gemini Nano, or a Gemini Nano 4 phone (Pixel 10/11, Galaxy S26+). Otherwise the cloud fallback runs, and the badges show which path answered.
-- All data is **synthetic** (`shared/demo/shelter.json`). The drug list is a demo and **not for clinical use**.
+- A real shelter starts **empty**. Demo mode (no Firebase config) and Settings → "Load demo shelter" load the **synthetic** Aceh shelter (`shared/demo/`). The drug list is a demo and **not for clinical use**.
 
 ## Privacy
 Medical data stays local by default. Only counts by generic name leave the device for supply requests. Public search returns name, age band, shelter and status only, and a person can ask staff to hide their entry. Laws to respect: Indonesia UU PDP (Law 27/2022), Japan APPI.

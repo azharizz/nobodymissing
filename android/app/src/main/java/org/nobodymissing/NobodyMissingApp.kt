@@ -20,5 +20,7 @@ class NobodyMissingApp : Application() {
             getString("rules").takeIf { it.isNotBlank() }
         }
         features = FeatureFactory.create(adapters, Shared.from(this, remoteRules))
+        // No Firebase config = demo mode: show the synthetic Aceh shelter (a real shelter starts empty).
+        if (adapters.env == "test") features.loadDemo()
     }
 }
