@@ -1078,6 +1078,46 @@ All 8 MUST features are kept (decision 2026-11-21). Order = build order; the **c
 6. HAND 30 m + Copernicus DEM clip for the demo town: sizes and value sanity check.
 7. All ⚠️ items in this file that the build touches: verify or replace.
 
+**D16 (from the builder brief, 2026-11-21):** tests first with shared golden fixtures (Vitest + JUnit); ports & adapters with AdapterFactory / InferenceRouterFactory / FeatureFactory; all AI only via Firebase AI Logic through the InferenceRouter; every AI output schema-validated; React without `useEffect`.
+
+**Agent decisions (builder agent, autonomous run on 2026-11-21).** Format: what · why · alternatives.
+- Agent decision (2026-11-21): moved PRODUCT.md into the git repo root (`nobodymissing/`) · it was outside the git checkout, so nothing tracked it · alternatives: keep it outside and copy it in (two copies drift).
+- Agent decision (2026-11-21): work on branch `day1-skeleton` with local commits only · don't commit to the default branch, and never push · alternatives: commit on main.
+- Agent decision (2026-11-21): a hand-written JSON Schema subset validator (type, properties, required, items, enum, min/max, maxLength, maxItems) on both platforms, instead of ajv · the same `schemaValidation.json` fixtures must give identical results on web and Android, and no ajv equivalent exists in Kotlin · alternatives: ajv on web + networknt on Android (behaviour may drift).
+- Agent decision (2026-11-21): all Remote Config defaults in ONE file, `shared/rules/defaults.json` (plus `keywords.json`), bundled on web and copied into Android assets from `shared/` · one source of truth, works offline · alternatives: one file per rule (more files, same data).
+- Agent decision (2026-11-21): HAND buckets are `<2 → 3`, `<5 → 2`, `≤10 → 1`, else 0 (the §6.11c reference code); the thresholds are in `fieldPriority.handDeep/Medium/Shallow` · the §6.11c table boundaries were ambiguous, so I followed the code · alternatives: inclusive lower bounds.
+- Agent decision (2026-11-21): the Field Check sorts by tier, then score (high first), then distance (unknown last) · matches §6.11c "within a tier: by score, then distance" · alternatives: distance before score.
+- Agent decision (2026-11-21): the dedupe rule (F3) is: names equal after normalising (lowercase, no accents, honorifics removed: pak/bapak/bu/ibu/mr/mrs/ms/san/sdr; old spelling oe→u, dj→j, tj→c, sj→sy, nj→ny; word order ignored), OR edit distance ≤1 when both names have ≥5 letters; ages within ±2 years or unknown · deterministic and explainable (§6.14) · alternatives: phonetic codes (Soundex does not fit Indonesian), LLM matching (not exact).
+- Agent decision (2026-11-21): family search matches whole name tokens ("hasan" does not match "Hasanah") · fewer false hits on a public page · alternatives: prefix match.
+- Agent decision (2026-11-21): the public search index stores the age as its decade (age band), not the exact age · minimal fields (D6) · alternatives: exact age.
+- Agent decision (2026-11-21): the demo drug list has 40 drugs, not ~100 · enough for every matcher case (look-alikes, mg/mcg, brands); clearly labelled "not for clinical use" · alternatives: spend the time on a 100-drug list.
+- Agent decision (2026-11-21): the drug matcher returns "matched" only for an exact generic or brand name; fuzzy hits (distance ≤ max(1, len/4)) are "candidates"; look-alike warnings for other generics within distance 3; `needsConfirm` is always true · §6.9 (never auto-accept) · alternatives: a similarity threshold that auto-accepts.
+- Agent decision (2026-11-21): only medicines confirmed by a person (self, family, staff or medic) enter the Medicine Round; unconfirmed AI readings show as review cards · "staff confirmation on medicine and names" must never be cut · alternatives: show unconfirmed ones in grey.
+- Agent decision (2026-11-21): supply requests use qty = number of people short (a count), not tablets · a dose calculation is forbidden (§6.9) · alternatives: compute tablet counts (not allowed).
+- Agent decision (2026-11-21): router policy: a sensitive task with no device asks staff (never silent); private mode blocks any cloud use; a task where the device is measured more than `accuracyBarPoints` worse goes to the cloud first, or becomes a device draft when offline. `announcement_id` uses PLACEHOLDER accuracies 70 vs 92 until set E is measured (PENDING HUMAN) · §6.3 + §7 · alternatives: hard-coded if-chains.
+- Agent decision (2026-11-21): on web, the privacy guard checks `LanguageModel.availability()` before every call, AND a post-check discards any cloud answer to an `ONLY_ON_DEVICE` request · the post-check alone can't stop data leaving, so the pre-check is the real guard · alternatives: trust the SDK mode.
+- Agent decision (2026-11-21): web cloud calls use `responseJsonSchema` (plain JSON Schema), and on-device calls use `responseConstraint` with the same schema · same output shape (§2.7) · alternatives: convert to the Firebase `Schema` builder.
+- Agent decision (2026-11-21): on Android, the cloud call uses `responseMimeType=application/json` and puts the JSON schema in the prompt, instead of the typed `JsonSchema` builder · building typed schemas from our JSON was too slow to do in this run; our validator still rejects anything wrong · alternatives: write a JSON → `JsonSchema` converter (TODO).
+- Agent decision (2026-11-21): a fourth environment, `demo` (fakes with canned AI replies + real connectivity check), is used when no Firebase config exists, and is labelled "DEMO: canned AI, no Firebase" in the status bar · lets judges and CI open the app without secrets · alternatives: crash without config.
+- Agent decision (2026-11-21): Android uses the `test` fakes when there is no `google-services.json` (the Google services plugin is applied only if the file exists) · builds without secrets · alternatives: commit a placeholder json (risky).
+- Agent decision (2026-11-21): toolchain: Vite 8 + React 19 + Vitest 5 + TypeScript 7; Android AGP 9.5.2 (built-in Kotlin) + Compose plugin 2.4.21 + Compose BOM 2026.11.01, compileSdk 37.2 (required by the Compose BOM), minSdk 26, JDK 21; firebase-ai 18.2.0 + firebase-ai-ondevice 16.0.0-beta08 (API checked against the AAR: `OnDeviceConfig(mode=…)`, `FirebaseAIOnDevice.checkStatus()`, `response.inferenceSource`); firebase JS 13.4.0 · latest stable at build time · alternatives: older pinned versions.
+- Agent decision (2026-11-21): offline map = a shelter-centred SVG drawn from the region-pack grid (HAND shading, shelters, places), not MapLibre + PMTiles · the "offline map view" is third on the cut line; the list + higher-place card are kept · alternatives: MapLibre GL JS with service-worker tile caching (later).
+- Agent decision (2026-11-21): the demo region pack `aceh-demo.json` is a SYNTHETIC 4×4 HAND grid and 3 invented shelters, clearly labelled · real HAND/DEM clipping needs GDAL and downloads (PENDING HUMAN) · alternatives: none in time.
+- Agent decision (2026-11-21): photos for batch mode are kept in memory only (never persisted to localStorage, never synced) · localStorage quota and privacy · alternatives: IndexedDB (TODO: needed so photos survive a restart).
+- Agent decision (2026-11-21): the Shelter Wi-Fi hub (`hub/server.mjs`) is a dependency-free Node server: GET/POST `/api/news` (POST from localhost only), POST `/api/help` from phones · D15, cheapest version · alternatives: a separate Express server.
+- Agent decision (2026-11-21): announcement language = the staff UI language toggle (EN/ID), not automatic detection · no extra unmeasured logic · alternatives: language detection via Nano.
+- Agent decision (2026-11-21): F5, F6, F7, F10, BLE beacon and speech input are not built in this run · the cut line in §10 · alternatives: none.
+- Agent decision (2026-11-21): Android Field Check uses the demo field entries and hazard only (no GPS report flow yet); Android Announce shows keyword cards + the reach list, without AI cards yet · time; Android is the submission platform, so these are next · alternatives: none.
+
+**Day-1 check results (2026-11-21, builder agent):**
+1. Hardware / Nano on laptop + Pixel: **PENDING HUMAN** (needs your devices). The code feature-detects and shows the status in Settings → "Prepare on-device AI".
+2. Nano on 10 Indonesian roster sheets: **PENDING HUMAN** (needs photos + Nano). Use `tools/eval/score.mjs`.
+3. Android offline speech `id-ID`: **PENDING HUMAN** (device). Speech input is cut-line item #1.
+4. Keyword-icon list: built (`shared/rules/keywords.json`) and tested on 9 fixture announcements (web + Android); the full set B (50) is still to write.
+5. (removed)
+6. HAND 30 m + DEM clip: **PENDING HUMAN** (GDAL + downloads, see `tools/region-pack/README.md`). The demo pack is synthetic.
+7. ⚠️ items verified in code: Android API names (from the AAR), web `inferenceSource`, `responseConstraint`, `responseJsonSchema`. Not verified: Remote Config / App Check in a real Firebase project (PENDING HUMAN: console).
+
 ---
 
 ## 13. Local files (research archive)
