@@ -47,7 +47,7 @@ function ScoutAlert() {
   return (
     <div className="scout-alert" role="alertdialog" aria-label={t.signalBack}>
       <div className="ripples" aria-hidden><i /><i /><i /></div>
-      <div className="scout-truck"><Kit mood="alert" size={280} /></div>
+      <div className="scout-kit"><Kit mood="alert" size={220} /></div>
       <h1>{t.signalBack}</h1>
       <p>{fmt(t.sentOf, p)}</p>
       <button className="btn dark" onClick={f.scout.dismiss}><Icon name="check" />OK</button>

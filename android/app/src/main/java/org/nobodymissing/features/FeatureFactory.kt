@@ -20,6 +20,9 @@ class Shared(private val read: (String) -> String, remoteRules: String? = null) 
     val drugs = Drug.listFrom(json("demo/drugs.json"))
     val keywords = Keywords.from(json("rules/keywords.json"))
     val pack = Pack.from(json("demo/region-aceh.json"))
+    /** Icons and the Kit mascot, shared with web (shared/icons, shared/mascot). */
+    val icons = json("icons/icons.json")["icons"]!!.jsonObject.mapValues { it.value.jsonPrimitive.content }
+    val mascot = json("mascot/kit.json")
     /** UI strings, shared with web (shared/i18n). */
     val strings = listOf("en", "id").associateWith { l -> json("i18n/$l.json").mapValues { it.value.jsonPrimitive.content } }
     companion object { fun from(c: Context, remoteRules: String? = null) = Shared({ c.assets.open(it).bufferedReader().readText() }, remoteRules) }

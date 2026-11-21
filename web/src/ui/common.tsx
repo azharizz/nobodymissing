@@ -24,17 +24,17 @@ export function Icon({ name, size = 22, label, className }: { name: IconName | s
   );
 }
 
-/** Kit, the shelter's fire truck (shared/mascot/kit.json). Mood drives the motion:
- *  idle = gentle bob + blink · device = amber beacon glowing · cloud = blue beacon, wheels rolling · alert = red/blue flashing, bounce · sleep = eyes closed. */
+/** Kit, the calm firefighter cat (shared/mascot/kit.json). Mood drives the motion:
+ *  idle = breathing + blink + tail sway · device = amber lantern glowing · cloud = blue lantern, walking bob · alert = lantern flashing red/blue, hop · sleep = eyes closed, lantern off. */
 export type Mood = 'idle' | 'device' | 'cloud' | 'alert' | 'sleep';
 export function Kit({ mood = 'idle', size = 56, label = 'Kit' }: { mood?: Mood; size?: number; label?: string }) {
   const [w, h] = kit.viewBox;
   const c = kit.centers as Record<string, number[]>;
-  const groups = ['shadow', 'body', 'face', 'eyes', 'glow', 'beacon', 'wheelL', 'wheelR'];
+  const groups = kit.order;
   const origin = (g: string) => (c[g] ? { transformOrigin: `${c[g][0]}px ${c[g][1]}px` } : undefined);
   return (
     <svg className={`kit kit-${mood}`} width={size} height={(size * h) / w} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label}>
-      <g className="kit-truck">
+      <g className="kit-cat">
         {groups.map(g => (
           <g key={g} className={`kit-${g}`} style={origin(g) as CSSProperties}>
             {kit.parts.filter(p => p.g === g).map((p, i) => (
@@ -43,7 +43,6 @@ export function Kit({ mood = 'idle', size = 56, label = 'Kit' }: { mood?: Mood; 
           </g>
         ))}
       </g>
-      {mood === 'cloud' && <g className="kit-speed" stroke="#14213D" strokeWidth={2.5} strokeLinecap="round"><path d="M2 40h8M0 50h12M4 60h7" /></g>}
     </svg>
   );
 }
