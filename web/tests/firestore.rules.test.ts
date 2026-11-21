@@ -7,6 +7,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 let env: RulesTestEnvironment;
 beforeAll(async () => {
   env = await initializeTestEnvironment({ projectId: 'demo-nobody-missing', firestore: { rules: readFileSync(new URL('../../firestore.rules', import.meta.url), 'utf8'), host: '127.0.0.1', port: 8080 } });
+  await env.clearFirestore();
   await env.withSecurityRulesDisabled(c => setDoc(doc(c.firestore(), 'shelters/SD3/members/staff1'), { role: 'volunteer' }));
 });
 afterAll(() => env?.cleanup());

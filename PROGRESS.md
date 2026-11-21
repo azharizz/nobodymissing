@@ -1,4 +1,66 @@
-# PROGRESS: autonomous build run, Sat Nov 21 2026
+# PROGRESS: update, Sat Nov 21 2026 (second autonomous run)
+
+## Status in one line
+The live Firebase project `nobodymissing` is set up and working end to end (free Spark plan, **no billing**): real Gemini calls through Firebase AI Logic with App Check enforced, **on-device Gemini Nano working on this laptop**, anonymous Auth, Firestore + rules, and Remote Config. Everything is on local branch `day1-skeleton` and nothing has been pushed. Hosting has not been deployed.
+
+## Done in this run
+- **Firebase (CLI + console):**
+  - web + Android apps registered; `web/.env.local` and `android/app/google-services.json` written locally and gitignored;
+  - Firestore in asia-southeast2, with rules deployed;
+  - reCAPTCHA Enterprise key, App Check **enforced** for AI Logic, web debug token registered;
+  - Anonymous Auth on;
+  - AI Logic on the **Gemini Developer API (no-cost)**, with optional AI monitoring left OFF;
+  - Remote Config v3 (`rules`, `promptPack`);
+  - Android Play Integrity registered with the debug SHA-1/SHA-256.
+- **Verified live in Chrome:**
+  - cloud cards with the ☁️ badge;
+  - **on-device cards with the 🏮 badge** (Nano on Chrome 156);
+  - a sync to Firestore wrote alerts (counts only), a supply request, the announcement and the membership record.
+- **Bugs found by tests and fixed:**
+  - Firestore rules let members add or promote other devices;
+  - batch mode dropped an approved photo when offline;
+  - the device timeout was too short for Nano (8 s → 15 s, measured);
+  - the cloud translated Indonesian place names (prompt fixed);
+  - the overloaded `gemini-3.8-flash` model now falls back to Flash-Lite.
+- **New tests:**
+  - Firestore rules unit tests (8, run in the emulator);
+  - Playwright end-to-end tests (6, demo mode);
+  - Android feature tests (announce, field report, family search, Remote Config override);
+  - eval set B (24 EN/ID announcements) with a scorer and an in-browser runner.
+- **Android:**
+  - AI announcement cards with approve + sync;
+  - field report flow;
+  - family search;
+  - Remote Config;
+  - shelter membership on sign-in;
+  - the router's backup model.
+- Commits from now on carry no Claude co-author line (your request).
+
+## Test results (this run)
+```
+web  vitest            Test Files 4 passed, Tests 136 passed
+web  playwright e2e    6 passed
+web  rules (emulator)  Tests 8 passed (twice in a row after adding clearFirestore)
+android JUnit          FixturesTest 13 · FeaturesTest 5 · InferenceRouterTest 7 · RemoteRulesTest 2 -> 0 failures; assembleDebug OK
+```
+
+## Eval set B (measured, prompt pack v1)
+| Path | EN | ID |
+|---|---|---|
+| Keywords (no AI) | 50% | 75% |
+| Cloud flash-lite | 92% | 42% (places translated; prompt fixed, re-run pending) |
+| Device Nano | pending (run cut by a browser disconnect) | pending |
+
+## PENDING HUMAN now
+1. **Device eval:** in Chrome, keep the tab in the **foreground**, open `http://localhost:5173` (`npm --prefix web run dev`), then run `await (await import('/src/eval/runB.ts')).runB()` in the console. Put the device-vs-cloud numbers into `routerPolicy.announcement_id` / `announcement` and republish Remote Config.
+2. **Android on a real phone:** install the APK (`android/app/build/outputs/apk/debug/app-debug.apk`), copy the App Check debug token from logcat (`DebugAppCheckProvider`), and add it under Firebase console → App Check → Android app → Manage debug tokens. There was no room on this Mac for an emulator (5.6 GB free).
+3. **Pixel Nano check:** run a scan and an announcement; the badge should say 🏮 Device.
+4. **Optional:** delete the unused GCP project `nobody-missing-hk26`.
+5. **Your choice:** deploy Hosting (`npx firebase-tools deploy --only hosting`, this is public) and push the branch.
+
+---
+
+# (Earlier report) PROGRESS: first autonomous run, Sat Nov 21 2026
 
 ## Status in one line
 The code work for the Day 1–5 web scope and the core of Day 6–7 Android is done. It is tested on both platforms with the same fixtures, and the app runs in demo mode. **Not done, because a person must do them:** real Firebase project setup, the on-device Nano checks, evaluations on real photos, the video and the Devpost submission. Everything is on local branch `day1-skeleton`, and **nothing has been pushed**.
