@@ -28,5 +28,10 @@ export interface StoragePort {
 
 export interface ClockPort { now(): number }
 
-export type Adapters = { inference: InferencePort; sync: SyncPort; connectivity: ConnectivityPort; storage: StoragePort; clock: ClockPort; env: Env };
-export type Env = 'prod' | 'emulator' | 'test';
+export type Adapters = {
+  inference: InferencePort; sync: SyncPort; connectivity: ConnectivityPort; storage: StoragePort; clock: ClockPort; env: Env;
+  /** Starts the on-device model download; must run from a user gesture (web). */
+  prepareDevice?: () => Promise<string>;
+};
+/** prod = Firebase; emulator = Firebase Emulator Suite; test = fakes; demo = fakes with canned AI (no Firebase project). */
+export type Env = 'prod' | 'emulator' | 'test' | 'demo';

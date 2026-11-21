@@ -1,0 +1,1 @@
+{ "name": "Nobody Missing", "short_name": "Nobody Missing", "start_url": "/", "display": "standalone", "background_color": "#ffffff", "theme_color": "#f28c00", "icons": [{ "src": "/kit.svg", "sizes": "any", "type": "image/svg+xml" }] }

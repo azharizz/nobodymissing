@@ -51,5 +51,5 @@ export function createFeatures(a: Adapters, rules: Rules = defaults, prompts: Re
     helpDone: (id: string) => store.set(s => ({ ...s, help: s.help.map(h => (h.id === id ? { ...h, done: true } : h)) })),
   };
 
-  return { store, router, rules, queue, roster, careCard, medicine, announcements, field, scout, family, views, settings };
+  return { env: a.env, prepareDevice: a.prepareDevice, store, router, rules, queue, roster, careCard, medicine, announcements, field, scout, family, views, settings };
 }
