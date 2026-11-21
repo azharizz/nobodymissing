@@ -1,0 +1,29 @@
+{
+  "_notice": "Eval set B (subset, 24 synthetic shelter announcements, EN + ID). Ground truth: main icon(s) allowed for the first card, time (HH:MM or null), a word the place must contain (or null).",
+  "items": [
+    { "id": "B01", "lang": "en", "text": "Food at 3 pm at the gym entrance", "icons": ["food"], "time": "15:00", "place": "gym" },
+    { "id": "B02", "lang": "en", "text": "Clean water is available now at the water tank behind the school", "icons": ["water"], "time": null, "place": "tank" },
+    { "id": "B03", "lang": "en", "text": "Medicine round at 8 am at the health post. Bring your medicine bag.", "icons": ["medicine"], "time": "08:00", "place": "health post" },
+    { "id": "B04", "lang": "en", "text": "A doctor will visit at 16.00 in classroom 2", "icons": ["doctor"], "time": "16:00", "place": "classroom" },
+    { "id": "B05", "lang": "en", "text": "Flood warning: water is rising. Move to the second floor now.", "icons": ["warning", "move"], "time": null, "place": "second floor" },
+    { "id": "B06", "lang": "en", "text": "Diapers and baby formula at 10:30 at the kitchen", "icons": ["baby"], "time": "10:30", "place": "kitchen" },
+    { "id": "B07", "lang": "en", "text": "Generator on from 6 pm. Charge your phones in the hall.", "icons": ["power"], "time": "18:00", "place": "hall" },
+    { "id": "B08", "lang": "en", "text": "Dinner at 7 pm at the mosque yard", "icons": ["food"], "time": "19:00", "place": "mosque" },
+    { "id": "B09", "lang": "en", "text": "The toilets near tent B are closed. Use the toilets by the gate.", "icons": ["toilet"], "time": null, "place": "gate" },
+    { "id": "B10", "lang": "en", "text": "Bus to the hospital leaves at 9 am from the main gate", "icons": ["move"], "time": "09:00", "place": "gate" },
+    { "id": "B11", "lang": "en", "text": "Breakfast at 7.30 in the school hall", "icons": ["food"], "time": "07:30", "place": "hall" },
+    { "id": "B12", "lang": "en", "text": "Nurse checks for elderly people at 2 pm at the health post", "icons": ["doctor"], "time": "14:00", "place": "health post" },
+    { "id": "B13", "lang": "id", "text": "Makan siang jam 12.00 di aula", "icons": ["food"], "time": "12:00", "place": "aula" },
+    { "id": "B14", "lang": "id", "text": "Pembagian air bersih pukul 15.00 di pintu depan", "icons": ["water"], "time": "15:00", "place": "pintu" },
+    { "id": "B15", "lang": "id", "text": "Dokter datang jam 9 pagi di ruang kelas 3", "icons": ["doctor"], "time": "09:00", "place": "kelas" },
+    { "id": "B16", "lang": "id", "text": "Awas banjir! Semua pindah ke lantai 2 sekarang", "icons": ["warning", "move"], "time": null, "place": "lantai" },
+    { "id": "B17", "lang": "id", "text": "Pembagian obat jam 08.00 di posko kesehatan", "icons": ["medicine"], "time": "08:00", "place": "posko" },
+    { "id": "B18", "lang": "id", "text": "Popok dan susu bayi jam 10.30 di dapur umum", "icons": ["baby"], "time": "10:30", "place": "dapur" },
+    { "id": "B19", "lang": "id", "text": "Genset menyala jam 18.00, isi daya HP di aula", "icons": ["power"], "time": "18:00", "place": "aula" },
+    { "id": "B20", "lang": "id", "text": "Makan malam jam 19.00 di halaman masjid", "icons": ["food"], "time": "19:00", "place": "masjid" },
+    { "id": "B21", "lang": "id", "text": "Toilet dekat tenda B ditutup, pakai toilet di gerbang", "icons": ["toilet"], "time": null, "place": "gerbang" },
+    { "id": "B22", "lang": "id", "text": "Bus ke rumah sakit berangkat jam 09.00 dari gerbang utama", "icons": ["move"], "time": "09:00", "place": "gerbang" },
+    { "id": "B23", "lang": "id", "text": "Sarapan jam 07.30 di aula sekolah", "icons": ["food"], "time": "07:30", "place": "aula" },
+    { "id": "B24", "lang": "id", "text": "Perawat memeriksa lansia jam 14.00 di posko kesehatan", "icons": ["doctor"], "time": "14:00", "place": "posko" }
+  ]
+}
