@@ -3,10 +3,11 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 import { connectAuthEmulator, getAuth, signInAnonymously } from 'firebase/auth';
-import { connectFirestoreEmulator, initializeFirestore, persistentLocalCache, type Firestore } from 'firebase/firestore';
+import { connectFirestoreEmulator, doc, initializeFirestore, persistentLocalCache, setDoc, type Firestore } from 'firebase/firestore';
 import { fetchAndActivate, getRemoteConfig, getValue } from 'firebase/remote-config';
 import defaults from '../../../shared/rules/defaults.json';
 import pack from '../../../shared/prompts/pack.json';
+import seed from '../../../shared/fixtures/demo-shelter.json';
 
 export type Rules = typeof defaults;
 const env = import.meta.env;
@@ -27,7 +28,13 @@ export function initFirebase(emulator: boolean): { app: FirebaseApp; db: Firesto
     connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
     connectFirestoreEmulator(db, '127.0.0.1', 8080);
   }
-  signInAnonymously(auth).catch(() => { /* offline: retried by Firebase when signal returns */ });
+  // Join = role from the scanned QR (?join=SD3&role=medic), stored on the device. The hub device defaults to organizer.
+  const q = new URLSearchParams(location.hash.split('?')[1] ?? '');
+  const role = q.get('role') ?? localStorage.getItem('nm:role') ?? 'organizer';
+  try { localStorage.setItem('nm:role', role); } catch { /* private window */ }
+  signInAnonymously(auth)
+    .then(c => setDoc(doc(db, 'shelters', q.get('join') ?? seed.shelter.id, 'members', c.user.uid), { role, joinedAt: Date.now() }))
+    .catch(() => { /* offline or already a member: retried on next start */ });
   return { app, db };
 }
 
