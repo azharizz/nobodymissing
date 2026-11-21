@@ -81,4 +81,14 @@ describe('InferenceRouter', () => {
     await router.run('roster_read', { text: 'y' });
     expect(router.counts()).toEqual({ device: 2, cloud: 0 });
   });
+
+  it('overloaded primary cloud model falls back to the backup model', async () => {
+    const inf = new FakeInference('no_api', r => {
+      if (r.model === rules.models.cloudAccurate) throw new Error('500 high demand');
+      return { raw: ROSTER_OK, source: 'cloud' };
+    });
+    const r = await make(inf).run('roster_read', { text: 'x' }, { staffApprovedCloud: true });
+    expect(r.status).toBe('ok');
+    expect(inf.calls.map(c => c.model)).toEqual([rules.models.cloudAccurate, rules.models.cloudLite]);
+  });
 });

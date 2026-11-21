@@ -21,7 +21,16 @@ class InferenceRouter(
     var cloudCount = 0; private set
 
     private suspend fun call(task: String, p: TaskPolicy, mode: String, text: String?, image: Bitmap?): InferenceResult {
-        val req = InferenceRequest(task, prompts[task] ?: "", text, image, schemas.getValue(p.schema), mode, models[p.model] ?: p.model)
+        val primary = models[p.model] ?: p.model
+        val backup = models.getValue("cloudLite")
+        return try { callModel(task, p, mode, text, image, primary) } catch (e: Exception) {
+            // Overloaded/failed primary cloud model -> backup model (6.14).
+            if (mode.endsWith("cloud") && primary != backup && e !is TimeoutCancellationException) callModel(task, p, mode, text, image, backup) else throw e
+        }
+    }
+
+    private suspend fun callModel(task: String, p: TaskPolicy, mode: String, text: String?, image: Bitmap?, model: String): InferenceResult {
+        val req = InferenceRequest(task, prompts[task] ?: "", text, image, schemas.getValue(p.schema), mode, model)
         return withTimeout(if (mode.endsWith("device")) deviceTimeoutMs else cloudTimeoutMs) { inference.generate(req) }
     }
 

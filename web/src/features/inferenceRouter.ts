@@ -25,9 +25,19 @@ export function createInferenceRouter(inference: InferencePort, rules: RouterRul
   const counts = { device: 0, cloud: 0 };
 
   async function call(task: string, policy: TaskPolicy, mode: Mode, input: Input): Promise<InferenceResult> {
+    try { return await callModel(task, policy, mode, input, rules.models[policy.model]); }
+    catch (e) {
+      // Overloaded/failed primary cloud model -> backup model (6.14). Device modes don't use the model name.
+      const backup = rules.models.cloudLite;
+      if ((mode === 'only_in_cloud' || mode === 'prefer_in_cloud') && rules.models[policy.model] !== backup && !(e instanceof Timeout)) return callModel(task, policy, mode, input, backup);
+      throw e;
+    }
+  }
+
+  async function callModel(task: string, policy: TaskPolicy, mode: Mode, input: Input, model: string): Promise<InferenceResult> {
     let prompt = prompts[task] ?? '';
     for (const [k, v] of Object.entries(input.vars ?? {})) prompt = prompt.replace(`{${k}}`, v);
-    const req = { task, prompt, text: input.text, image: input.image, schema: SCHEMAS[policy.schema], mode, model: rules.models[policy.model] };
+    const req = { task, prompt, text: input.text, image: input.image, schema: SCHEMAS[policy.schema], mode, model };
     const isDevice = mode === 'only_on_device' || mode === 'prefer_on_device';
     return withTimeout(inference.generate(req), isDevice ? rules.timeouts.deviceMs : rules.timeouts.cloudMs);
   }

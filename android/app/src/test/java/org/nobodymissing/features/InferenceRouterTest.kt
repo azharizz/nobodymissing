@@ -52,4 +52,11 @@ class InferenceRouterTest {
         assertEquals("queued", router(f, online = false).run("supply_request", "x").status)
         assertEquals(0, f.calls.size)
     }
+
+    @Test fun overloadedPrimaryModelFallsBackToBackup() = runBlocking {
+        val f = FakeInference("unavailable") { if (it.model == "gemini-3.8-flash") error("500 high demand") else InferenceResult(ok, "cloud") }
+        val r = router(f).run("roster_read", "x", staffApprovedCloud = true)
+        assertEquals("ok", r.status)
+        assertEquals(listOf("gemini-3.8-flash", "gemini-3.5-flash-lite"), f.calls.map { it.model })
+    }
 }
