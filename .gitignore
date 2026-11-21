@@ -171,3 +171,4 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 dist/
+hub/hub-state.json

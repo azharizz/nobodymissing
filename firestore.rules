@@ -1,0 +1,34 @@
+rules_version = '2';
+// Staff write; public family search reads minimal fields only (D6); roles come from a membership record (D14).
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function signedIn() { return request.auth != null; }
+    function member(shelterId) { return signedIn() && exists(/databases/$(db)/documents/shelters/$(shelterId)/members/$(request.auth.uid)); }
+    function role(shelterId) { return get(/databases/$(db)/documents/shelters/$(shelterId)/members/$(request.auth.uid)).data.role; }
+
+    match /shelters/{shelterId} {
+      allow read: if member(shelterId);
+      allow create: if signedIn();
+      match /members/{uid} {
+        allow read: if member(shelterId);
+        // ponytail: join token is checked client-side from the signed QR; move to a callable function if abuse appears
+        allow create: if signedIn() && request.auth.uid == uid && request.resource.data.role in ['volunteer', 'medic', 'organizer', 'scout'];
+        allow delete: if member(shelterId) && role(shelterId) == 'organizer';
+      }
+      match /{doc=**} { allow read, write: if member(shelterId); }
+    }
+    // Public family search index: minimal fields only, no flags, no health data.
+    match /public/{id} {
+      allow read: if true;
+      allow write: if signedIn()
+        && request.resource.data.keys().hasOnly(['name', 'age', 'shelterId', 'status', 'hidden', 'updatedAt'])
+        && member(request.resource.data.shelterId);
+    }
+    // Supply requests + can't-miss alerts: counts only, no names.
+    match /requests/{id} { allow create, update: if signedIn() && !('names' in request.resource.data); allow read: if signedIn(); }
+    match /alerts/{id} { allow create, update: if signedIn() && request.resource.data.keys().hasOnly(['shelterId', 'counts', 'minSupplyDays', 'updatedAt']); allow read: if signedIn(); }
+    match /fieldReports/{id} { allow create: if signedIn(); allow read: if signedIn(); }
+    match /announcements/{id} { allow create: if signedIn(); allow read: if true; }
+    match /roster/{id} { allow create: if signedIn(); }
+  }
+}

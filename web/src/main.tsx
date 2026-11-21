@@ -40,4 +40,29 @@ const scoutLoop = () => {
 scoutLoop();
 addEventListener('online', () => features.scout.check());
 
+// Shelter Wi-Fi: the hub laptop publishes shown cards to the local server; phones on the hotspot read them.
+const { HubSync } = await import('./adapters/hubSync');
+if (await HubSync.available()) {
+  const hub = new HubSync();
+  if (location.hash.startsWith('#/public')) {
+    const pull = async () => {
+      const news = await hub.list('news').catch(() => []) as any[];
+      if (news.length) features.store.set(s => ({ ...s, announcements: news }));
+      const help = features.store.get().help.filter(h => !h.done && !(h as any).sent);
+      for (const h of help) { await hub.put('help', h).catch(() => {}); features.store.set(s => ({ ...s, help: s.help.map(x => x.id === h.id ? { ...x, sent: true } as any : x) })); }
+    };
+    pull(); setInterval(pull, 15000);
+  } else {
+    let last = '';
+    const push = () => { const news = JSON.stringify(features.store.get().announcements.filter(a => a.shown)); if (news !== last) { last = news; hub.put('news', JSON.parse(news)).catch(() => {}); } };
+    features.store.subscribe(push); push();
+    setInterval(async () => {
+      const help = await hub.list('help').catch(() => []) as any[];
+      const have = new Set(features.store.get().help.map(h => h.at + h.kind));
+      const fresh = help.filter(h => !have.has(h.at + h.kind)).map(h => ({ id: crypto.randomUUID(), kind: h.kind, spot: h.spot, at: h.at, done: false }));
+      if (fresh.length) features.store.set(s => ({ ...s, help: [...s.help, ...fresh] }));
+    }, 15000);
+  }
+}
+
 createRoot(document.getElementById('root')!).render(<FeaturesCtx.Provider value={features}><App /></FeaturesCtx.Provider>);
