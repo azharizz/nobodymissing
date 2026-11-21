@@ -11,7 +11,7 @@ import org.nobodymissing.ports.InferenceResult
 import java.io.File
 
 class FeaturesTest {
-    private val shared = Shared { File("../../shared/$it").readText() }
+    private val shared = Shared({ File("../../shared/$it").readText() })
     private fun features(inf: FakeInference, online: Boolean = true) =
         FeatureFactory.create(Adapters("test", inf, MemorySync(), FakeConnectivity(online)), shared)
 
@@ -51,5 +51,16 @@ class FeaturesTest {
     @Test fun familySearchLocalMinimalFields() {
         val f = features(FakeInference("unavailable"))
         assertEquals("80-89", f.familySearch("Hasan").single().ageBand)
+    }
+}
+
+class RemoteRulesTest {
+    @Test fun remoteConfigRulesOverrideBundledDefaultsKeyByKey() {
+        val s = Shared({ File("../../shared/$it").readText() }, """{"elderlyAge": 60}""")
+        assertEquals(60, s.rules.elderlyAge)
+        assertEquals(75, s.rules.reachAge)
+    }
+    @Test fun brokenRemoteConfigFallsBackToDefaults() {
+        assertEquals(65, Shared({ File("../../shared/$it").readText() }, "not json").rules.elderlyAge)
     }
 }

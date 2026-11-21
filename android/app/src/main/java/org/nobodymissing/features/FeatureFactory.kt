@@ -9,9 +9,10 @@ import org.nobodymissing.adapters.Adapters
 import org.nobodymissing.domain.*
 
 /** Shared JSON (rules, schemas, prompts, drugs, region pack, synthetic demo shelter) bundled from shared/ as assets. */
-class Shared(private val read: (String) -> String) {
+class Shared(private val read: (String) -> String, remoteRules: String? = null) {
     fun json(p: String) = Json.parseToJsonElement(read(p)).jsonObject
-    val defaults = json("rules/defaults.json")
+    /** Remote Config "rules" (last activated, available offline) wins over the bundled defaults, key by key. */
+    val defaults = json("rules/defaults.json").let { d -> remoteRules?.let { runCatching { JsonObject(d + Json.parseToJsonElement(it).jsonObject) }.getOrNull() } ?: d }
     val rules = Rules.from(defaults)
     val schemas = listOf("roster", "careCard", "announcementCard", "fieldReport", "request", "translation").associateWith { json("schemas/$it.json") }
     val prompts = json("prompts/pack.json")["tasks"]!!.jsonObject.mapValues { it.value.jsonPrimitive.content }
@@ -19,7 +20,7 @@ class Shared(private val read: (String) -> String) {
     val keywords = Keywords.from(json("rules/keywords.json"))
     val pack = Pack.from(json("regions/aceh-demo.json"))
     val demo = json("fixtures/demo-shelter.json")
-    companion object { fun from(c: Context) = Shared { c.assets.open(it).bufferedReader().readText() } }
+    companion object { fun from(c: Context, remoteRules: String? = null) = Shared({ c.assets.open(it).bufferedReader().readText() }, remoteRules) }
 }
 
 data class UiPerson(val id: String, val name: String, val age: Int?, val flags: List<String>, val confirmed: Boolean, val needsReview: Boolean, val source: String)
