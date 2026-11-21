@@ -242,7 +242,7 @@ label { font-size: .85rem; font-weight: 700; color: var(--ink-2); display: flex;
 .kit-cat { transform-origin: 60px 124px; animation: breathe 3.6s ease-in-out infinite; }
 .kit-tail { animation: sway 2.8s ease-in-out infinite; }
 .kit-eyes { animation: eyes 5s infinite; }
-.kit-glow { opacity: .3; }
+.kit-glow { opacity: .18; }
 .kit-device .kit-glow { animation: glow 2.6s ease-in-out infinite; }
 .kit-cloud .kit-beacon path, .kit-cloud .kit-glow path { fill: var(--cloud); }
 .kit-cloud .kit-glow { animation: glow 1.2s ease-in-out infinite; }
