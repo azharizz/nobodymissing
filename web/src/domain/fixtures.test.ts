@@ -27,6 +27,9 @@ import { parseAndValidate, SCHEMAS } from './validate';
 import { mapRosterRows } from './rosterMapping';
 import { scoutStates } from './scout';
 import { chunk, join } from './courier';
+import { handAt, nearestHigher } from './regionPack';
+import pack from '../../../shared/regions/aceh-demo.json';
+import regionFx from '../../../shared/fixtures/regionPack.json';
 
 describe('priority', () => {
   for (const c of priorityFx.cases) it(c.name, () => {
@@ -97,4 +100,9 @@ describe('scout', () => {
 describe('courier', () => {
   for (const c of courierFx.cases) it(`chunk ${c.input.payload}`, () => expect(chunk(c.input.payload, c.input.size)).toEqual(c.expected));
   for (const c of courierFx.joinCases) it(`join ${c.input.join(',')}`, () => expect(join(c.input)).toBe(c.expected));
+});
+
+describe('regionPack', () => {
+  for (const c of regionFx.handCases) it(`HAND at ${c.input.lat},${c.input.lng}`, () => expect(handAt(pack, c.input.lat, c.input.lng)).toBe(c.expected));
+  for (const c of regionFx.higherCases) it('nearest higher shelter for this hazard', () => expect(nearestHigher(pack, c.input.lat, c.input.lng, c.input.event, rules.higherMinGainM)).toEqual(c.expected));
 });

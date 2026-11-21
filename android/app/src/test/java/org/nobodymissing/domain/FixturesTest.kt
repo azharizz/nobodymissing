@@ -153,4 +153,17 @@ class FixturesTest {
             assertEquals(c.expected.jsonPrimitive.contentOrNull, join(c.input.jsonArray.map { it.jsonPrimitive.content }))
         }
     }
+
+    @Test fun regionPack() {
+        val pack = Pack.from(load("regions/aceh-demo.json"))
+        for (c in cases("regionPack.json", "handCases")) {
+            val i = c.input.jsonObject
+            assertEquals(c.name(), c.expected.jsonPrimitive.doubleOrNull, handAt(pack, i.d("lat")!!, i.d("lng")!!))
+        }
+        for (c in cases("regionPack.json", "higherCases")) {
+            val i = c.input.jsonObject; val e = c.expected.jsonObject
+            assertEquals(HigherPlace(e.s("id")!!, e.s("name")!!, e.i("distanceM")!!.toLong(), e.s("direction")!!, e.d("handGain")!!),
+                nearestHigher(pack, i.d("lat")!!, i.d("lng")!!, i.s("event")!!, load("rules/defaults.json").d("higherMinGainM")!!))
+        }
+    }
 }

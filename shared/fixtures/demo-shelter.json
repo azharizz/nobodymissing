@@ -1,0 +1,32 @@
+{
+  "_notice": "SYNTHETIC DEMO DATA. All people are invented. Never put real evacuee data in this repo.",
+  "shelter": { "id": "SD3", "name": "Shelter SD 3", "regionPack": "aceh-demo" },
+  "people": [
+    { "id": "p-hasan", "nameAsWritten": "Pak Hasan Basri", "age": 82, "sex": "M", "flags": ["hard_of_hearing", "needs_meds", "elderly", "cant_walk"], "status": "safe" },
+    { "id": "p-rina", "nameAsWritten": "Ibu Rina Marlina", "age": 45, "sex": "F", "flags": ["deaf"], "status": "safe" },
+    { "id": "p-sari", "nameAsWritten": "Sari Wulandari", "age": 29, "sex": "F", "flags": ["needs_meds", "pregnant"], "status": "safe" },
+    { "id": "p-budi", "nameAsWritten": "Budi Santoso", "age": 38, "sex": "M", "flags": [], "status": "safe" },
+    { "id": "p-aminah", "nameAsWritten": "Siti Aminah", "age": 77, "sex": "F", "flags": ["elderly", "lives_alone"], "status": "safe" },
+    { "id": "p-dika", "nameAsWritten": "Dika", "age": 1, "sex": "M", "flags": ["infant"], "status": "safe" },
+    { "id": "p-yuki", "nameAsWritten": "Yuki Tanaka", "age": 31, "sex": "F", "flags": ["foreign_language"], "status": "safe" }
+  ],
+  "cards": [
+    { "personId": "p-hasan", "meds": [
+      { "nameAsWritten": "Lantus", "generic": "insulin glargine", "strength": "100 units/ml", "doseAsWritten": "10 units at night", "timesPerDay": 1, "qtyLeft": 1, "confirmedBy": "family" },
+      { "nameAsWritten": "Amlodipine 5mg", "generic": "amlodipine", "strength": "5 mg", "doseAsWritten": "1 tablet morning", "timesPerDay": 1, "qtyLeft": 2, "confirmedBy": "family" } ] },
+    { "personId": "p-sari", "meds": [
+      { "nameAsWritten": "Keppra 500", "generic": "levetiracetam", "strength": "500 mg", "doseAsWritten": "1 tablet", "timesPerDay": 2, "qtyLeft": 3, "confirmedBy": "self" } ] },
+    { "personId": "p-aminah", "meds": [
+      { "nameAsWritten": "Metformin", "generic": "metformin", "strength": "500 mg", "doseAsWritten": "1 tablet after meal", "timesPerDay": 2, "qtyLeft": 20, "confirmedBy": "self" } ] }
+  ],
+  "field": [
+    { "id": "f-nur", "name": "Nenek Nur", "location": { "lat": 4.2335, "lng": 98.0005 }, "lastContactAt": null,
+      "person": { "age": 88, "mobility": 3, "cantMiss": false, "dailyMeds": true, "alone": true, "hazard": {} } },
+    { "id": "f-ahmad", "name": "Pak Ahmad", "location": { "lat": 4.2420, "lng": 98.0120 }, "lastContactAt": "26h",
+      "person": { "age": 70, "mobility": 1, "cantMiss": true, "supplyDays": 4, "hazard": {} } },
+    { "id": "f-lina", "name": "Lina (wheelchair)", "location": null, "lastContactAt": null,
+      "person": { "age": 54, "mobility": 2, "hazard": {} } },
+    { "id": "f-umar", "name": "Umar", "location": { "lat": 4.2500, "lng": 98.0200 }, "lastContactAt": "2h",
+      "person": { "age": 66, "mobility": 0, "hazard": {} } }
+  ]
+}

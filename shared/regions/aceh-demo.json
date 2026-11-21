@@ -1,0 +1,25 @@
+{
+  "_notice": "SYNTHETIC demo region pack for an invented town near Aceh Tamiang. HAND values are illustrative, NOT real data. Real packs are built by tools/region-pack from Global HAND 30 m + Copernicus DEM 30 m (attribution: produced using Copernicus WorldDEM-30 (c) DLR e.V.) and OpenStreetMap (ODbL).",
+  "id": "aceh-demo",
+  "name": "Aceh demo town",
+  "source": { "hand": "synthetic (demo)", "date": "2026-11-21" },
+  "bbox": [97.99, 4.22, 98.03, 4.26],
+  "grid": { "origin": [97.99, 4.22], "step": 0.01, "cols": 4, "rows": 4,
+    "hand": [
+      [1.2, 1.8, 3.5, 6.0],
+      [1.5, 2.6, 4.8, 9.0],
+      [3.0, 4.2, 8.5, 12.0],
+      [5.5, 7.0, 11.0, 15.0]
+    ] },
+  "shelters": [
+    { "id": "SD3", "name": "SD 3 school hall", "lat": 4.2350, "lng": 98.0050, "hazards": ["earthquake"] },
+    { "id": "MSJ1", "name": "Masjid Al-Ikhlas", "lat": 4.2560, "lng": 98.0260, "hazards": ["flood", "earthquake"] },
+    { "id": "SD1", "name": "SD 1 school (2nd floor)", "lat": 4.2480, "lng": 98.0180, "hazards": ["flood"] }
+  ],
+  "places": [
+    { "kind": "medical", "name": "Health post", "lat": 4.2352, "lng": 98.0052 },
+    { "kind": "water", "name": "Water tank", "lat": 4.2348, "lng": 98.0047 },
+    { "kind": "toilet", "name": "Toilets", "lat": 4.2353, "lng": 98.0046 },
+    { "kind": "kitchen", "name": "Kitchen", "lat": 4.2349, "lng": 98.0054 }
+  ]
+}
