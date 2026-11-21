@@ -24,6 +24,9 @@ class Shared(private val read: (String) -> String) {
 
 data class UiPerson(val id: String, val name: String, val age: Int?, val flags: List<String>, val confirmed: Boolean, val needsReview: Boolean, val source: String)
 data class UiMed(val personId: String, val nameAsWritten: String, val match: DrugMatch, val strength: String?, val dose: String?, val timesPerDay: Int?, val qtyLeft: Int?, val generic: String?, val confirmedBy: String?)
+data class UiCard(val icon: String, val title: String, val time: String?, val place: String?)
+data class UiAnnouncement(val id: String, val text: String, val icons: List<String>, val cards: List<UiCard>, val source: String, val draft: Boolean, val shown: Boolean = false)
+data class UiField(val id: String, val name: String, val lat: Double?, val lng: Double?, val hoursSinceContact: Double?, val person: PriorityInput, val needsReview: Boolean = false)
 data class UiJob(val id: String, val type: String, val path: String, val payload: Map<String, Any?>, val createdAt: Long, var status: JobStatus = JobStatus("waiting", 0))
 
 /** FeatureFactory: wires every feature to its ports. Features never construct adapters. */
@@ -73,19 +76,58 @@ class Features(val adapters: Adapters, val shared: Shared) {
         if (s.shortages.isNotEmpty()) enqueue("med_shortage", "requests", mapOf("items" to s.shortages.map { mapOf("generic" to it.generic, "strength" to it.strength, "qty" to it.people) }))
     }
 
-    // F12-lite field check (demo entries from the synthetic shelter, hazard from the region pack)
-    fun fieldList(): List<Pair<String, RankedRow>> {
-        val entries = shared.demo["field"]!!.jsonArray.map { it.jsonObject }
-        val names = entries.associate { it.s("id")!! to it.s("name")!! }
-        val rows = entries.map { e ->
+    // F12-lite field check: entries from the synthetic demo + volunteer reports; hazard from the region pack
+    val field = mutableStateListOf<UiField>().apply {
+        shared.demo["field"]!!.jsonArray.map { it.jsonObject }.forEach { e ->
             val loc = e["location"] as? JsonObject
-            val p = PriorityInput.from(e["person"]!!.jsonObject.let { JsonObject(it + ("hazard" to JsonObject(emptyMap()))) })
-            val hazard = if (loc == null) Hazard(unknown = true) else Hazard(hand = handAt(shared.pack, loc.d("lat")!!, loc.d("lng")!!))
-            val hrs = e.s("lastContactAt")?.removeSuffix("h")?.toDoubleOrNull()
-            FieldRow(e.s("id")!!, null, p.copy(hazard = hazard, hoursSinceContact = hrs))
+            add(UiField(e.s("id")!!, e.s("name")!!, loc?.d("lat"), loc?.d("lng"), e.s("lastContactAt")?.removeSuffix("h")?.toDoubleOrNull(),
+                PriorityInput.from(JsonObject(e["person"]!!.jsonObject + ("hazard" to JsonObject(emptyMap()))))))
         }
+    }
+    fun fieldList(): List<Pair<String, RankedRow>> {
+        val rows = field.map { e ->
+            val hazard = if (e.lat == null || e.lng == null) Hazard(unknown = true) else Hazard(hand = handAt(shared.pack, e.lat, e.lng))
+            FieldRow(e.id, null, e.person.copy(hazard = hazard, hoursSinceContact = e.hoursSinceContact))
+        }
+        val names = field.associate { it.id to it.name }
         return sortFieldList(rows, rules.currentEvent, rules.fieldPriority).map { names.getValue(it.id) to it }
     }
+    suspend fun fieldReport(note: String, lat: Double?, lng: Double?, cloudOk: Boolean = false): RouteResult {
+        val r = router.run("field_report", text = note, staffApprovedCloud = cloudOk)
+        if (r.status == "ok" || r.status == "draft") {
+            val people = r.data!!.jsonObject["people"]!!.jsonArray.map { it.jsonObject }
+            people.forEach { p ->
+                val needs = p.strings("medicalNeeds").map { it.lowercase() }
+                val cantMiss = needs.any { n -> rules.cantMiss.keys.any { n.contains(it) } }
+                field += UiField(java.util.UUID.randomUUID().toString(), p.s("name")!!, lat, lng, 0.0,
+                    PriorityInput(age = p.i("age"), mobility = p.i("mobility") ?: 0, cantMiss = cantMiss, supplyDays = if (cantMiss) 0 else null, dailyMeds = !cantMiss && needs.isNotEmpty()), needsReview = true)
+            }
+            enqueue("field_report", "fieldReports", mapOf("note" to note, "lat" to lat, "lng" to lng, "people" to people.map { it.s("name") }))
+        }
+        return r
+    }
+
+    // F2 announcements: keyword icons at once (offline, exact), AI cards via the router; staff approve before showing.
+    val announcements = mutableStateListOf<UiAnnouncement>()
+    suspend fun announce(text: String, lang: String): UiAnnouncement {
+        val kw = keywordIcons(text, shared.keywords)
+        val r = router.run(if (lang == "id") "announcement_id" else "announcement", text = text)
+        val ai = if (r.status == "ok" || r.status == "draft") r.data!!.jsonObject["cards"]!!.jsonArray.map { it.jsonObject }
+            .map { UiCard(it.s("icon")!!, it.s("title")!!, it.s("time"), it.s("place")) } else null
+        val a = UiAnnouncement(java.util.UUID.randomUUID().toString(), text, kw.icons, ai ?: listOf(UiCard(kw.icons.firstOrNull() ?: "info", text.take(40), kw.times.firstOrNull(), kw.place)),
+            if (ai != null) r.source!! else "keywords", r.status == "draft")
+        announcements.add(0, a)
+        return a
+    }
+    fun approve(id: String) {
+        val i = announcements.indexOfFirst { it.id == id }; if (i < 0) return
+        announcements[i] = announcements[i].copy(shown = true)
+        val a = announcements[i]
+        enqueue("other", "shelters/SD3/announcements", mapOf("text" to a.text, "icons" to a.icons, "cards" to a.cards.map { mapOf("icon" to it.icon, "title" to it.title, "time" to it.time, "place" to it.place) }))
+    }
+
+    // F3 family search: this shelter only (minimal fields, D6)
+    fun familySearch(q: String) = familySearch(q, people.filter { it.confirmed }.map { PublicRec(it.id, it.name, it.age, "SD3", "safe") })
 
     // F2 offline keyword cards
     fun keywordCard(text: String) = keywordIcons(text, shared.keywords)

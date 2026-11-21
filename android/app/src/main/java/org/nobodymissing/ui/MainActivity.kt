@@ -100,7 +100,10 @@ fun CameraButton(label: String, onPhoto: (Bitmap) -> Unit) {
 fun People(f: Features) {
     val scope = rememberCoroutineScope()
     var last by remember { mutableStateOf<Pair<Bitmap, RouteResult>?>(null) }
+    var q by remember { mutableStateOf("") }
     Column {
+        OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth(), label = { Text("🔍 Family search (this shelter)") })
+        if (q.isNotBlank()) f.familySearch(q).forEach { Text("${it.name} · ${it.ageBand} · ${it.shelterId} · ${it.status}", fontWeight = FontWeight.Bold) }
         last?.let { (bmp, r) -> RouteNotice(r) { scope.launch { last = bmp to f.scanRoster(bmp, cloudOk = true) } } }
         LazyColumn(Modifier.weight(1f)) {
             items(f.people) { p ->
@@ -133,24 +136,52 @@ fun Medicine(f: Features) {
     }
 }
 
+private val ICON = mapOf("food" to "🍙", "water" to "💧", "medicine" to "💊", "doctor" to "🩺", "move" to "🚌", "warning" to "⚠️", "toilet" to "🚻", "info" to "ℹ️", "baby" to "🍼", "power" to "🔌")
+
+@Composable
+fun Badge(source: String, draft: Boolean) = Text(when { draft -> "⚠️ Needs review"; source == "device" -> "🏮 Device"; source == "cloud" -> "☁️ Cloud"; else -> "🔤 Keywords (no AI)" }, fontWeight = FontWeight.Bold)
+
 @Composable
 fun Announce(f: Features) {
+    val scope = rememberCoroutineScope()
     var text by remember { mutableStateOf("") }
-    val card = if (text.isBlank()) null else f.keywordCard(text)
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth(), label = { Text("Announcement") })
-        card?.let { Text("🔤 Keywords (no AI): ${it.icons.joinToString()} · ${it.times.joinToString()} · 📍 ${it.place ?: "-"}", fontSize = 22.sp) }
-        Text("Tell in person:", fontWeight = FontWeight.Bold)
-        f.people.filter { p -> p.confirmed && (p.flags.any { it in f.rules.reachFlags } || (p.age ?: 0) >= f.rules.reachAge) }.forEach { Text("• ${it.name}") }
+    var lang by remember { mutableStateOf("id") }
+    var busy by remember { mutableStateOf(false) }
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item {
+            OutlinedTextField(text, { text = it }, Modifier.fillMaxWidth(), label = { Text("Announcement (type or dictate)") })
+            Row { listOf("id" to "Bahasa", "en" to "English").forEach { (k, l) -> FilterChip(lang == k, { lang = k }, { Text(l) }) ; Spacer(Modifier.width(8.dp)) } }
+            Button({ busy = true; scope.launch { f.announce(text.trim(), lang); text = ""; busy = false } }, Modifier.fillMaxWidth().height(56.dp), enabled = text.isNotBlank() && !busy,
+                colors = ButtonDefaults.buttonColors(containerColor = Orange, contentColor = Color.Black)) { Text(if (busy) "…" else "✍️ Make cards", fontWeight = FontWeight.Bold) }
+        }
+        items(f.announcements) { a ->
+            OutlinedCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(12.dp)) {
+                Text("Original: “${a.text}”", color = Color.Gray); Badge(a.source, a.draft)
+                a.cards.forEach { c -> Text("${ICON[c.icon] ?: "ℹ️"} ${c.title}${c.time?.let { " · $it" } ?: ""}", fontSize = 26.sp, fontWeight = FontWeight.Bold); c.place?.let { Text("📍 $it", fontSize = 20.sp) } }
+                if (a.shown) Text("✅ Shown") else Button({ f.approve(a.id) }) { Text("➤ Show") }
+            } }
+        }
+        item { Text("Tell in person:", fontWeight = FontWeight.Bold) }
+        items(f.people.filter { p -> p.confirmed && (p.flags.any { it in f.rules.reachFlags } || (p.age ?: 0) >= f.rules.reachAge) }) { Text("• ${it.name} · ${it.flags.filter { fl -> fl in f.rules.reachFlags }.joinToString()}") }
     }
 }
 
 @Composable
-fun Field(f: Features) = LazyColumn {
-    items(f.fieldList()) { (name, r) ->
-        Column(Modifier.padding(vertical = 8.dp)) {
-            Text("${r.result.tier} · $name", fontWeight = FontWeight.Bold, color = if (r.result.tier == "P1") Danger else Color.Unspecified)
-            Text("Why: ${r.result.why.joinToString(" · ").ifEmpty { "—" }}")
+fun Field(f: Features) {
+    val scope = rememberCoroutineScope()
+    var note by remember { mutableStateOf("") }
+    var r by remember { mutableStateOf<RouteResult?>(null) }
+    LazyColumn {
+        items(f.fieldList()) { (name, row) ->
+            Column(Modifier.padding(vertical = 8.dp)) {
+                Text("${row.result.tier} · $name", fontWeight = FontWeight.Bold, color = if (row.result.tier == "P1") Danger else Color.Unspecified)
+                Text("Why: ${row.result.why.joinToString(" · ").ifEmpty { "—" }}")
+            }
+        }
+        item {
+            RouteNotice(r) { scope.launch { r = f.fieldReport(note, null, null, cloudOk = true) } }
+            OutlinedTextField(note, { note = it }, Modifier.fillMaxWidth(), label = { Text("Pak Hasan, 78, can't walk, needs insulin") })
+            Button({ scope.launch { r = f.fieldReport(note, null, null); if (r?.status == "ok") note = "" } }, Modifier.fillMaxWidth(), enabled = note.isNotBlank()) { Text("📝 Report") }
         }
     }
 }
