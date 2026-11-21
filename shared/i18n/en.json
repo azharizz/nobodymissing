@@ -24,8 +24,8 @@
   "map": "Map",
   "help": "Help",
   "family": "Family",
-  "noSignal": "Kit is holding the lantern: working on this device.",
-  "syncing": "Kit is carrying your list to the other shelters.",
+  "noSignal": "Kit's beacon is on: working on this device.",
+  "syncing": "Kit is driving your list to the other shelters.",
   "airplaneTip": "No signal here. Turn on airplane mode to save battery. I'll keep working, and the Scout phone will tell us when signal is back.",
   "signalBack": "Signal is back here! Bring devices to sync.",
   "sentOf": "Sent {sent} of {total} items. {waiting} waiting for the next signal.",
@@ -92,5 +92,7 @@
   "familySearchLocal": "Family search (this shelter)",
   "announcementHint": "Makan siang jam 12.00 di aula / Food at 3 pm at the gym entrance",
   "fieldHint": "Pak Hasan, 78, can't walk, water knee-high, needs insulin",
-  "emptyShelter": "No one registered yet. Scan the first list."
+  "emptyShelter": "No one registered yet. Scan the first list.",
+  "noNews": "No announcements yet.",
+  "days": "days"
 }

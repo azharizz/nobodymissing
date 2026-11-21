@@ -22,9 +22,9 @@ test('announcement: keyword card offline-safe, approve, Big Screen + public News
   await page.goto('/#/staff/announce');
   await page.locator('textarea').fill('Makan siang jam 12.00 di aula');
   await page.getByRole('button', { name: /Make cards/ }).click();
-  await expect(page.getByText('📍 aula').first()).toBeVisible();
+  await expect(page.locator('.kcard-place', { hasText: 'aula' }).first()).toBeVisible();
   await expect(page.getByText(/Tell in person: \d+ left/)).toBeVisible();
-  await page.getByRole('button', { name: /Show/ }).click();
+  await page.getByRole('button', { name: /^Show$/ }).click();
   await page.goto('/#/public/news');
   await expect(page.getByText(/12:00/).first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Read aloud' })).toBeVisible();
@@ -32,23 +32,23 @@ test('announcement: keyword card offline-safe, approve, Big Screen + public News
 
 test('medicine: can-miss alerts pinned and supply request queued', async ({ page }) => {
   await page.goto('/#/staff/medicine');
-  await expect(page.getByText(/Can't-miss: .*Pak Hasan Basri/)).toBeVisible();
+  await expect(page.locator('.card.danger', { hasText: 'Pak Hasan Basri' })).toContainText("Can't-miss");
   await page.getByRole('button', { name: /Request supplies/ }).click();
-  await expect(page.getByText(/Waiting \(2\)/)).toBeVisible();
+  await expect(page.locator('.chip', { hasText: 'Waiting' })).toContainText('2');
 });
 
 test('field check lists P1 first with reasons and a higher place', async ({ page }) => {
   await page.goto('/#/staff/field');
-  const first = page.locator('.card').first();
-  await expect(first).toContainText('P1');
-  await expect(first).toContainText('Why:');
+  const first = page.locator('.card.visit').first();
+  await expect(first.locator('.tier')).toHaveText('P1');
+  await expect(first.locator('.why .pill-tag').first()).toBeVisible();
   await expect(page.getByText(/Higher place:/).first()).toBeVisible();
 });
 
 test('public help request reaches the staff Today tab', async ({ page }) => {
   await page.goto('/#/public/help');
   await page.getByPlaceholder('Bed 12 / Area B').fill('Bed 7');
-  await page.getByRole('button', { name: /medicine/ }).click();
+  await page.getByRole('button', { name: 'medicine' }).click();
   await page.goto('/#/staff/today');
-  await expect(page.getByText(/medicine · 📍 Bed 7/)).toBeVisible();
+  await expect(page.locator('.card', { hasText: 'Bed 7' })).toContainText('medicine');
 });

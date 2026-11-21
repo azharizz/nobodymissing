@@ -24,8 +24,8 @@
   "map": "Peta",
   "help": "Bantuan",
   "family": "Keluarga",
-  "noSignal": "Kit memegang lentera: bekerja di perangkat ini.",
-  "syncing": "Kit membawa daftar ke posko lain.",
+  "noSignal": "Lampu Kit menyala: bekerja di perangkat ini.",
+  "syncing": "Kit mengantar daftar ke posko lain.",
   "airplaneTip": "Tidak ada sinyal. Nyalakan mode pesawat untuk hemat baterai. Kit tetap bekerja, HP Pengintai akan memberi tahu saat sinyal kembali.",
   "signalBack": "Sinyal kembali di sini! Bawa perangkat untuk sinkron.",
   "sentOf": "Terkirim {sent} dari {total}. {waiting} menunggu sinyal berikutnya.",
@@ -92,5 +92,7 @@
   "familySearchLocal": "Cari keluarga (posko ini)",
   "announcementHint": "Makan siang jam 12.00 di aula / Food at 3 pm at the gym entrance",
   "fieldHint": "Pak Hasan, 78, tidak bisa jalan, air selutut, perlu insulin",
-  "emptyShelter": "Belum ada yang terdaftar. Pindai daftar pertama."
+  "emptyShelter": "Belum ada yang terdaftar. Pindai daftar pertama.",
+  "noNews": "Belum ada pengumuman.",
+  "days": "hari"
 }
