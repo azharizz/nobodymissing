@@ -15,14 +15,17 @@ data class Adapters(val env: String, val inference: InferencePort, val sync: Syn
 
 /** AdapterFactory: prod (Firebase) / emulator (Emulator Suite) / test (fakes). The only place adapters are built. */
 object AdapterFactory {
-    fun create(context: Context, env: String = defaultEnv(context)): Adapters = when (env) {
+    fun create(context: Context, env: String = defaultEnv(context), shelterId: String = "SD3", role: String = "volunteer"): Adapters = when (env) {
         "test" -> Adapters(env, FakeInference("unavailable"), MemorySync(), FakeConnectivity(false))
         else -> {
             // App Check is required for AI Logic: debug provider in debug builds (register the token), Play Integrity in release.
             Firebase.appCheck.installAppCheckProviderFactory(
                 if (BuildConfig.DEBUG) DebugAppCheckProviderFactory.getInstance() else PlayIntegrityAppCheckProviderFactory.getInstance())
             if (env == "emulator") { Firebase.firestore.useEmulator("10.0.2.2", 8080); Firebase.auth.useEmulator("10.0.2.2", 9099) }
-            Firebase.auth.signInAnonymously() // silent, no login screen (D14)
+            // Silent sign-in (D14), then join the shelter as a member so Firestore rules accept staff writes.
+            Firebase.auth.signInAnonymously().addOnSuccessListener { r ->
+                Firebase.firestore.document("shelters/$shelterId/members/${r.user!!.uid}").set(mapOf("role" to role, "joinedAt" to System.currentTimeMillis()))
+            }
             Adapters(env, FirebaseAiLogicInference(), FirestoreSync(), HttpConnectivity())
         }
     }
