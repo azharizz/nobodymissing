@@ -5,7 +5,7 @@ import { createFeatures } from './features/featureFactory';
 import type { Env } from './ports';
 import { App } from './ui/App';
 import { demoState, refreshDemoLocations } from './demo/seed';
-import { FeaturesCtx } from './ui/common';
+import { FeaturesCtx, loadQrLibs } from './ui/common';
 import './ui/styles.css';
 
 const env: Env = import.meta.env.VITE_USE_EMULATOR === 'true' ? 'emulator' : import.meta.env.VITE_FIREBASE_API_KEY ? 'prod' : 'demo';
@@ -76,3 +76,5 @@ if (await HubSync.available()) {
 }
 
 createRoot(document.getElementById('root')!).render(<FeaturesCtx.Provider value={features}><App /></FeaturesCtx.Provider>);
+// After first paint: fetch the QR libraries so they are cached for offline scanning.
+setTimeout(() => { loadQrLibs().catch(() => {}); }, 1500);

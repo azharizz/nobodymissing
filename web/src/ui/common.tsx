@@ -1,6 +1,4 @@
 import { createContext, useContext, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
-import QRCode from 'qrcode';
-import jsQR from 'jsqr';
 import iconSet from '../../../shared/icons/icons.json';
 import kit from '../../../shared/mascot/kit.json';
 import type { Features } from '../features/featureFactory';
@@ -100,6 +98,8 @@ export function PhotoPick({ label, onPhoto, className = 'btn', children }: { lab
   );
 }
 
+/** QR libraries load after first paint (main.tsx prefetches them so the service worker has them offline). */
+export const loadQrLibs = () => Promise.all([import('qrcode'), import('jsqr')]);
 const qrCache = new Map<string, string>();
 const qrPending = new Set<string>();
 export function QR({ text, size = 180, label }: { text: string; size?: number; label: string }) {
@@ -107,7 +107,7 @@ export function QR({ text, size = 180, label }: { text: string; size?: number; l
   const url = qrCache.get(text);
   if (!url && !qrPending.has(text)) {
     qrPending.add(text);
-    QRCode.toDataURL(text, { width: size, margin: 1, color: { dark: '#14161A', light: '#FFFFFF' } }).then(u => { qrCache.set(text, u); rerender(n => n + 1); }).catch(() => {});
+    import('qrcode').then(m => m.default.toDataURL(text, { width: size, margin: 1, color: { dark: '#14161A', light: '#FFFFFF' } })).then(u => { qrCache.set(text, u); rerender(n => n + 1); }).catch(() => {});
   }
   return url ? <img className="qr" src={url} width={size} height={size} alt={label} /> : <div className="qr" style={{ width: size, height: size, background: '#fff' }} aria-label={label} />;
 }
@@ -182,11 +182,12 @@ export function QrScanner({ onText }: { onText: (text: string) => boolean }) {
   const [noCam, setNoCam] = useState(false);
   const attach = (v: HTMLVideoElement | null) => {
     if (!v) return;
-    let stream: MediaStream | null = null, stop = false, last = '';
+    let stream: MediaStream | null = null, stop = false, last = '', jsQR: typeof import('jsqr').default | null = null;
+    import('jsqr').then(m => { jsQR = m.default; });
     const c = document.createElement('canvas'), ctx = c.getContext('2d', { willReadFrequently: true })!;
     const loop = () => {
       if (stop) return;
-      if (v.videoWidth) {
+      if (v.videoWidth && jsQR) {
         c.width = v.videoWidth; c.height = v.videoHeight; ctx.drawImage(v, 0, 0);
         const code = jsQR(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height);
         if (code?.data && code.data !== last) { last = code.data; if (onText(code.data)) return; }
