@@ -3,8 +3,10 @@ import type { Mode } from '../domain/router';
 import type { Schema } from '../domain/validate';
 
 export type ImageInput = { mimeType: 'image/jpeg' | 'image/png'; base64: string };
-export type InferenceRequest = { task: string; prompt: string; text?: string; image?: ImageInput; schema: Schema; mode: Mode; model: string };
-export type InferenceResult = { raw: string; source: 'device' | 'cloud' };
+export type GroundingPlace = { title?: string; uri?: string; placeId?: string };
+/** grounding 'maps' = Grounding with Google Maps (cloud only), near `location` (already rounded by the caller). */
+export type InferenceRequest = { task: string; prompt: string; text?: string; image?: ImageInput; schema: Schema; mode: Mode; model: string; grounding?: 'maps'; location?: { lat: number; lng: number } };
+export type InferenceResult = { raw: string; source: 'device' | 'cloud'; places?: GroundingPlace[] };
 
 /** Firebase AI Logic only (D11). onDeviceStatus: 'no_api' | 'available' | 'downloadable' | 'downloading' | 'unavailable'. */
 export interface InferencePort {

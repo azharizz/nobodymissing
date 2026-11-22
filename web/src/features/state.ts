@@ -14,7 +14,14 @@ export type MedEntry = {
   nameAsWritten: string; strength: string | null; doseAsWritten: string | null; timesPerDay: number | null; qtyLeft: number | null;
   match: DrugMatch; generic: string | null; confirmedBy: 'self' | 'family' | 'staff' | 'medic' | null; inferredBy?: 'device' | 'cloud';
 };
-export type CareCard = { personId: string; meds: MedEntry[]; conditions?: string[]; allergies?: string[] };
+export type MedCheck = {
+  items: { name: string; generic: string | null; alsoKnownAs?: string[]; swaps?: string[]; cantMiss?: boolean; note?: string | null }[];
+  interactions: { a: string; b: string; severity: 'low' | 'moderate' | 'high'; note?: string | null }[];
+  cross: { name: string; offline: string | null; status: 'agree' | 'mismatch' | 'cloud_only' | 'offline_only' | 'unknown' }[];
+  source: 'cloud'; at: number; pending: boolean;
+};
+export type OpenPlace = { name: string; kind?: string | null; distanceKm?: number | null; openNow?: boolean | null; hours?: string | null; note?: string | null; uri: string | null; placeId: string | null };
+export type CareCard = { personId: string; meds: MedEntry[]; conditions?: string[]; allergies?: string[]; check?: MedCheck };
 export type Announcement = {
   id: string; text: string; lang: 'en' | 'id'; icons: string[]; times: string[]; place: string | null;
   cards: { icon: string; title: string; time?: string | null; place?: string | null; detail?: string | null }[] | null;
@@ -27,7 +34,7 @@ export type FieldEntry = {
   needsReview?: boolean;
 };
 export type Job = { id: string; type: string; payload: unknown; path: string | null; createdAt: number; state: JobState; retries: number };
-export type Help = { id: string; kind: string; spot: string; at: number; done: boolean };
+export type Help = { id: string; kind: string; spot: string; at: number; done: boolean; text?: string };
 export type BatchItem = { id: string; kind: 'roster' | 'med'; personId?: string; image: ImageInput; approved: boolean };
 
 export type State = {
@@ -35,13 +42,14 @@ export type State = {
   announcements: Announcement[]; field: FieldEntry[]; jobs: Job[]; help: Help[]; batch: BatchItem[];
   privateMode: boolean; signal: SignalState; scoutRun: number; scoutAlert: boolean; lastSignalAt: number | null;
   lang: 'en' | 'id'; volunteerPos: { lat: number; lng: number } | null;
+  open: { need: string; places: OpenPlace[]; at: number; pending: boolean } | null;
 };
 
 /** A real shelter starts empty: people come from scanned lists, never from bundled data. */
 export function initialState(): State {
   return {
     shelter: { id: 'shelter-1', name: 'Shelter' }, people: [], cards: [], round: {}, announcements: [], field: [], jobs: [], help: [], batch: [],
-    privateMode: false, signal: 'no_signal', scoutRun: 0, scoutAlert: false, lastSignalAt: null, lang: 'en', volunteerPos: null,
+    privateMode: false, signal: 'no_signal', scoutRun: 0, scoutAlert: false, lastSignalAt: null, lang: 'en', volunteerPos: null, open: null,
   };
 }
 

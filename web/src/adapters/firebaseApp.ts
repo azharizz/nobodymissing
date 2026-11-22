@@ -44,5 +44,7 @@ export async function loadRemoteRules(app: FirebaseApp): Promise<{ rules: Rules;
   rc.settings.minimumFetchIntervalMillis = import.meta.env.DEV ? 0 : 3_600_000;
   try { await fetchAndActivate(rc); } catch { /* offline: defaults */ }
   const parse = <T,>(k: string, fallback: T): T => { try { return JSON.parse(getValue(rc, k).asString()) as T; } catch { return fallback; } };
-  return { rules: { ...defaults, ...parse('rules', defaults) }, prompts: parse('promptPack', pack).tasks };
+  // Key-by-key merge: an older published template must not drop tasks added since (policy + prompts).
+  const r = parse('rules', defaults);
+  return { rules: { ...defaults, ...r, routerPolicy: { ...defaults.routerPolicy, ...r.routerPolicy } }, prompts: { ...pack.tasks, ...parse('promptPack', pack).tasks } };
 }

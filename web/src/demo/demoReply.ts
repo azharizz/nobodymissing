@@ -17,7 +17,20 @@ export function demoReply(r: InferenceRequest): InferenceResult {
     announcement: JSON.stringify({ cards: [{ icon: /water|air/i.test(t) ? 'water' : /medic|obat/i.test(t) ? 'medicine' : 'food', title: t.split(/[.,!]/)[0].slice(0, 30), time: /(\d{1,2})[.:](\d{2})/.exec(t)?.[0].replace('.', ':') ?? null, place: null, detail: null }] }),
     translate: JSON.stringify({ text: t }),
     supply_request: JSON.stringify({ items: [], note: 'Demo note' }),
+    med_check: JSON.stringify({ items: [
+      { name: 'insulin glargine', generic: 'insulin glargine', alsoKnownAs: ['Lantus', 'Basaglar'], swaps: ['insulin detemir', 'NPH insulin'], cantMiss: true, note: 'Keep cool; never skip.' },
+      { name: 'amlodipine', generic: 'amlodipine', alsoKnownAs: ['Norvasc', 'Tensivask'], swaps: ['nifedipine (long-acting)'], cantMiss: false, note: null } ],
+      interactions: [] }),
+    find_open: JSON.stringify({ places: [{ name: 'Apotek Sehat Keluarga', kind: 'pharmacy', distanceKm: 1.2, openNow: true, hours: 'until 21:00', note: null }, { name: 'Puskesmas Kota (demo)', kind: 'health post', distanceKm: 2.4, openNow: true, hours: '24 hours', note: null }] }),
+    ask_kit: (() => {
+      // Demo: pick the notice sharing a word with the question (the real model reads them in any language).
+      const words = t.toLowerCase().split(/\W+/).filter(w => w.length > 3 && !['when', 'what', 'where', 'does', 'will', 'there'].includes(w));
+      const hit = [...r.prompt.matchAll(/id=(\S+) text=([^\n]*)/g)].find(m => words.some(w => m[2].toLowerCase().includes(w)));
+      return JSON.stringify(hit ? { cardId: hit[1], answer: hit[2].replace(/ \(said:.*$/, '') } : { cardId: null, answer: 'Please ask a volunteer.' });
+    })(),
   };
   raw.announcement_id = raw.announcement;
-  return { raw: raw[r.task] ?? '{}', source };
+  // Demo grounding: the canned places come back as if Google Maps returned them.
+  const places = r.task === 'find_open' ? [{ title: 'Apotek Sehat Keluarga', uri: 'https://maps.google.com/?q=Apotek+Sehat+Keluarga' }, { title: 'Puskesmas Kota (demo)', uri: 'https://maps.google.com/?q=Puskesmas' }] : undefined;
+  return { raw: raw[r.task] ?? '{}', source, places };
 }

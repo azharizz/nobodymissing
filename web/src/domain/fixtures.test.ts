@@ -106,3 +106,19 @@ describe('regionPack', () => {
   for (const c of regionFx.handCases) it(`HAND at ${c.input.lat},${c.input.lng}`, () => expect(handAt(pack, c.input.lat, c.input.lng)).toBe(c.expected));
   for (const c of regionFx.higherCases) it('nearest higher shelter for this hazard', () => expect(nearestHigher(pack, c.input.lat, c.input.lng, c.input.event, rules.higherMinGainM)).toEqual(c.expected));
 });
+
+import hybridFx from '../../../shared/fixtures/hybrid.json';
+import { askKitAnswer, coarseLocation, crossCheck, groundedPlaces, medCheckInput } from './hybrid';
+describe('hybrid AI safety contracts (shared fixtures)', () => {
+  it('medicine check input is a whitelist: no names, beds or photos', () => {
+    for (const c of hybridFx.medCheckInput) {
+      const out = medCheckInput(c.input.meds as any);
+      expect(out, c.name).toEqual(c.expected);
+      expect(JSON.stringify(out)).not.toMatch(/Hasan|Bed 4|base64/);
+    }
+  });
+  it('location is rounded before it leaves', () => { for (const c of hybridFx.coarseLocation) expect(coarseLocation(c.input.lat, c.input.lng, c.input.decimals)).toEqual(c.expected); });
+  it('cloud generic names are cross-checked against the offline list', () => { for (const c of hybridFx.crossCheck) expect(crossCheck(c.input.items, drugs.drugs), c.name).toEqual(c.expected); });
+  it('only Google Maps places survive', () => { for (const c of hybridFx.groundedPlaces) expect(groundedPlaces(c.input.places as any, c.input.chunks).map(p => ({ name: p.name, uri: p.uri })), c.name).toEqual(c.expected); });
+  it('Ask Kit answers must cite a real card', () => { for (const c of hybridFx.askKit) expect(askKitAnswer(c.input.result, c.input.cardIds), c.name).toEqual(c.expected); });
+});

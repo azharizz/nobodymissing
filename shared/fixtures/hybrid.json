@@ -1,0 +1,200 @@
+{
+  "_comment": "Hybrid AI safety contracts (medicine check, find open, Ask Kit). Same cases run in Vitest and JUnit.",
+  "medCheckInput": [
+    {
+      "name": "names, beds and photos never leave",
+      "input": {
+        "meds": [
+          {
+            "nameAsWritten": "Lantus",
+            "strength": "100 units/ml",
+            "doseAsWritten": "10 unit malam",
+            "generic": "insulin glargine",
+            "confirmedBy": "family",
+            "personName": "Pak Hasan Basri",
+            "bed": "Bed 4",
+            "photo": "data:image/jpeg;base64,AAAA"
+          },
+          {
+            "nameAsWritten": "Amlodipin 5 mg",
+            "strength": "5 mg",
+            "doseAsWritten": "1 x 1",
+            "generic": null,
+            "confirmedBy": null
+          }
+        ]
+      },
+      "expected": {
+        "meds": [
+          {
+            "name": "insulin glargine",
+            "strength": "100 units/ml"
+          },
+          {
+            "name": "Amlodipin 5 mg",
+            "strength": "5 mg"
+          }
+        ]
+      }
+    }
+  ],
+  "coarseLocation": [
+    {
+      "input": {
+        "lat": 5.55412,
+        "lng": 95.31791,
+        "decimals": 2
+      },
+      "expected": {
+        "lat": 5.55,
+        "lng": 95.32
+      }
+    },
+    {
+      "input": {
+        "lat": -6.20005,
+        "lng": 106.84499,
+        "decimals": 2
+      },
+      "expected": {
+        "lat": -6.2,
+        "lng": 106.84
+      }
+    }
+  ],
+  "crossCheck": [
+    {
+      "name": "cloud generic agrees with offline list, unknown stays unknown, disagreement is flagged",
+      "input": {
+        "items": [
+          {
+            "name": "Lantus",
+            "generic": "insulin glargine"
+          },
+          {
+            "name": "Amlodipin 5 mg",
+            "generic": "amlodipine"
+          },
+          {
+            "name": "Glucophage",
+            "generic": "glibenclamide"
+          },
+          {
+            "name": "Zzyx",
+            "generic": "made-up-ol"
+          }
+        ]
+      },
+      "expected": [
+        {
+          "name": "Lantus",
+          "offline": "insulin glargine",
+          "status": "agree"
+        },
+        {
+          "name": "Amlodipin 5 mg",
+          "offline": "amlodipine",
+          "status": "agree"
+        },
+        {
+          "name": "Glucophage",
+          "offline": "metformin",
+          "status": "mismatch"
+        },
+        {
+          "name": "Zzyx",
+          "offline": null,
+          "status": "cloud_only"
+        }
+      ]
+    }
+  ],
+  "groundedPlaces": [
+    {
+      "name": "only places Google Maps returned survive",
+      "input": {
+        "places": [
+          {
+            "name": "Apotek Kimia Farma Peunayong",
+            "distanceKm": 1.2,
+            "openNow": true
+          },
+          {
+            "name": "Invented Clinic",
+            "openNow": true
+          }
+        ],
+        "chunks": [
+          {
+            "title": "Apotek Kimia Farma - Peunayong",
+            "uri": "https://maps.google.com/?cid=1",
+            "placeId": "places/abc"
+          }
+        ]
+      },
+      "expected": [
+        {
+          "name": "Apotek Kimia Farma Peunayong",
+          "uri": "https://maps.google.com/?cid=1"
+        }
+      ]
+    },
+    {
+      "name": "no grounding chunks means nothing is shown",
+      "input": {
+        "places": [
+          {
+            "name": "Apotek A"
+          }
+        ],
+        "chunks": []
+      },
+      "expected": []
+    }
+  ],
+  "askKit": [
+    {
+      "name": "valid card id is kept",
+      "input": {
+        "result": {
+          "cardId": "a1",
+          "answer": "Lunch is at 12:00 in the hall."
+        },
+        "cardIds": [
+          "a1",
+          "a2"
+        ]
+      },
+      "expected": {
+        "answer": "Lunch is at 12:00 in the hall.",
+        "cardId": "a1"
+      }
+    },
+    {
+      "name": "unknown card id is discarded",
+      "input": {
+        "result": {
+          "cardId": "zz",
+          "answer": "The bus leaves at 9."
+        },
+        "cardIds": [
+          "a1"
+        ]
+      },
+      "expected": null
+    },
+    {
+      "name": "null card id is discarded",
+      "input": {
+        "result": {
+          "cardId": null,
+          "answer": "Please ask a volunteer."
+        },
+        "cardIds": [
+          "a1"
+        ]
+      },
+      "expected": null
+    }
+  ]
+}

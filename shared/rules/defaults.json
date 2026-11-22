@@ -117,6 +117,28 @@
       "cloudOnly": true,
       "schema": "request",
       "model": "cloudAccurate"
+    },
+    "med_check": {
+      "sensitive": false,
+      "cloudOnly": true,
+      "schema": "medCheck",
+      "model": "cloudAccurate",
+      "_comment": "Input is drug names + strengths only, built by code (domain medCheckInput). Never names, beds or photos."
+    },
+    "find_open": {
+      "sensitive": false,
+      "cloudOnly": true,
+      "schema": "findOpen",
+      "model": "cloudAccurate",
+      "grounding": "maps",
+      "_comment": "Grounding with Google Maps. Location is rounded (findOpen.precisionDecimals) before it leaves the device."
+    },
+    "ask_kit": {
+      "sensitive": false,
+      "cloudOnly": false,
+      "schema": "askKit",
+      "model": "cloudLite",
+      "_comment": "Answers only from today's shown notices; an answer without a valid cardId is discarded."
     }
   },
   "fieldPriority": {
@@ -141,5 +163,13 @@
     "p1": 9,
     "p2": 5
   },
-  "higherMinGainM": 2
+  "higherMinGainM": 2,
+  "findOpen": {
+    "precisionDecimals": 2,
+    "needs": [
+      "pharmacy",
+      "dialysis",
+      "health_post"
+    ]
+  }
 }

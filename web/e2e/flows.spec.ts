@@ -1,54 +1,92 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => { await page.goto('/'); await page.evaluate(() => localStorage.clear()); });
+const PNG = { name: 'list.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') };
+/** Demo Scout: real connectivity checks until the signal is "back" (the full-screen alert). */
+async function signalBack(page: Page) {
+  await page.goto('/#/staff/now');
+  for (let i = 0; i < 5 && !(await page.locator('.scout').count()); i++) { await page.locator('.signal').click(); await page.waitForTimeout(700); }
+  await page.getByRole('button', { name: 'Got it' }).click();
+}
 
-test('Today shows the shelter tiles and demo label', async ({ page }) => {
-  await page.goto('/#/staff/today');
-  await expect(page.getByText('DEMO: canned AI, no Firebase')).toBeVisible();
-  await expect(page.getByText("Can't-miss")).toBeVisible();
-  await expect(page.getByText('P1 visits')).toBeVisible();
+test('Now: the three numbers and the can\'t-miss task', async ({ page }) => {
+  await page.goto('/#/staff/now');
+  await expect(page.locator('.stat', { hasText: "Can't-miss" })).toContainText('2');
+  await expect(page.locator('.task', { hasText: 'Pak Hasan Basri' }).first()).toContainText("Can't-miss");
 });
 
-test('roster scan with no on-device AI: asks staff first; with no signal the photo waits in the batch', async ({ page }) => {
-  await page.goto('/#/staff/people');
-  await page.locator('input[type=file]').setInputFiles({ name: 'list.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
+test('camera LIST with no on-device AI: asks staff first; with no signal the photo waits in the batch', async ({ page }) => {
+  await page.goto('/#/staff/camera');
+  await page.locator('.shutter input[type=file], .thumbs input[type=file]').first().setInputFiles(PNG);
   await expect(page.getByText(/Send this to the cloud\?/)).toBeVisible();
   await page.getByRole('button', { name: /Send to cloud/ }).click();
   await expect(page.getByText(/Kit will send this when the signal comes back/)).toBeVisible();
+  await page.getByRole('button', { name: 'Now' }).click(); // photos stay in memory only, so no reload
   await expect(page.getByText(/1 photo\(s\) waiting/)).toBeVisible();
 });
 
-test('announcement: keyword card offline-safe, approve, Big Screen + public News show it', async ({ page }) => {
+test('announcement: keyword card offline-safe, show everyone, evacuee home + Big Screen show it', async ({ page }) => {
   await page.goto('/#/staff/announce');
   await page.locator('textarea').fill('Makan siang jam 12.00 di aula');
   await page.getByRole('button', { name: /Make cards/ }).click();
-  await expect(page.locator('.kcard-place', { hasText: 'aula' }).first()).toBeVisible();
-  await expect(page.getByText(/Tell in person: \d+ left/)).toBeVisible();
-  await page.getByRole('button', { name: /^Show$/ }).click();
-  await page.goto('/#/public/news');
-  await expect(page.getByText(/12:00/).first()).toBeVisible();
+  await expect(page.locator('.mini-news')).toContainText('aula');
+  await expect(page.getByText(/\d+ to tell in person/)).toBeVisible();
+  await page.getByRole('button', { name: /Show everyone/ }).click();
+  await page.goto('/#/public');
+  await expect(page.locator('.news')).toContainText('12:00');
   await expect(page.getByRole('button', { name: 'Read aloud' })).toBeVisible();
+  await page.goto('/#/big');
+  await expect(page.locator('.tv-news')).toContainText('12:00');
 });
 
-test('medicine: can-miss alerts pinned and supply request queued', async ({ page }) => {
-  await page.goto('/#/staff/medicine');
-  await expect(page.locator('.card.danger', { hasText: 'Pak Hasan Basri' })).toContainText("Can't-miss");
+test('medicine round: can\'t-miss pinned and supply request queued', async ({ page }) => {
+  await page.goto('/#/staff/round');
+  await expect(page.locator('.task.urgent', { hasText: 'Pak Hasan Basri' })).toContainText("Can't-miss");
   await page.getByRole('button', { name: /Request supplies/ }).click();
-  await expect(page.locator('.chip', { hasText: 'Waiting' })).toContainText('2');
+  await page.goto('/#/staff/now');
+  await expect(page.locator('.signal')).toContainText('2 waiting');
 });
 
-test('field check lists P1 first with reasons and a higher place', async ({ page }) => {
-  await page.goto('/#/staff/field');
-  const first = page.locator('.card.visit').first();
-  await expect(first.locator('.tier')).toHaveText('P1');
-  await expect(first.locator('.why .pill-tag').first()).toBeVisible();
+test('map: visit-first person with reasons and a higher place', async ({ page }) => {
+  await page.goto('/#/staff/map');
+  await expect(page.locator('.sheet .prio')).toHaveText('VISIT FIRST');
+  await expect(page.locator('.sheet .risk .pill').first()).toBeVisible();
   await expect(page.getByText(/Higher place:/).first()).toBeVisible();
 });
 
-test('public help request reaches the staff Today tab', async ({ page }) => {
+test('evacuee help request reaches the staff Now list', async ({ page }) => {
   await page.goto('/#/public/help');
-  await page.getByPlaceholder('Bed 12 / Area B').fill('Bed 7');
-  await page.getByRole('button', { name: 'medicine' }).click();
-  await page.goto('/#/staff/today');
-  await expect(page.locator('.card', { hasText: 'Bed 7' })).toContainText('medicine');
+  await page.getByPlaceholder('Bed 12 · Hall A').fill('Bed 7');
+  await page.getByRole('button', { name: 'Medicine' }).click();
+  await expect(page.getByText(/A volunteer is coming to Bed 7/)).toBeVisible();
+  await page.goto('/#/staff/now');
+  await expect(page.locator('.task', { hasText: 'Bed 7' })).toContainText('Medicine');
+});
+
+test('medicine check + find it open: wait offline, run with names kept on the phone when signal returns', async ({ page }) => {
+  await page.goto('/#/staff/person/p-hasan');
+  await page.getByRole('button', { name: /Check medicines/ }).click();
+  await expect(page.getByText(/Waiting for signal/)).toBeVisible();
+  await signalBack(page);
+  await page.goto('/#/staff/person/p-hasan');
+  await expect(page.getByText('Matches the offline list').first()).toBeVisible();
+  await expect(page.getByText(/For a pharmacist to confirm/)).toBeVisible();
+  await page.getByRole('button', { name: 'Pharmacy' }).click();
+  await expect(page.locator('.place', { hasText: 'Apotek Sehat Keluarga' })).toContainText('Open now');
+  await expect(page.getByRole('link', { name: 'Open in Google Maps' }).first()).toBeVisible();
+});
+
+test('Ask Kit answers from today\'s notice, or sends them to a volunteer', async ({ page }) => {
+  await page.goto('/#/staff/announce');
+  await page.locator('textarea').fill('Lunch at 12.00 in the hall');
+  await page.getByRole('button', { name: /Make cards/ }).click();
+  await page.getByRole('button', { name: /Show everyone/ }).click();
+  await signalBack(page);
+  await page.goto('/#/public/ask');
+  await page.locator('textarea').fill('When is lunch?');
+  await page.getByRole('button', { name: 'Ask', exact: true }).click();
+  await expect(page.locator('.answer')).toContainText("From today's notice");
+  await page.locator('textarea').fill('When does the bus leave?');
+  await page.getByRole('button', { name: 'Ask', exact: true }).click();
+  await expect(page.locator('.answer')).toContainText('Please ask a volunteer');
 });

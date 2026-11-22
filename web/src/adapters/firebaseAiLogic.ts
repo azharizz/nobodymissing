@@ -24,9 +24,13 @@ export class FirebaseAiLogicInference implements InferencePort {
 
   async generate(r: InferenceRequest) {
     // A new model per call is cheap; the SDK creates a new on-device session per call anyway.
+    // Grounding with Google Maps (cloud only): no JSON mode with tools; the text is parsed + schema-validated by the router.
+    const maps = r.grounding === 'maps';
     const model = getGenerativeModel(this.ai, {
       mode: r.mode,
-      inCloudParams: { model: r.model, generationConfig: { responseMimeType: 'application/json', responseJsonSchema: r.schema as Record<string, unknown> } },
+      inCloudParams: maps
+        ? { model: r.model, tools: [{ googleMaps: {} }], toolConfig: r.location ? { retrievalConfig: { latLng: { latitude: r.location.lat, longitude: r.location.lng } } } : undefined }
+        : { model: r.model, generationConfig: { responseMimeType: 'application/json', responseJsonSchema: r.schema as Record<string, unknown> } },
       onDeviceParams: {
         createOptions: { expectedInputs: r.image ? [{ type: 'text' }, { type: 'image' }] : [{ type: 'text' }] },
         promptOptions: { responseConstraint: r.schema },
@@ -35,6 +39,7 @@ export class FirebaseAiLogicInference implements InferencePort {
     const parts: Part[] = [{ type: 'text', text: r.text ? `${r.prompt}\n\n${r.text}` : r.prompt }];
     if (r.image) parts.push({ type: 'inlineData', inlineData: { mimeType: r.image.mimeType, data: r.image.base64 } });
     const { response } = await model.generateContent(parts);
-    return { raw: response.text(), source: response.inferenceSource === InferenceSource.ON_DEVICE ? 'device' as const : 'cloud' as const };
+    const places = response.candidates?.[0]?.groundingMetadata?.groundingChunks?.flatMap(c => (c.maps ? [{ title: c.maps.title, uri: c.maps.uri, placeId: c.maps.placeId }] : []));
+    return { raw: response.text(), source: response.inferenceSource === InferenceSource.ON_DEVICE ? 'device' as const : 'cloud' as const, places };
   }
 }

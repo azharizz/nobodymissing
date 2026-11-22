@@ -3,16 +3,16 @@
 import pack from '../../../shared/prompts/pack.json';
 import { decide, isOnDeviceReady, type Mode, type TaskPolicy } from '../domain/router';
 import { parseAndValidate, SCHEMAS } from '../domain/validate';
-import type { ImageInput, InferencePort, InferenceResult } from '../ports';
+import type { GroundingPlace, ImageInput, InferencePort, InferenceResult } from '../ports';
 
 export type RouteStatus = 'ok' | 'draft' | 'ask_staff' | 'queued' | 'blocked' | 'invalid' | 'error';
-export type RouteResult<T = any> = { status: RouteStatus; data?: T; source?: 'device' | 'cloud'; errors?: string[] };
+export type RouteResult<T = any> = { status: RouteStatus; data?: T; source?: 'device' | 'cloud'; errors?: string[]; places?: GroundingPlace[] };
 export type RouterRules = {
   routerPolicy: Record<string, TaskPolicy>; accuracyBarPoints: number; models: Record<string, string>;
   timeouts: { deviceMs: number; cloudMs: number };
 };
 type Ctx = () => { online: boolean; privateMode: boolean };
-type Input = { text?: string; image?: ImageInput; vars?: Record<string, string> };
+type Input = { text?: string; image?: ImageInput; vars?: Record<string, string>; location?: { lat: number; lng: number } };
 
 class Timeout extends Error {}
 const withTimeout = <T,>(p: Promise<T>, ms: number) =>
@@ -37,7 +37,8 @@ export function createInferenceRouter(inference: InferencePort, rules: RouterRul
   async function callModel(task: string, policy: TaskPolicy, mode: Mode, input: Input, model: string): Promise<InferenceResult> {
     let prompt = prompts[task] ?? '';
     for (const [k, v] of Object.entries(input.vars ?? {})) prompt = prompt.replace(`{${k}}`, v);
-    const req = { task, prompt, text: input.text, image: input.image, schema: SCHEMAS[policy.schema], mode, model };
+    const grounding = policy.grounding === 'maps' ? 'maps' as const : undefined;
+    const req = { task, prompt, text: input.text, image: input.image, schema: SCHEMAS[policy.schema], mode, model, grounding, location: input.location };
     const isDevice = mode === 'only_on_device' || mode === 'prefer_on_device';
     return withTimeout(inference.generate(req), isDevice ? rules.timeouts.deviceMs : rules.timeouts.cloudMs);
   }
@@ -68,7 +69,7 @@ export function createInferenceRouter(inference: InferencePort, rules: RouterRul
     counts[res.source]++;
     const v = parseAndValidate<T>(res.raw, SCHEMAS[policy.schema]);
     if (!v.valid) return { status: 'invalid', source: res.source, errors: v.errors };
-    return { status: d.action === 'device_draft' ? 'draft' : 'ok', data: v.value, source: res.source };
+    return { status: d.action === 'device_draft' ? 'draft' : 'ok', data: v.value, source: res.source, places: res.places };
   }
 
   return { run, counts: () => ({ ...counts }) };

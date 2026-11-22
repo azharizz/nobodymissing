@@ -7,8 +7,11 @@ import announcementCard from '../../../shared/schemas/announcementCard.json';
 import fieldReport from '../../../shared/schemas/fieldReport.json';
 import request from '../../../shared/schemas/request.json';
 import translation from '../../../shared/schemas/translation.json';
+import medCheck from '../../../shared/schemas/medCheck.json';
+import findOpen from '../../../shared/schemas/findOpen.json';
+import askKit from '../../../shared/schemas/askKit.json';
 
-export const SCHEMAS = { roster, careCard, announcementCard, fieldReport, request, translation } as Record<string, Schema>;
+export const SCHEMAS = { roster, careCard, announcementCard, fieldReport, request, translation, medCheck, findOpen, askKit } as Record<string, Schema>;
 export type Schema = {
   type?: string | string[]; properties?: Record<string, Schema>; required?: string[]; items?: Schema;
   enum?: unknown[]; minimum?: number; maximum?: number; maxLength?: number; maxItems?: number;

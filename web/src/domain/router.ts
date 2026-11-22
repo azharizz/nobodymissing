@@ -3,7 +3,7 @@ export type Mode = 'only_on_device' | 'prefer_on_device' | 'prefer_in_cloud' | '
 export type Action = 'device' | 'device_draft' | 'cloud' | 'ask_staff' | 'queue' | 'block';
 export type Decision = { action: Action; mode: Mode | null };
 export type RouterCtx = { onDeviceAvailable: boolean; online: boolean; privateMode: boolean; staffApprovedCloud: boolean };
-export type TaskPolicy = { sensitive: boolean; cloudOnly: boolean; schema: string; model: string; deviceAccuracy?: number | null; cloudAccuracy?: number | null };
+export type TaskPolicy = { sensitive: boolean; cloudOnly: boolean; schema: string; model: string; deviceAccuracy?: number | null; cloudAccuracy?: number | null; grounding?: string };
 
 const d = (action: Action, mode: Mode | null = null): Decision => ({ action, mode });
 

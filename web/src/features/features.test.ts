@@ -130,4 +130,44 @@ describe('features (wired by FeatureFactory with test adapters)', () => {
     expect(f.store.get().people.length).toBeGreaterThan(0);
     expect(f.store.get().shelter.id).toBe('SD3');
   });
+
+  it('medicine check: only drug names leave; offline it waits, then runs when signal returns', async () => {
+    const reply = (r: any) => ({ raw: JSON.stringify({ items: [{ name: 'insulin glargine', generic: 'insulin glargine', swaps: [], cantMiss: true }], interactions: [] }), source: 'cloud' as const });
+    const { f, inf } = await setup(reply);
+    const card = f.store.get().cards[0];
+    const who = f.store.get().people.find(p => p.id === card.personId)!;
+    expect(await f.hybrid.checkMeds(card.personId)).toBe('queued');      // no signal yet
+    expect(inf.calls.length).toBe(0);
+    f.store.set(s => ({ ...s, signal: 'back' }));
+    await f.queue.flush();
+    const req = inf.calls.find(c => c.task === 'med_check')!;
+    expect(req.mode).toBe('only_in_cloud');
+    expect(req.image).toBeUndefined();
+    expect(req.text).not.toContain(who.nameAsWritten);
+    const check = f.store.get().cards.find(c => c.personId === card.personId)!.check!;
+    expect(check.pending).toBe(false);
+    expect(check.cross[0].status).toBe('agree');
+    expect(card.meds.every(m => f.store.get().cards[0].meds.find(x => x.nameAsWritten === m.nameAsWritten)!.confirmedBy === m.confirmedBy)).toBe(true); // never auto-accepted
+  });
+
+  it('find it open: Maps grounding with a rounded location; invented places are dropped', async () => {
+    const { f, inf } = await setup(() => ({ raw: '{"places":[{"name":"Apotek Real","openNow":true},{"name":"Made Up Clinic"}]}', source: 'cloud', places: [{ title: 'Apotek Real', uri: 'https://maps.google.com/?cid=9' }] }));
+    f.store.set(s => ({ ...s, signal: 'back', volunteerPos: { lat: 4.234567, lng: 98.004321 } }));
+    expect(await f.hybrid.findOpen('pharmacy')).toBe('done');
+    const req = inf.calls[0];
+    expect(req.grounding).toBe('maps');
+    expect(req.location).toEqual({ lat: 4.23, lng: 98 });
+    expect(f.store.get().open!.places.map(p => p.name)).toEqual(['Apotek Real']);
+  });
+
+  it('Ask Kit: answers only with a real notice, on the device first', async () => {
+    const { f, inf } = await setup(r => ({ raw: JSON.stringify({ cardId: /id=(\S+)/.exec(r.prompt)![1], answer: 'Lunch is at 12:00.' }), source: 'device' }));
+    f.store.set(s => ({ ...s, announcements: [{ id: 'a1', text: 'Lunch 12.00 in the hall', lang: 'en', icons: ['food'], times: ['12:00'], place: 'hall', cards: null, source: 'keywords', draft: false, shown: true, told: [], createdAt: 0 }] }));
+    const r = await f.hybrid.askKit('When is lunch?');
+    expect(r).toMatchObject({ answer: 'Lunch is at 12:00.', source: 'device' });
+    expect(inf.calls[0].mode).toBe('prefer_on_device');
+    const bad = await setup(() => ({ raw: '{"cardId":"nope","answer":"The bus leaves at 9."}', source: 'device' }));
+    bad.f.store.set(s => ({ ...s, announcements: f.store.get().announcements }));
+    expect((await bad.f.hybrid.askKit('bus?')).answer).toBeNull();
+  });
 });
