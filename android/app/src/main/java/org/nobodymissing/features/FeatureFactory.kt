@@ -72,6 +72,16 @@ class Features(val adapters: Adapters, val shared: Shared) {
         deviceTimeoutMs = shared.defaults["timeouts"]!!.jsonObject.i("deviceMs")!!.toLong(), cloudTimeoutMs = shared.defaults["timeouts"]!!.jsonObject.i("cloudMs")!!.toLong()) {
         Ctx(signal.value == "back", privateMode.value)
     }
+    /** Where Kit ran today and what left the shelter, by kind (shared cloudSends; device runs send nothing). */
+    data class KitToday(val log: List<RunLog>, val device: Int, val cloud: Int, val sent: Map<String, Int>)
+    fun kitToday(): KitToday {
+        val day = java.time.LocalDate.now()
+        val log = router.log.filter { java.time.Instant.ofEpochMilli(it.at).atZone(java.time.ZoneId.systemDefault()).toLocalDate() == day }
+        val sends = shared.defaults["cloudSends"]?.jsonObject.orEmpty()
+        val sent = linkedMapOf("photo" to 0, "name" to 0, "drugs" to 0, "location" to 0, "text" to 0)
+        log.filter { it.source == "cloud" }.forEach { l -> (sends[l.task] as? JsonPrimitive)?.content?.let { k -> if (k in sent) sent[k] = sent.getValue(k) + 1 } }
+        return KitToday(log.reversed(), log.count { it.source == "device" }, log.count { it.source == "cloud" }, sent)
+    }
     val people = mutableStateListOf<UiPerson>()
     val meds = mutableStateListOf<UiMed>()
     val jobs = mutableStateListOf<UiJob>()

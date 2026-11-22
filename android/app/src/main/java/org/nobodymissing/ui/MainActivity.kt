@@ -93,6 +93,7 @@ fun App(ui: Ui) {
                     "review" -> Review(ui)
                     "round" -> Round(ui)
                     "settings" -> Settings(ui)
+                    "kit" -> KitLog(ui)
                     else -> Now(ui)
                 }
             }
@@ -137,11 +138,6 @@ fun Top(ui: Ui, title: String, back: String? = "now", trailing: @Composable () -
         H(title, 26.sp, NM.Navy, Modifier.weight(1f)); trailing()
     }
 
-@Composable
-fun Hybrid(ui: Ui) = Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-    Ic(ui.icons, "device", 15.dp, NM.Ink2); Spacer(Modifier.width(6.dp))
-    P(ui.f.t("counter", "device" to ui.f.router.deviceCount, "cloud" to ui.f.router.cloudCount, "waiting" to ui.f.jobs.count { it.status.state != "sent" }), 13.sp, NM.Ink2)
-}
 
 /** One task row on the Now list. */
 @Composable
@@ -208,11 +204,11 @@ fun Now(ui: Ui) {
             }
         }
     }) {
+        pad { KitCard(ui) }
         pad { Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) { H(f.t("needsYouNow"), 22.sp, modifier = Modifier.weight(1f)); Btn(ui, f.t("announce"), "announce", small = true) { ui.go("announce") } } }
         (if (more) tasks else tasks.take(4)).forEachIndexed { i, t -> pad { Rise(i) { t() } } }
         if (tasks.size > 4) pad { Btn(ui, if (more) f.t("seeLess") else f.t("seeMore", "n" to tasks.size - 4), style = BtnStyle.LINK) { more = !more } }
         if (tasks.isEmpty()) pad { Empty(ui, if (f.people.isEmpty()) f.t("emptyShelter") else f.t("allClear"), if (f.people.isEmpty()) Mood.SLEEP else Mood.IDLE) }
-        pad { Hybrid(ui) }
     }
 }
 fun buildAnnotated(bold: String, rest: String) = androidx.compose.ui.text.buildAnnotatedString {

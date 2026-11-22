@@ -19,6 +19,13 @@ class InferenceRouterTest {
     private fun router(f: FakeInference, online: Boolean = true, deviceMs: Long = 8000) =
         InferenceRouterFactory.create(f, rules, schemas, prompts, deviceTimeoutMs = deviceMs, cloudTimeoutMs = 15000) { Ctx(online, false) }
 
+    @Test fun whereKitRanLogsRealSourceAndReason() = runBlocking {
+        val r1 = router(FakeInference("available") { InferenceResult(ok, "device") }); r1.run("roster_read", "x")
+        val r2 = router(FakeInference("available"), online = false); r2.run("med_check", "x")
+        val r3 = router(FakeInference("available") { InferenceResult("""{"cards":[]}""", "cloud") }); r3.run("announcement", "Lunch at 12")   // SDK fell back
+        assertEquals(listOf("device" to "private", null to "no_signal", "cloud" to "cloud_fallback"), listOf(r1, r2, r3).map { it.log.single().let { l -> l.source to l.why } })
+    }
+
     @Test fun privacyGuardAsksStaffAndSendsNothing() = runBlocking {
         val f = FakeInference("unavailable")
         assertEquals("ask_staff", router(f).run("roster_read", "x").status)
