@@ -187,6 +187,7 @@ class ParityTest {
         f.loadDemo(); f.lang.value = "id"
         f.checkin(org.nobodymissing.domain.Checkin("Siti Aminah", 77, listOf("needs_meds")))
         f.jobs[0].status = org.nobodymissing.domain.JobStatus("sending", 1)   // killed mid-send
+        f.router.deviceCount = 3
         val file = File.createTempFile("state", ".bin").apply { deleteOnExit() }
         assertTrue(f.saveTo(file).isSuccess)
         val g = features()
@@ -196,7 +197,17 @@ class ParityTest {
         assertEquals(f.field.toList(), g.field.toList())
         assertEquals("id", g.lang.value)
         assertEquals("waiting", g.jobs[0].status.state)                       // sent again, not lost
+        assertEquals(3, g.router.deviceCount)                                 // live counter: same day, kept
         assertFalse(features().loadFrom(File(file.path + ".missing")))
+    }
+
+    @Test fun dailyListsPrintRosterMedicineAndReach() {
+        val f = features(); f.loadDemo()
+        val html = f.dailyListsHtml(0)
+        assertTrue(html.contains("<svg"))                                      // Kit on paper
+        f.people.filter { it.confirmed }.forEach { assertTrue(it.name, html.contains(it.name.replace("&", "&amp;"))) }
+        f.schedule().slots.keys.forEach { assertTrue(html.contains(it)) }
+        assertFalse(html.contains("<script"))
     }
 }
 

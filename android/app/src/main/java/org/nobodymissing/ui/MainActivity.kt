@@ -52,6 +52,7 @@ import kotlinx.coroutines.launch
 import org.nobodymissing.NobodyMissingApp
 import org.nobodymissing.adapters.FirebaseAiLogicInference
 import org.nobodymissing.features.RouteResult
+import org.nobodymissing.features.dailyListsHtml
 import org.nobodymissing.domain.strings
 
 // Same screens, words, icons, colours and mascot as the web app (web/src/ui/staff.tsx + public.tsx). Design: docs/design/index.html.
@@ -138,8 +139,8 @@ fun Top(ui: Ui, title: String, back: String? = "now", trailing: @Composable () -
 
 @Composable
 fun Hybrid(ui: Ui) = Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-    Ic(ui.icons, "device", 15.dp, NM.Ink2); P(" " + ui.f.t("onThisPhone", "n" to ui.f.router.deviceCount) + "    ", 13.sp, NM.Ink2)
-    Ic(ui.icons, "cloud", 15.dp, NM.Ink2); P(" " + ui.f.t("cloudN", "n" to ui.f.router.cloudCount), 13.sp, NM.Ink2)
+    Ic(ui.icons, "device", 15.dp, NM.Ink2); Spacer(Modifier.width(6.dp))
+    P(ui.f.t("counter", "device" to ui.f.router.deviceCount, "cloud" to ui.f.router.cloudCount, "waiting" to ui.f.jobs.count { it.status.state != "sent" }), 13.sp, NM.Ink2)
 }
 
 /** One task row on the Now list. */
@@ -691,6 +692,7 @@ fun qr(text: String, size: Int = 400): Bitmap {
 @Composable
 fun Settings(ui: Ui) {
     val f = ui.f
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf("") }
     var chunks by remember { mutableStateOf<List<String>?>(null) }
@@ -731,6 +733,8 @@ fun Settings(ui: Ui) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) { Image(qr(HOSTED + path, 240).asImageBitmap(), f.t(k), Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp))); P(f.t(k), 13.sp, bold = true) }
                 }
             } } }
+        pad { CardBox { title("print", f.t("printLists")); P(f.t("printWhy"), 15.sp, NM.Ink2)
+            Btn(ui, f.t("print"), "print", BtnStyle.PRIMARY, full = true) { printHtml(ctx, f.dailyListsHtml(), f.t("printLists")) } } }
         pad { Btn(ui, f.t("loadDemo"), "demo", full = true) { f.loadDemo() } }
         if (f.adapters.env == "test") pad { Note(ui, "demo", f.t("demoBadge")) }
     }
@@ -759,5 +763,18 @@ fun ScoutAlert(ui: Ui) {
         LinearProgressIndicator({ if (f.jobs.isEmpty()) 1f else sent.toFloat() / f.jobs.size }, Modifier.width(300.dp).height(10.dp).clip(RoundedCornerShape(50)), color = NM.Amber, trackColor = Color.White.copy(alpha = .12f))
         Spacer(Modifier.height(22.dp))
         Btn(ui, f.t("gotIt"), style = BtnStyle.AMBER, modifier = Modifier.widthIn(min = 220.dp)) { f.scoutAlert.value = false }
+    }
+}
+
+/** Android's own print dialog (paper or Save as PDF). Kept in a field: a collected WebView would cancel the job. */
+private var printing: android.webkit.WebView? = null
+fun printHtml(ctx: android.content.Context, html: String, title: String) {
+    printing = android.webkit.WebView(ctx).apply {
+        webViewClient = object : android.webkit.WebViewClient() {
+            override fun onPageFinished(v: android.webkit.WebView, url: String?) {
+                (ctx.getSystemService(android.content.Context.PRINT_SERVICE) as android.print.PrintManager).print(title, v.createPrintDocumentAdapter(title), android.print.PrintAttributes.Builder().build())
+            }
+        }
+        loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
     }
 }

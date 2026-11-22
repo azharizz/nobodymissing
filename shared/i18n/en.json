@@ -399,5 +399,14 @@
   "askedWhen": "asked {when}",
   "maybeHere": "Maybe already here",
   "samePerson": "Same person: open",
-  "notSame": "Not the same: add"
+  "notSame": "Not the same: add",
+  "printLists": "Print today's lists",
+  "printWhy": "Roster, medicine round and who to tell in person, on paper. The app is never the only copy.",
+  "printKeep": "Printed {time}. Keep this paper copy: the app is never the only copy.",
+  "colName": "Name",
+  "colAge": "Age",
+  "colNeeds": "Needs",
+  "colMedicine": "Medicine",
+  "colTold": "Told",
+  "rosterTitle": "Roster: {n} people"
 }

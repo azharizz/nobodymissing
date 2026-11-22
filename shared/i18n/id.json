@@ -399,5 +399,14 @@
   "askedWhen": "minta {when}",
   "maybeHere": "Mungkin sudah di sini",
   "samePerson": "Orang yang sama: buka",
-  "notSame": "Bukan: tambahkan"
+  "notSame": "Bukan: tambahkan",
+  "printLists": "Cetak daftar hari ini",
+  "printWhy": "Daftar pengungsi, pembagian obat, dan siapa yang perlu diberi tahu langsung, di kertas. Aplikasi bukan satu-satunya salinan.",
+  "printKeep": "Dicetak {time}. Simpan salinan kertas ini: aplikasi bukan satu-satunya salinan.",
+  "colName": "Nama",
+  "colAge": "Umur",
+  "colNeeds": "Kebutuhan",
+  "colMedicine": "Obat",
+  "colTold": "Sudah diberi tahu",
+  "rosterTitle": "Daftar pengungsi: {n} orang"
 }

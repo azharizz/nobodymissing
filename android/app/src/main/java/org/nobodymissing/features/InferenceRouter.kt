@@ -1,6 +1,8 @@
 package org.nobodymissing.features
 
 import android.graphics.Bitmap
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.JsonElement
@@ -19,8 +21,9 @@ class InferenceRouter(
     private val prompts: Map<String, String>, private val models: Map<String, String>,
     private val deviceTimeoutMs: Long, private val cloudTimeoutMs: Long, private val ctx: () -> Ctx,
 ) {
-    var deviceCount = 0; private set
-    var cloudCount = 0; private set
+    // Compose state so the live counter updates as answers come in; saved with the shelter (Persist.kt).
+    var deviceCount by androidx.compose.runtime.mutableIntStateOf(0); internal set
+    var cloudCount by androidx.compose.runtime.mutableIntStateOf(0); internal set
 
     private suspend fun call(task: String, p: TaskPolicy, mode: String, text: String?, image: Bitmap?, x: Extra): InferenceResult {
         val primary = models[p.model] ?: p.model
