@@ -12,6 +12,8 @@ Hybrid AI now does real cloud work, not just fallback: **Medicine check** (drug 
 
 - Follow-up (same day): OpenStreetMap maps on both apps (offline-cached); "I need help" with on-device triage (urgent first on staff Now); Ask Kit greets with Kit; family group by QR with online sync. Web 153 unit + 10 e2e + 9 rules tests pass; Android 37 tests pass.
 
+- Follow-up 2: real map data for Kuala Simpang (Global HAND 30 m + OSM) via `tools/region-pack/build.mjs`; family QR carries the whole group + gossip sync; hybrid family search; Android live QR scanner. Web 157 unit + 11 e2e tests pass; Android 38 tests pass.
+
 ## PENDING HUMAN
 - Deploy the updated Firestore rules (`firebase deploy --only firestore:rules`): family sync needs the new `families/` rule.
 - Install the debug APK on a phone and look at every screen (no emulator space on this Mac).

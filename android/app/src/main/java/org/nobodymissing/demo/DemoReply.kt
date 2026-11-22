@@ -1,5 +1,6 @@
 package org.nobodymissing.demo
 
+import org.nobodymissing.domain.parseLookFor
 import org.nobodymissing.ports.GroundingPlace
 import org.nobodymissing.ports.InferenceRequest
 import org.nobodymissing.ports.InferenceResult
@@ -18,6 +19,8 @@ object DemoReply {
             "med_check" -> """{"items":[{"name":"insulin glargine","generic":"insulin glargine","alsoKnownAs":["Lantus","Basaglar"],"swaps":["insulin detemir","NPH insulin"],"cantMiss":true,"note":"Keep cool; never skip."},{"name":"amlodipine","generic":"amlodipine","alsoKnownAs":["Norvasc","Tensivask"],"swaps":["nifedipine (long-acting)"],"cantMiss":false,"note":null}],"interactions":[]}"""
             "find_open" -> """{"places":[{"name":"Apotek Sehat Keluarga","kind":"pharmacy","distanceKm":1.2,"openNow":true,"hours":"until 21:00"},{"name":"Puskesmas Kota (demo)","kind":"health post","distanceKm":2.4,"openNow":true,"hours":"24 hours"}]}"""
             "help_triage" -> """{"kind":"${when { Regex("insulin|obat|medic", RegexOption.IGNORE_CASE).containsMatchIn(t) -> "medicine"; Regex("sick|sakit|demam|fever|pain|nyeri", RegexOption.IGNORE_CASE).containsMatchIn(t) -> "sick"; else -> "other" }}","urgent":${Regex("chest|dada|breath|napas", RegexOption.IGNORE_CASE).containsMatchIn(t)},"summary":"${t.take(80).replace("\"", "")}"}"""
+            "family_query" -> parseLookFor(t).let { """{"name":"${it.name.replace("\"", "")}","age":${it.age ?: "null"},"place":${it.place?.let { p -> "\"${p.replace("\"", "")}\"" } ?: "null"}}""" }
+            "name_variants" -> """{"variants":[${if (t.contains(' ')) "\"${t.replace(" ", "").replace("\"", "")}\"" else if (t.length > 6) "\"${t.take(3)} ${t.drop(3).replace("\"", "")}\"" else ""}]}"""
             "ask_kit" -> {
                 // Demo: pick the notice sharing a word with the question (the real model reads them in any language).
                 val words = t.lowercase().split(Regex("\\W+")).filter { it.length > 3 && it !in setOf("when", "what", "where", "does", "will", "there") }

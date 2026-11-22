@@ -181,20 +181,32 @@ fun EvMap(ui: Ui) {
 @Composable
 fun EvFamily(ui: Ui) {
     val f = ui.f
+    val scope = rememberCoroutineScope()
     var q by remember { mutableStateOf("") }
-    var hits by remember { mutableStateOf<List<org.nobodymissing.domain.PublicHit>?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    var res by remember { mutableStateOf<org.nobodymissing.features.SmartFamily?>(null) }
     EvTop(ui, f.t("myFamily"), f.t("everyShelter"))
     Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Row(Modifier.fillMaxWidth().soft(R22).padding(start = 18.dp, end = 8.dp).heightIn(min = 72.dp), verticalAlignment = Alignment.CenterVertically) {
-            Ic(ui.icons, "search", 28.dp, NM.Ink2); Spacer(Modifier.width(12.dp))
-            Box(Modifier.weight(1f)) { if (q.isEmpty()) H(f.t("search"), 24.sp, NM.Ink2.copy(alpha = .5f)); BasicTextField(q, { q = it }, Modifier.fillMaxWidth(), textStyle = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, color = NM.Navy), singleLine = true) }
-            Btn(ui, f.t("search"), style = BtnStyle.PRIMARY, small = true, enabled = q.isNotBlank()) { hits = f.familySearch(q) }
+        Column(Modifier.fillMaxWidth().soft(R28).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(Modifier.heightIn(min = 60.dp)) { if (q.isEmpty()) H(f.t("lookForHint"), 20.sp, NM.Ink2.copy(alpha = .5f)); BasicTextField(q, { q = it }, Modifier.fillMaxWidth(), textStyle = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, color = NM.Navy)) }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MicButton(ui, Modifier.weight(1f)) { q = it }
+                Btn(ui, f.t("search"), "search", BtnStyle.PRIMARY, enabled = q.isNotBlank() && !busy, modifier = Modifier.weight(1f)) { busy = true; scope.launch { res = f.familySmart(q); busy = false } }
+            }
         }
-        hits?.let { if (it.isEmpty()) H(f.t("notFound"), 22.sp) }
-        hits?.forEachIndexed { i, h -> Rise(i) { Row(Modifier.fillMaxWidth().soft(R28).padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+        res?.let { r -> CardBox {
+            H("${f.t("lookingFor")}: ${r.name}" + (r.age?.let { " · " + f.t("aged", "n" to it) } ?: "") + (r.place?.let { " · " + f.t("fromPlace", "p" to it) } ?: ""), 18.sp)
+            if (r.parsedBy == "device") Badge(ui, "device", text = f.t("understoodOnPhone")) else Badge(ui, "keywords", text = f.t("keywordsOnly"))
+            if (r.variants.isNotEmpty()) { P("${f.t("spellings")}: ${r.variants.joinToString()}", 15.sp, NM.Ink2); Badge(ui, if (r.variantsBy == "cloud") "cloud" else "keywords", text = f.t(if (r.variantsBy == "cloud") "spellingsCloud" else "spellingsOffline")) }
+        } }
+        res?.let { if (it.hits.isEmpty()) H(f.t("notFound"), 22.sp) }
+        res?.hits?.forEachIndexed { i, h -> Rise(i) { Row(Modifier.fillMaxWidth().soft(R28).padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
             Avatar(h.name, NM.SKY, 66.dp); Spacer(Modifier.width(16.dp))
-            Column { H(h.name, 24.sp, NM.Navy); P("${h.ageBand} · ${h.shelterId}", 18.sp, NM.Ink2); Spacer(Modifier.height(8.dp)); Pill(if (h.status == "safe") f.t("safe") else h.status, NM.Sage, NM.SageInk, ui, "check") }
+            Column { H(h.name, 24.sp, NM.Navy); P("${h.ageBand} · ${h.shelterId}", 18.sp, NM.Ink2); Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { Pill(if (h.status == "safe") f.t("safe") else h.status, NM.Sage, NM.SageInk, ui, "check")
+                    Pill(f.t(if (h.match == "exact") "matchExact" else "matchSpelling"), if (h.match == "exact") NM.Quiet else NM.AmberSoft, if (h.match == "exact") NM.Ink else NM.AmberInk) } }
         } } }
+        if (res?.hits?.isNotEmpty() == true) Note(ui, "info", f.t("confirmWithStaff"))
         if (f.signal.value != "back") Note(ui, "device", f.t("offlineFamily"))
         FamilyGroupCard(ui)
     }
@@ -209,8 +221,13 @@ fun FamilyGroupCard(ui: Ui) {
     var show by remember { mutableStateOf(false) }
     var paste by remember { mutableStateOf("") }
     var msg by remember { mutableStateOf("") }
-    fun got(text: String) { val m = f.scanFamily(text); msg = m?.let { f.t("linked", "name" to it.name) } ?: f.t("badQr"); if (m != null) paste = "" }
-    val scan = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.TakePicturePreview()) { b -> b?.let { decodeQr(it)?.let(::got) ?: run { msg = f.t("badQr") } } }
+    val scope = rememberCoroutineScope()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    fun got(text: String) { val m = f.scanFamily(text); msg = m?.let { f.t("linked", "name" to it.joinToString { x -> x.name }) + " " + f.t("scanBack") } ?: f.t("badQr"); if (m != null) { paste = ""; show = true; scope.launch { f.syncFamily() } } }
+    // Live scanner from Google Play services (QR only); falls back to the paste box if it is not available.
+    fun scan() = com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(ctx, com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions.Builder()
+        .setBarcodeFormats(com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE).build()).startScan()
+        .addOnSuccessListener { b -> b.rawValue?.let(::got) }.addOnFailureListener { msg = f.t("noCamera") }
     fun ago(at: Long) = ((System.currentTimeMillis() - at) / 60000).let { m -> if (m < 1) f.t("justNow") else if (m < 60) f.t("minAgo", "n" to m) else f.t("hAgo", "n" to m / 60) }
     @Composable fun row(m: org.nobodymissing.domain.Member, me: Boolean) = Row(Modifier.fillMaxWidth().soft(R22).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
         Avatar(m.name, if (me) NM.HONEY else NM.SKY); Spacer(Modifier.width(14.dp))
@@ -224,14 +241,14 @@ fun FamilyGroupCard(ui: Ui) {
             P(f.t("familyGroupWhy"), 16.sp)
             P(f.t("yourName"), 14.sp, bold = true); Field(name, { name = it }, f.t("yourName"), Modifier.fillMaxWidth())
             Row(Modifier.clip(RoundedCornerShape(50)).background(Color.White).padding(4.dp)) { listOf("safe", "need_help").forEach { st -> val on = (g?.me?.status ?: "safe") == st
-                Text(f.t("status_$st"), Modifier.clip(RoundedCornerShape(50)).background(if (on) NM.Navy else Color.Transparent).clickable(enabled = name.isNotBlank()) { f.setMe(name, st) }.padding(horizontal = 14.dp, vertical = 10.dp),
+                Text(f.t("status_$st"), Modifier.clip(RoundedCornerShape(50)).background(if (on) NM.Navy else Color.Transparent).clickable(enabled = name.isNotBlank()) { f.setMe(name, st); scope.launch { f.syncFamily() } }.padding(horizontal = 14.dp, vertical = 10.dp),
                     color = if (on) Color.White else NM.Ink2, fontFamily = Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp) } }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Btn(ui, f.t("showMyQr"), "qr", small = true, enabled = name.isNotBlank(), modifier = Modifier.weight(1f)) { if (g == null || g.me.name != name.trim()) f.setMe(name, g?.me?.status ?: "safe"); show = !show }
-                Btn(ui, f.t("scanFamilyQr"), "camera", BtnStyle.PRIMARY, small = true, enabled = name.isNotBlank(), modifier = Modifier.weight(1f)) { if (g == null) f.setMe(name, "safe"); scan.launch(null) }
+                Btn(ui, f.t("scanFamilyQr"), "camera", BtnStyle.PRIMARY, small = true, enabled = name.isNotBlank(), modifier = Modifier.weight(1f)) { if (g == null) f.setMe(name, "safe"); scan() }
             }
             if (show) f.myQr()?.let { q -> Column(Modifier.fillMaxWidth().clip(R22).background(Color.White).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                androidx.compose.foundation.Image(qr(q, 480).asImageBitmap(), f.t("showMyQr"), Modifier.size(240.dp)); P(f.myQr()!!.substringAfterLast(':'), 15.sp, NM.Ink2) } }
+                androidx.compose.foundation.Image(qr(q, 600).asImageBitmap(), f.t("showMyQr"), Modifier.size(260.dp)); P("${f.familyGroup.value!!.me.name} · ${f.familyGroup.value!!.me.shelter}", 15.sp, NM.Ink2); P(f.t("groupInQr"), 14.sp, NM.Ink2) } }
             Row(verticalAlignment = Alignment.CenterVertically) { Field(paste, { paste = it }, f.t("pasteCode"), Modifier.weight(1f)); Spacer(Modifier.width(8.dp)); Btn(ui, f.t("import"), small = true, enabled = paste.isNotBlank()) { got(paste) } }
             if (msg.isNotEmpty()) Note(ui, "info", msg, NM.SageInk)
             g?.let { row(it.me, true); it.members.forEach { m -> row(m, false) }; if (it.members.isEmpty()) P(f.t("noFamilyYet"), 16.sp) }
@@ -239,12 +256,6 @@ fun FamilyGroupCard(ui: Ui) {
         }
     }
 }
-
-/** Decode a QR from a photo (zxing, already used for showing QR codes). */
-fun decodeQr(b: android.graphics.Bitmap): String? = runCatching {
-    val px = IntArray(b.width * b.height).also { b.getPixels(it, 0, b.width, 0, 0, b.width, b.height) }
-    com.google.zxing.MultiFormatReader().decode(com.google.zxing.BinaryBitmap(com.google.zxing.common.HybridBinarizer(com.google.zxing.RGBLuminanceSource(b.width, b.height, px)))).text
-}.getOrNull()
 
 @Composable
 fun EvAsk(ui: Ui) {

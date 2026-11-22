@@ -206,12 +206,21 @@ class FixturesTest {
         }
         fun member(o: JsonObject) = Member(o.s("id")!!, o.s("name")!!, o.s("shelter")!!, o.s("status")!!, o["at"]!!.jsonPrimitive.long)
         for (c in fx["familyQr"]!!.jsonArray.map { it.jsonObject }) {
-            val i = c["input"]!!.jsonObject; val me = member(i["me"]!!.jsonObject)
-            val q = encodeFamilyQr(i.s("fam")!!, me)
-            assertEquals(c["expected"]!!.jsonPrimitive.content, q)
-            assertEquals(i.s("fam")!! to me, decodeFamilyQr(q))
+            val i = c["input"]!!.jsonObject; val ms = i["members"]!!.jsonArray.map { member(it.jsonObject) }
+            val q = encodeFamilyQr(i.s("fam")!!, ms)
+            assertEquals(c.name(), c["expected"]!!.jsonPrimitive.content, q)
+            assertEquals(ms.map { it.id }, decodeFamilyQr(q)!!.second.map { it.id })
         }
         for (bad in fx["familyQrReject"]!!.jsonArray.map { it.jsonPrimitive.content }) assertEquals(bad, null, decodeFamilyQr(bad))
+        val nameRules = load("rules/defaults.json")["nameRules"]!!.jsonObject.mapValues { it.value.jsonArray.map { x -> x.jsonPrimitive.content } }
+        for (c in fx["nameVariantsOffline"]!!.jsonArray.map { it.jsonObject }) assertEquals(c.s("input"), c["expected"]!!.jsonArray.map { it.jsonPrimitive.content }, offlineVariants(c.s("input")!!, nameRules))
+        for (c in fx["variantSearch"]!!.jsonArray.map { it.jsonObject }) {
+            val i = c["input"]!!.jsonObject
+            val recs = i["records"]!!.jsonArray.map { it.jsonObject.let { r -> PublicRec(r.s("id")!!, r.s("name")!!, r.i("age"), r.s("shelterId")!!, r.s("status")!!) } }
+            assertEquals(c.name(), c["expected"]!!.jsonArray.map { it.jsonObject.let { e -> Triple(e.s("name")!!, e.s("shelterId")!!, e.s("match")!!) } },
+                searchVariants(i.s("name")!!, i.strings("variants"), i.i("age"), recs).map { Triple(it.name, it.shelterId, it.match) })
+        }
+        for (c in fx["lookForRules"]!!.jsonArray.map { it.jsonObject }) { val e = c["expected"]!!.jsonObject; assertEquals(c.s("input"), LookFor(e.s("name")!!, e.i("age"), e.s("place")), parseLookFor(c.s("input")!!)) }
         for (c in fx["familyMerge"]!!.jsonArray.map { it.jsonObject }) {
             val i = c["input"]!!.jsonObject
             assertEquals(c.name(), c["expected"]!!.jsonArray.map { member(it.jsonObject) }, mergeMembers(i["mine"]!!.jsonArray.map { member(it.jsonObject) }, i["theirs"]!!.jsonArray.map { member(it.jsonObject) }))

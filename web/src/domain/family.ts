@@ -1,6 +1,7 @@
 // Family group by QR (no accounts) + spelling-aware family search. Same rules on Android (shared/fixtures/hybrid.json).
 // The QR carries the family id and the whole small group the phone knows, so news travels phone to phone with no signal.
-import { ageBand, familySearch, type PublicRec } from './dedupe';
+import { ageBand, familySearch, normalizeName, type PublicRec } from './dedupe';
+import { levenshtein } from './drugMatcher';
 
 export type Member = { id: string; name: string; shelter: string; status: 'safe' | 'need_help'; at: number };
 
@@ -61,7 +62,10 @@ export function searchVariants(name: string, variants: string[], age: number | n
     return [{ name: r.name, ageBand: ageBand(r.age), shelterId: r.shelterId, status: r.status, match }];
   };
   const exact = pool.filter(r => familySearch(name, [r]).length).flatMap(r => hit(r, 'exact'));
-  const spelling = pool.filter(r => variants.some(v => familySearch(v, [r]).length)).flatMap(r => hit(r, 'spelling'));
+  // Offline safety net: every word of the name matches a word in the record with at most one letter different (words of 4+ letters).
+  const q = normalizeName(name).split(' ').filter(Boolean);
+  const close = (r: PublicRec) => { const w = normalizeName(r.name).split(' '); return q.length > 0 && q.every(t => w.some(x => x === t || (t.length >= 4 && levenshtein(t, x) <= 1))); };
+  const spelling = pool.filter(r => !r.hidden && (variants.some(v => familySearch(v, [r]).length) || close(r))).flatMap(r => hit(r, 'spelling'));
   return [...exact, ...spelling];
 }
 

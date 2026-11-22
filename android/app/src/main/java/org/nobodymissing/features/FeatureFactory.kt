@@ -18,7 +18,7 @@ class Shared(private val read: (String) -> String, remoteRules: String? = null) 
         JsonObject(d + r + ("routerPolicy" to JsonObject(d["routerPolicy"]!!.jsonObject + (r["routerPolicy"] as? JsonObject ?: JsonObject(emptyMap())))))
     }.getOrNull() } ?: d }
     val rules = Rules.from(defaults)
-    val schemas = listOf("roster", "careCard", "announcementCard", "fieldReport", "request", "translation", "medCheck", "findOpen", "askKit", "helpTriage").associateWith { json("schemas/$it.json") }
+    val schemas = listOf("roster", "careCard", "announcementCard", "fieldReport", "request", "translation", "medCheck", "findOpen", "askKit", "helpTriage", "familyQuery", "nameVariants").associateWith { json("schemas/$it.json") }
     val prompts = json("prompts/pack.json")["tasks"]!!.jsonObject.mapValues { it.value.jsonPrimitive.content }
     // ponytail: only the synthetic demo drug list and region pack exist today; swap in real region packs when tools/region-pack ships them.
     val drugs = Drug.listFrom(json("demo/drugs.json"))
@@ -38,7 +38,8 @@ data class UiCard(val icon: String, val title: String, val time: String?, val pl
 data class UiAnnouncement(val id: String, val text: String, val icons: List<String>, val cards: List<UiCard>, val source: String, val draft: Boolean, val shown: Boolean = false, val told: Set<String> = emptySet())
 data class UiField(val id: String, val name: String, val lat: Double?, val lng: Double?, val hoursSinceContact: Double?, val person: PriorityInput, val needsReview: Boolean = false, val status: String = "unchecked")
 data class UiHelp(val id: String, val kind: String, val spot: String, val text: String?, val done: Boolean = false, val summary: String? = null, val urgent: Boolean = false, val by: String? = null)
-data class FamilyGroup(val fam: String, val me: Member, val members: List<Member>, val via: Map<String, String>)
+data class FamilyGroup(val fam: String, val fams: List<String>, val me: Member, val members: List<Member>, val via: Map<String, String>)
+data class SmartFamily(val name: String, val age: Int?, val place: String?, val parsedBy: String, val variants: List<String>, val variantsBy: String, val hits: List<FamilyHit>)
 data class MedCheckItem(val name: String, val generic: String?, val alsoKnownAs: List<String>, val swaps: List<String>, val cantMiss: Boolean, val note: String?)
 data class Interaction(val a: String, val b: String, val severity: String, val note: String?)
 data class MedCheckUi(val items: List<MedCheckItem>, val interactions: List<Interaction>, val cross: List<Cross>, val pending: Boolean)
@@ -227,34 +228,65 @@ class Features(val adapters: Adapters, val shared: Shared) {
         return triageHelp(text, ai, shared.defaults.strings("urgentWords"), keywordIcons(text, shared.keywords).icons)
     }
 
-    // ---- Family group by QR: offline the QR carries the latest status both ways; online it syncs via families/{id} ----
+    fun helpDone(id: String) = help.replaceAll { if (it.id == id) it.copy(done = true) else it }
+
+    // ---- Family group by QR: the QR carries the whole group (news hops phone to phone offline);
+    // online, each phone shares everyone it knows into every family id it has seen (gossip), so groups join up.
     val familyGroup = mutableStateOf<FamilyGroup?>(null)
-    private fun publishMe() = familyGroup.value?.let { g -> enqueue("family_member", "families/${g.fam}/members", mapOf("name" to g.me.name, "shelter" to g.me.shelter, "status" to g.me.status, "at" to g.me.at), g.me.id) }
     fun setMe(name: String, status: String) {
-        val g = familyGroup.value
+        val g = familyGroup.value; val fam = g?.fam ?: newFamilyId()
         val me = Member(g?.me?.id ?: java.util.UUID.randomUUID().toString().take(12), name.trim().take(60), shelterId.value, status, System.currentTimeMillis())
-        familyGroup.value = FamilyGroup(g?.fam ?: newFamilyId(), me, g?.members ?: emptyList(), g?.via ?: emptyMap())
-        publishMe()
+        familyGroup.value = FamilyGroup(fam, g?.fams ?: listOf(fam), me, g?.members ?: emptyList(), g?.via ?: emptyMap())
     }
-    fun myQr() = familyGroup.value?.let { encodeFamilyQr(it.fam, it.me) }
-    fun scanFamily(text: String): Member? {
-        val (fam, m) = decodeFamilyQr(text) ?: return null
+    fun myQr() = familyGroup.value?.let { encodeFamilyQr(it.fam, listOf(it.me) + it.members) }
+    /** Learn everyone on a relative's QR. Two groups that meet converge on the smaller id; both ids stay synced. */
+    fun scanFamily(text: String): List<Member>? {
+        val (fam, ms) = decodeFamilyQr(text) ?: return null
         val g = familyGroup.value ?: return null
-        if (m.id == g.me.id) return null
-        familyGroup.value = g.copy(fam = fam, members = mergeMembers(g.members, listOf(m)), via = g.via + (m.id to "qr"))
-        if (fam != g.fam) publishMe()
-        return m
+        val theirs = ms.filter { it.id != g.me.id }.ifEmpty { return null }
+        val via = g.via + theirs.filter { t -> g.members.none { it.id == t.id && it.at >= t.at } }.associate { it.id to "qr" }
+        familyGroup.value = g.copy(fam = minOf(g.fam, fam), fams = (g.fams + fam).distinct(), members = mergeMembers(g.members, theirs), via = via)
+        return theirs
     }
     suspend fun syncFamily() {
         val g = familyGroup.value ?: return
         if (signal.value != "back") return
-        val remote = runCatching { adapters.sync.list("families/${g.fam}/members") }.getOrElse { return }
-            .filter { it["id"] != g.me.id && it["name"] is String }
-            .map { Member(it["id"].toString(), it["name"].toString(), it["shelter"].toString(), if (it["status"] == "need_help") "need_help" else "safe", (it["at"] as? Number)?.toLong() ?: 0L) }
-        val via = g.via + remote.filter { r -> g.members.none { it.id == r.id && it.at >= r.at } }.associate { it.id to "online" }
-        familyGroup.value = g.copy(members = mergeMembers(g.members, remote), via = via)
+        runCatching {
+            var members = g.members; val via = g.via.toMutableMap(); val remoteBy = mutableMapOf<String, List<Member>>()
+            for (fam in g.fams) {
+                val remote = adapters.sync.list("families/$fam/members").filter { it["name"] is String }
+                    .map { Member(it["id"].toString(), it["name"].toString(), it["shelter"].toString(), if (it["status"] == "need_help") "need_help" else "safe", (it["at"] as? Number)?.toLong() ?: 0L) }
+                remoteBy[fam] = remote
+                val others = remote.filter { it.id != g.me.id }
+                others.filter { r -> members.none { it.id == r.id && it.at >= r.at } }.forEach { via[it.id] = "online" }
+                members = mergeMembers(members, others)
+            }
+            // Gossip: write anyone a family id is missing or has an older copy of.
+            for (fam in g.fams) for (m in listOf(g.me) + members) {
+                val have = remoteBy.getValue(fam).firstOrNull { it.id == m.id }
+                if (have == null || have.at < m.at) adapters.sync.put("families/$fam/members/${m.id}", mapOf("name" to m.name, "shelter" to m.shelter, "status" to m.status, "at" to m.at))
+            }
+            familyGroup.value = familyGroup.value!!.copy(members = members, via = via)
+        }
     }
-    fun helpDone(id: String) = help.replaceAll { if (it.id == id) it.copy(done = true) else it }
+
+    /** Hybrid family search. Device: understand "my grandmother Nurhayati, about 80" privately (name, age, place); no model -> rules.
+     *  Cloud (online, only the name): Indonesian/Acehnese spellings; offline -> spelling rules. Matching is deterministic; a person confirms. */
+    suspend fun familySmart(text: String): SmartFamily {
+        val q = router.run("family_query", text = text.trim())
+        val ai = if ((q.status == "ok" || q.status == "draft") && q.source == "device") q.data!!.jsonObject.let { LookFor(it.s("name") ?: "", it.i("age"), it.s("place")) }.takeIf { it.name.isNotBlank() } else null
+        val p = ai ?: parseLookFor(text)
+        val rules = shared.defaults["nameRules"]!!.jsonObject.mapValues { it.value.jsonArray.map { x -> x.jsonPrimitive.content } }
+        var variants = offlineVariants(p.name, rules); var by = "offline"
+        if (signal.value == "back") {
+            val v = router.run("name_variants", text = p.name)
+            if (v.status == "ok") { variants = (v.data!!.jsonObject.strings("variants").filter { it.isNotBlank() && !it.equals(p.name, true) } + variants).distinct(); by = "cloud" }
+        }
+        val local = people.filter { it.confirmed }.map { PublicRec(it.id, it.name, it.age, shelterId.value, "safe") }
+        val remote = if (signal.value == "back") runCatching { adapters.sync.list("public").filter { it["name"] is String && it["hidden"] != true }
+            .map { PublicRec(it["id"].toString(), it["name"].toString(), (it["age"] as? Number)?.toInt(), it["shelterId"].toString(), it["status"].toString()) } }.getOrDefault(emptyList()) else emptyList()
+        return SmartFamily(p.name, p.age, p.place, if (ai != null) "device" else "rules", variants, by, searchVariants(p.name, variants, p.age, local + remote))
+    }
 
     // F3 family search: this shelter only (minimal fields, D6)
     fun familySearch(q: String) = familySearch(q, people.filter { it.confirmed }.map { PublicRec(it.id, it.name, it.age, shelterId.value, "safe") })

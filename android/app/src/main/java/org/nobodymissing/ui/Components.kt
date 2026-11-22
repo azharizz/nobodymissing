@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
@@ -287,14 +288,14 @@ fun ShelterMap(ui: Ui, markers: List<Marker>, you: Pair<Double, Double>? = null,
             }
             tx++
         }
-        Canvas(Modifier.fillMaxSize()) {
+        // Flood risk from real HAND (height above nearest drainage): the lower, the darker; blurred so it reads as terrain (API 31+).
+        Canvas(Modifier.fillMaxSize().blur(6.dp)) {
             val k = density
             for (r in 0 until p.rows) for (c in 0 until p.cols) {
-                val hand = p.hand[r][c]; if (hand > 5) continue
+                val hand = p.hand[r][c]; if (hand >= 5) continue
                 val (x0, y1) = xy(p.originLat + r * p.step, p.originLng + c * p.step); val (x1, y0) = xy(p.originLat + (r + 1) * p.step, p.originLng + (c + 1) * p.step)
-                val o = Offset((x0 * k).toFloat(), (y0 * k).toFloat()); val sz = Size(((x1 - x0) * k).toFloat(), ((y1 - y0) * k).toFloat())
-                drawRect(if (hand < 2) Color(0x472C5A8C) else Color(0x2E5E95CF), o, sz)
-                if (hand >= 2) { var d = -sz.height; while (d < sz.width) { drawLine(Color(0x592C5A8C), Offset(o.x + maxOf(d, 0f), o.y + maxOf(-d, 0f)), Offset(o.x + minOf(d + sz.height, sz.width), o.y + minOf(sz.width - d, sz.height)), 3f * k); d += 11f * k } }
+                if (x1 < 0 || y1 < 0 || x0 > w || y0 > h) continue
+                drawRect(Color(0xFF2C5A8C).copy(alpha = if (hand < 1) .4f else if (hand < 2) .28f else .13f), Offset(((x0 - .5) * k).toFloat(), ((y0 - .5) * k).toFloat()), Size(((x1 - x0 + 1) * k).toFloat(), ((y1 - y0 + 1) * k).toFloat()))
             }
         }
         you?.let { (la, ln) -> val (x, y) = xy(la, ln); Box(Modifier.offset((x - 13).dp, (y - 13).dp).size(26.dp).clip(CircleShape).background(NM.Navy).border(5.dp, Color.White, CircleShape)) }

@@ -93,17 +93,27 @@ class FeaturesTest {
         assertTrue(off.calls.isEmpty())
     }
 
-    @Test fun familyGroupLinksByQrAndSyncs() = runBlocking {
-        val sync = MemorySync()
-        val a = FeatureFactory.create(Adapters("test", FakeInference("unavailable"), sync, FakeConnectivity(true)), shared)
-        val b = FeatureFactory.create(Adapters("test", FakeInference("unavailable"), sync, FakeConnectivity(true)), shared)
-        a.setMe("Cut Nurlaila", "safe"); b.setMe("Teuku Hasballah", "need_help")
-        assertEquals("Cut Nurlaila", b.scanFamily(a.myQr()!!)!!.name)
-        assertEquals(null, b.scanFamily("hello"))
-        b.signal.value = "back"; b.flush()
-        a.familyGroup.value = a.familyGroup.value!!.copy(fam = b.familyGroup.value!!.fam)
-        a.signal.value = "back"; a.syncFamily()
-        assertEquals("need_help", a.familyGroup.value!!.members.single { it.name == "Teuku Hasballah" }.status)
+    @Test fun familyGroupQrCarriesGroupAndGossipJoinsGroups() = runBlocking {
+        val cloud = MemorySync()
+        fun mk() = FeatureFactory.create(Adapters("test", FakeInference("unavailable"), cloud, FakeConnectivity(true)), shared)
+        val a = mk(); val b = mk(); val c = mk()
+        a.setMe("Cut Nurlaila", "safe"); b.setMe("Teuku Hasballah", "need_help"); c.setMe("M. Rizki", "safe")
+        assertEquals(listOf("M. Rizki"), b.scanFamily(c.myQr()!!)!!.map { it.name })
+        assertEquals(listOf("Teuku Hasballah", "M. Rizki"), a.scanFamily(b.myQr()!!)!!.map { it.name })
+        assertEquals(null, a.scanFamily("hello"))
+        listOf(a, b, c).forEach { it.signal.value = "back" }
+        b.syncFamily(); a.syncFamily(); b.syncFamily(); c.syncFamily()
+        assertEquals(listOf("Cut Nurlaila", "Teuku Hasballah"), c.familyGroup.value!!.members.map { it.name }.sorted())
+    }
+
+    @Test fun familySearchDeviceParsesCloudSpells() = runBlocking {
+        val inf = FakeInference("available") { if (it.task == "family_query") InferenceResult("""{"name":"Hasan Basry","age":80,"place":null}""", "device") else InferenceResult("""{"variants":["Hasan Basri"]}""", "cloud") }
+        val f = features(inf).also { it.loadDemo(); it.signal.value = "back" }
+        val r = f.familySmart("kakek saya Hasan Basry, sekitar 80")
+        assertEquals("device", r.parsedBy); assertEquals("cloud", r.variantsBy)
+        assertEquals(listOf("Pak Hasan Basri" to "spelling"), r.hits.map { it.name to it.match })
+        assertEquals("only_on_device", inf.calls.first { it.task == "family_query" }.mode)
+        assertEquals("Hasan Basry", inf.calls.first { it.task == "name_variants" }.text)
     }
 
     @Test fun familySearchLocalMinimalFields() {

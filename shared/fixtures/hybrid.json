@@ -441,6 +441,44 @@
           "match": "spelling"
         }
       ]
+    },
+    {
+      "name": "offline: one letter off per word still counts as a spelling match",
+      "input": {
+        "name": "Hasan Basry",
+        "variants": [],
+        "age": null,
+        "records": [
+          {
+            "id": "h",
+            "name": "Pak Hasan Basri",
+            "age": 82,
+            "shelterId": "SD3",
+            "status": "safe"
+          },
+          {
+            "id": "x",
+            "name": "Hasan Bakri",
+            "age": 40,
+            "shelterId": "SD3",
+            "status": "safe"
+          },
+          {
+            "id": "y",
+            "name": "Ana Basri",
+            "age": 30,
+            "shelterId": "SD3",
+            "status": "safe"
+          }
+        ]
+      },
+      "expected": [
+        {
+          "name": "Pak Hasan Basri",
+          "shelterId": "SD3",
+          "match": "spelling"
+        }
+      ]
     }
   ],
   "lookForRules": [

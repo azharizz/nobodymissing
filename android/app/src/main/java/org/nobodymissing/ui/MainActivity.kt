@@ -528,7 +528,8 @@ fun FieldMap(ui: Ui, arg: String?) {
     var sel by remember { mutableStateOf(arg ?: rows.firstOrNull { f.fieldEntry(it.second.id).status == "unchecked" }?.second?.id) }
     val sh = f.shared.pack.shelters.firstOrNull { it.id == f.shelterId.value } ?: f.shared.pack.shelters.first()
     val color = mapOf("P1" to NM.Urgent, "P2" to NM.AmberInk, "P3" to NM.Ink2)
-    val markers = listOf(Marker("shelter", sh.lat, sh.lng, "home", NM.Navy, shelterName(ui))) + rows.mapNotNull { (n, r) ->
+    val hp = rows.firstOrNull { it.second.id == sel }?.let { f.higherPlace(f.fieldEntry(it.second.id)) }?.let { h -> f.shared.pack.shelters.firstOrNull { it.id == h.id } }
+    val markers = listOf(Marker("shelter", sh.lat, sh.lng, "home", NM.Navy, shelterName(ui))) + listOfNotNull(hp?.let { Marker("higher", it.lat, it.lng, "higher", NM.SageAcc, f.t("higherPlace")) }) + rows.mapNotNull { (n, r) ->
         val e = f.fieldEntry(r.id); if (e.lat == null || e.lng == null) null else {
             val open = e.status == "unchecked"
             Marker(r.id, e.lat, e.lng, if (!open) "check" else if (r.result.tier == "P1") "mobility" else "pin", if (open) color[r.result.tier]!! else NM.Done, n, open && r.result.tier == "P1", sel == r.id) { sel = r.id }

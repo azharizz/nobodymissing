@@ -1,17 +1,16 @@
 # Region pack builder (PRODUCT.md 6.13)
 
-Builds `shared/regions/<id>.json` for one bounding box. The demo pack `demo/region-aceh.json` is **synthetic** (illustrative HAND values).
-
-Real build (PENDING HUMAN: needs internet + GDAL):
+Builds a region pack from real open data. No GDAL needed.
 
 ```sh
-# 1. Global HAND 30 m (AWS Open Data, glo-30-hand) clipped to the bbox
-gdalwarp -te 97.99 4.22 98.03 4.26 -tr 0.001 0.001 /vsicurl/<HAND-30m-tile-url>.tif hand.tif
-# 2. Optional: Copernicus DEM GLO-30, only if this region needs the higher-ground finder
-gdalwarp -te 97.99 4.22 98.03 4.26 -tr 0.001 0.001 /vsicurl/<copernicus-glo30-tile-url>.tif dem.tif
-# 3. Export the grid to the pack JSON format (grid.origin, grid.step, grid.rows/cols, grid.hand[row][col], row 0 = south)
-gdal_translate -of AAIGrid hand.tif hand.asc
-# 4. Shelters: OSM emergency=assembly_point / amenity=shelter (ODbL) + shelters typed by the organizer
+cd tools/region-pack && npm install
+node build.mjs <id> <west> <south> <east> <north> <out.json>
+# the demo pack: Kuala Simpang, Aceh Tamiang (flooded Nov 2025)
+node build.mjs kuala-simpang 98.03 4.255 98.09 4.31 pack.json
 ```
 
-Attribution to show in the app: "Produced using Copernicus WorldDEM-30 © DLR e.V." and "© OpenStreetMap contributors (ODbL)".
+- **HAND** (height above nearest drainage, m): Global HAND 30 m (`glo-30-hand`, AWS Open Data), read as a Cloud-Optimized GeoTIFF window, median per ~110 m cell.
+- **Shelter candidates**: named schools, places of worship, hospitals and clinics from OpenStreetMap (Overpass). Flood-capable = HAND ≥ 5 m. The organizer confirms which are really open.
+- `shared/demo/region-aceh.json` = this output + one SYNTHETIC demo shelter (SD3) and its in-shelter places. All demo people are synthetic.
+
+Attribution shown in the app: "© OpenStreetMap contributors (ODbL)"; HAND derived from Copernicus GLO-30 DEM © DLR e.V. 2010-2014 and © Airbus 2014-2018.
