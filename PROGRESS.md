@@ -1,3 +1,19 @@
+# PROGRESS: update, Mon Nov 23 2026 (hybrid made visible, photo eval, Android footage)
+
+## Done
+- **Where Kit ran** (web + Android): every AI answer logged with its real source (SDK inferenceSource), the reason (private / device first / needs the internet / measured / phone too slow / staff approved / no signal / private mode) and time; **Kit today** card on staff Now: on-phone vs cloud counts and what left the shelter, by kind (`shared/rules/defaults.json` cloudSends). Tests: the log never claims the device did cloud work.
+- **Measured, not claimed**: evaluation card (Settings + Where Kit ran) from `shared/eval/results.json`.
+- **Photo eval** (`tools/eval/make-sheets.mjs`, `web/src/eval/runPhotos.ts`): 12 synthetic handwritten sheets, 63 people. Nano names 97% / ages 76% / needs 56%, 9.3 s; cloud 100 / 97 / 98, 3.2 s. A shorter on-device roster prompt is ~2x faster and no longer drops ages.
+- Bugs found while recording and fixed: approval-to-cloud loop, cloud schema "too many states", lost waiting photo, Show the way render loop, silent failures (Find it open, medicine check), wrong "found online" label.
+- **Footage**: `../footage/` (outside the repo): 24 clips (21 web, 3 Android emulator incl. real airplane mode), `TIMELINE.md`, `CUT_PLAN.md` (3:00 story cut).
+
+## Pending
+- Real Find it open + official warning takes after the free grounding quota resets (dummy takes exist, labelled; the cut plan doesn't use them).
+- Hosted demo (Firebase Hosting, public): needs the owner's OK. Push to main: needs the owner's OK.
+- Republish Remote Config `rules` (new routerPolicy numbers, cloudSends).
+
+---
+
 # PROGRESS: update, Sun Nov 22 2026 (evening: Android saves, routing measured, paper lists)
 
 ## Status in one line
