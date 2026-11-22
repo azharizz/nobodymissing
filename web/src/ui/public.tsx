@@ -3,10 +3,9 @@ import { useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { regionPack as pack } from '../features/regionData';
 import { distanceM, nearestHigher } from '../domain/regionPack';
 import type { Announcement } from '../features/state';
-import { isWhereToGo } from '../domain/firstHours';
 import { fmt } from './i18n';
 import { GoNow, Way, PickupPage, CheckinCard } from './firstHours';
-import { Badge, cardIcon, greeting, Icon, Kit, MicButton, navigate, QR, QrScanner, SayButton, ShelterMap, useAppState, useF, useT } from './common';
+import { Badge, cardIcon, greeting, handOff, Icon, takeHandOff, Kit, MicButton, navigate, QR, QrScanner, SayButton, ShelterMap, useAppState, useF, useT } from './common';
 
 const go = (p: string) => navigate(`#/public/${p}`);
 const PLACE_ICON: Record<string, string> = { medical: 'doctor', water: 'water', toilet: 'toilet', kitchen: 'food' };
@@ -77,7 +76,7 @@ function HelpPage() {
   const f = useF(), t = useT();
   const [spot, setSpot] = useState('');
   const [sent, setSent] = useState<{ kind: string; urgent: boolean } | null>(null);
-  const [words, setWords] = useState('');
+  const [words, setWords] = useState(takeHandOff);
   const [busy, setBusy] = useState(false);
   const [tri, setTri] = useState<Awaited<ReturnType<typeof f.hybrid.triage>> | null>(null);
   const kinds: [string, string, string][] = [['medicine', 'medicine', 'sage'], ['sick', 'sick', 'rose'], ['moving', 'mobility', 'sky'], ['baby', 'baby', 'lav']];
@@ -143,7 +142,7 @@ function MapPage() {
 
 function Family() {
   const t = useT(), f = useF(), s = useAppState();
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(takeHandOff);
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState<Awaited<ReturnType<typeof f.family.smart>> | null>(null);
   const go = async () => { if (!q.trim()) return; setBusy(true); setRes(await f.family.smart(q)); setBusy(false); };
@@ -219,45 +218,41 @@ function AskKit() {
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
   const [r, setR] = useState<Awaited<ReturnType<typeof f.hybrid.askKit>> | null>(null);
-  const [way, setWay] = useState<ReturnType<typeof f.first.destination> | 'none' | null>(null);
-  // "Where do I go?" -> the offline flood map answers instantly (rules in code); everything else asks Kit's model.
-  const ask = async () => {
-    setR(null); setWay(null);
-    if (isWhereToGo(q, f.rules.whereWords)) { setWay(f.first.destination() ?? 'none'); return; }
-    setBusy(true); setR(await f.hybrid.askKit(q)); setBusy(false);
-  };
-  const wayText = way && way !== 'none' ? fmt(t.goAnswer, { name: way.name, m: way.distanceM, dir: way.direction, gain: way.handGain, where: way.gps ? t.myLocation : t.theShelter }) : t.noHigher;
+  const ask = async (text = q) => { if (!text.trim()) return; setQ(text); setBusy(true); setR(null); setR(await f.hybrid.askKit(text)); setBusy(false); };
+  // The model only picks the intent; these words and buttons are the app's own (rules in code).
+  const dest = r?.intent === 'where_to_go' ? f.first.destination() : null;
+  const reply = !r ? '' : r.intent === 'notice' ? r.answer! : r.intent === 'where_to_go'
+    ? (dest ? fmt(t.goAnswer, { name: dest.name, m: dest.distanceM, dir: dest.direction, gain: dest.handGain, where: dest.gps ? t.myLocation : t.theShelter }) : t.noHigher)
+    : r.intent === 'greeting' ? t.kitHi : r.intent === 'help' ? (r.urgent ? t.kitUrgent : t.kitToHelp) : r.intent === 'pickup' ? t.kitToPickup : r.intent === 'family' ? t.kitToFamily : t.kitUnknown;
+  const main = !r ? null : r.intent === 'where_to_go' && dest ? { to: 'way', icon: 'nav', label: t.showWay, cls: 'primary' }
+    : r.intent === 'help' ? { to: 'help', icon: 'help', label: t.needHelp, cls: 'danger' } : r.intent === 'pickup' ? { to: 'pickup', icon: 'mobility', label: t.needPickup, cls: 'danger' }
+    : r.intent === 'family' ? { to: 'family', icon: 'family', label: t.findFamily, cls: 'primary' } : null;
+  const chips = [{ q: t.whereGo, icon: 'higher' }, { to: 'pickup', label: t.needPickup, icon: 'mobility' }, { to: 'help', label: t.needHelp, icon: 'help' }, { to: 'family', label: t.findFamily, icon: 'family' }, { to: '', label: t.todayNotices, icon: 'announce' }];
+  const by = r?.source === 'cloud' ? 'cloud' : r?.source === 'device' ? 'device' : 'rules';
   return (
     <>
       <Top title={t.askKit} sub={t.askPrivate} />
       <main className="content">
-        {!r && !way && <div className="hello rise"><Kit mood={busy ? 'think' : 'idle'} size={busy ? 130 : 120} /><p className="bubble">{t.askKitHello}</p></div>}
+        {!r && <div className="hello rise"><Kit mood={busy ? 'think' : 'idle'} size={busy ? 130 : 120} /><p className="bubble">{busy ? t.kitThinking : t.askKitHello}</p></div>}
         <div className="ask-box">
-          <textarea rows={2} value={q} placeholder={t.askKitHint} aria-label={t.askKit} onChange={e => setQ(e.target.value)} />
-          <div className="tools"><MicButton onText={setQ} /><button className="btn primary" style={{ flex: 1 }} disabled={!q.trim() || busy} onClick={ask}><Icon name="send" className={busy ? 'spin' : ''} />{t.ask}</button></div>
+          <textarea rows={2} value={q} placeholder={t.askKitHint} aria-label={t.askKit} onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void ask(); } }} />
+          <div className="tools"><MicButton onText={x => void ask(x)} /><button className="btn primary" style={{ flex: 1 }} disabled={!q.trim() || busy} onClick={() => void ask()}><Icon name="send" className={busy ? 'spin' : ''} />{t.ask}</button></div>
         </div>
-        {busy && <p className="note" aria-live="polite"><Icon name="device" size={16} />{t.kitThinking}</p>}
-        {way && (
+        {r && (
           <div className="answer rise" aria-live="polite">
-            <div className="place"><Kit mood="device" size={56} /><span className="badge local"><Icon name="device" size={15} />{t.fromFloodMap}</span></div>
-            <p>{wayText}</p>
-            <SayButton id="ask" text={wayText} />
-            {way !== 'none' && <button className="btn primary" onClick={() => go('way')}><Icon name="nav" />{t.showWay}</button>}
-            <button className="btn danger" onClick={() => go('pickup')}><Icon name="mobility" />{t.needPickup}</button>
+            <div className="place"><Kit mood={by === 'cloud' ? 'cloud' : 'device'} size={56} />
+              {by === 'rules' && r.intent === 'where_to_go' ? <span className="badge local"><Icon name="device" size={15} />{t.fromFloodMap}</span>
+                : by === 'rules' ? <span className="badge kw"><Icon name="keywords" size={15} />{t.plainByRules}</span>
+                : r.intent === 'notice' ? <Badge source={r.source as 'device' | 'cloud'} /> : <span className={`badge ${by === 'cloud' ? 'cloud' : 'local'}`}><Icon name={by} size={15} />{t.kitUnderstood}</span>}</div>
+            <p>{reply}</p>
+            {r.card && <div className="from"><Icon name={headline(r.card).icon} />{t.fromNotice}: “{r.card.text}”</div>}
+            <SayButton id="ask" text={reply} />
+            {main && <button className={`btn ${main.cls}`} onClick={() => { handOff(q); go(main.to); }}><Icon name={main.icon} />{main.label}</button>}
           </div>
         )}
-        {r && (r.answer ? (
-          <div className="answer rise" aria-live="polite">
-            <div className="place"><Kit mood={r.source === 'cloud' ? 'cloud' : 'device'} size={56} /><Badge source={r.source} /></div>
-            <p>{r.answer}</p>
-            {r.card && <div className="from"><Icon name={headline(r.card).icon} />{t.fromNotice}: “{r.card.text}”</div>}
-            <SayButton id="ask" text={r.answer} />
-          </div>
-        ) : (
-          <div className="answer rise" aria-live="polite"><div className="place"><Kit mood="idle" size={56} /></div><p>{t.askVolunteer}</p>
-            <SayButton id="ask" text={t.askVolunteer} />
-            <button className="btn danger" onClick={() => go('help')}><Icon name="help" />{t.needHelp}</button></div>
-        ))}
+        {!busy && <div className="kit-chips" role="group" aria-label={t.askKit}>
+          {chips.filter(c => !(r && main && c.to === main.to)).map(c => <button key={c.icon} className="chip" onClick={() => c.q ? void ask(c.q) : go(c.to!)}><Icon name={c.icon} size={18} />{c.q ?? c.label}</button>)}
+        </div>}
       </main>
     </>
   );

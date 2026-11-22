@@ -258,3 +258,8 @@ export function ShelterMap({ markers, you, chips, aspect = 4 / 5, className = ''
     </div>
   );
 }
+
+/** Kit -> Help / Pickup / Family: carry the person's own words so nobody types twice. In memory only (not in the URL or history). */
+let handoff = '';
+export const handOff = (text: string) => { handoff = text.trim(); };
+export const takeHandOff = () => { const t = handoff; handoff = ''; return t; };

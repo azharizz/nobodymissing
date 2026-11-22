@@ -384,5 +384,17 @@
   "go": "Go",
   "goAnswer": "Go to {name}: {m} m {dir}, {gain} m higher than {where}. Take your medicine and documents.",
   "fromFloodMap": "From the flood map on this phone (works offline)",
-  "kitThinking": "Kit is thinking… first on this phone, then online if needed."
+  "kitThinking": "Kit is thinking… first on this phone, then online if needed.",
+  "kitHi": "Hi! I'm Kit. I can help you get to a higher place, ask for a pickup, find your family, or read today's notices. Tap one below.",
+  "kitToHelp": "Tell a volunteer what you need. Tap below and Kit will help you say it.",
+  "kitToPickup": "If you can't get out on your own, ask for a pickup. Tap below.",
+  "kitToFamily": "Kit can help you find your family or tell them you are safe. Tap below.",
+  "kitUnknown": "Kit isn't sure. Try one of these, or ask a volunteer.",
+  "todayNotices": "Today's notices",
+  "findFamily": "Find family",
+  "whereGo": "Where do I go?",
+  "kitUrgent": "This sounds urgent. Show this screen to the nearest volunteer now, or tap below.",
+  "someone": "Someone (no spot given)",
+  "pickupSending": "Sending to volunteers now…",
+  "askedWhen": "asked {when}"
 }

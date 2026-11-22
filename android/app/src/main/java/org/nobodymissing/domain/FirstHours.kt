@@ -31,12 +31,13 @@ fun mergeCheckin(ai: Checkin?, text: String, flagWords: Map<String, List<String>
 
 data class Pickup(val who: String, val mobility: Int, val needs: List<String>, val people: Int, val by: String = "keywords")
 /** "My mother can't walk, needs insulin" -> pickup request (keywords). */
-fun parsePickup(text: String, needWords: Map<String, List<String>>, mobilityWords: Map<String, List<String>>) = Pickup(
-    text.split(Regex("[,;.]"))[0].trim().take(40), (mobilityWords.filter { has(text, it.value) }.keys.map { it.toInt() } + 0).max(), needWords.keys.filter { has(text, needWords.getValue(it)) }, 1)
-/** Mobility and needs can only go up. */
-fun mergePickup(ai: Pickup?, text: String, needWords: Map<String, List<String>>, mobilityWords: Map<String, List<String>>): Pickup {
-    val r = parsePickup(text, needWords, mobilityWords)
-    return if (ai == null) r else Pickup(ai.who.ifBlank { r.who }, maxOf(ai.mobility, r.mobility), (ai.needs + r.needs).distinct(), maxOf(1, ai.people), "device")
+fun parsePickup(text: String, needWords: Map<String, List<String>>, mobilityWords: Map<String, List<String>>, peopleWords: Map<String, List<String>> = emptyMap()) = Pickup(
+    text.split(Regex("[,;.]"))[0].trim().take(40), (mobilityWords.filter { has(text, it.value) }.keys.map { it.toInt() } + 0).max(), needWords.keys.filter { has(text, needWords.getValue(it)) },
+    (peopleWords.filter { has(text, it.value) }.keys.map { it.toInt() } + 1).max())
+/** Mobility, needs and headcount can only go up. */
+fun mergePickup(ai: Pickup?, text: String, needWords: Map<String, List<String>>, mobilityWords: Map<String, List<String>>, peopleWords: Map<String, List<String>> = emptyMap()): Pickup {
+    val r = parsePickup(text, needWords, mobilityWords, peopleWords)
+    return if (ai == null) r else Pickup(ai.who.ifBlank { r.who }, maxOf(ai.mobility, r.mobility), (ai.needs + r.needs).distinct(), maxOf(1, ai.people, r.people), "device")
 }
 /** A pickup becomes a Field Check entry ranked by the same priority rules. */
 fun pickupPriority(p: Pickup) = PriorityInput(age = null, mobility = minOf(3, p.mobility), cantMiss = p.needs.any { it in listOf("insulin", "dialysis", "oxygen") },

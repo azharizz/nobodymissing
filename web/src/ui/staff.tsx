@@ -70,7 +70,7 @@ function Now() {
   const toCheck = s.people.filter(p => !p.confirmedBy).length;
   const tasks: React.ReactNode[] = [
     ...s.help.filter(h => !h.done).sort((a, b) => Number(!!b.urgent) - Number(!!a.urgent)).map(h => <div key={h.id} className={`task ${h.urgent ? 'urgent' : ''}`}><span className={`sq ${h.urgent ? 'rose' : h.kind === 'write' ? 'lav' : 'rose'}`}><Icon name={h.urgent ? 'alert' : h.kind === 'write' ? 'chat' : 'help'} /></span>
-      <span className="tx">{h.urgent && <span className="tagline">{t.urgent}</span>}<b>{fmt(t.asksFor, { spot: h.spot, kind: (t as Record<string, string>)[`kind_${h.kind}`] ?? helpWord(t, h.kind) })}</b>
+      <span className="tx">{h.urgent && <span className="tagline">{t.urgent}</span>}<b>{fmt(t.asksFor, { spot: !h.spot.trim() || h.spot === '?' ? t.someone : h.spot, kind: (t as Record<string, string>)[`kind_${h.kind}`] ?? helpWord(t, h.kind) })}</b>
         {h.summary && <span>{h.summary}{h.by === 'device' ? ' · ' + t.readsOnPhone : ''}</span>}{h.text && h.text !== h.summary && <span>“{h.text}”</span>}</span>
       <button className="act" aria-label={t.confirm} onClick={() => f.settings.helpDone(h.id)}><Icon name="check" /></button></div>),
     ...sch.alerts.map(a => <button key={'a' + a.personId + a.generic} className="task urgent" onClick={() => go(`person/${a.personId}`)}><span className="sq"><Icon name="medicine" /></span>
@@ -445,7 +445,7 @@ function FieldMap() {
           <div className="place"><span className="avatar rose">{initial(row.name)}</span>
             <div className="tx"><span className={`prio ${row.tier.toLowerCase()}`}>{row.pickup ? t.pickupFirst : row.tier === 'P1' ? t.visitFirst.toUpperCase() : row.tier}</span>
               <b className="h" style={{ fontSize: 22, marginTop: 4 }}>{row.name}{row.person.age ? `, ${row.person.age}` : ''}</b>
-              <span>{[row.distanceM != null ? `${row.distanceM} m` : null, fmt(t.lastChecked, { when: hours(row.id) })].filter(Boolean).join(' · ')}</span></div>
+              <span>{[row.distanceM != null ? `${row.distanceM} m` : null, row.pickup ? fmt(t.askedWhen, { when: fmt(t.minAgo, { n: Math.max(0, Math.round((Date.now() - row.pickup.at) / 60_000)) }) }) : fmt(t.lastChecked, { when: hours(row.id) })].filter(Boolean).join(' · ')}</span></div>
             {row.needsReview && <Badge draft />}</div>
           <div className="risk">{row.pickup?.needs.map(n => <span key={n} className="pill urgent">{(t as Record<string, string>)[`need_${n}`] ?? n}</span>)}{row.why.map(w => <span key={w} className="pill urgent">{w}</span>)}</div>
           {row.higher && <div className="higher"><Icon name="higher" />{fmt(t.higherFor, { name: row.higher.name, m: row.higher.distanceM, dir: row.higher.direction })}</div>}

@@ -80,6 +80,7 @@ fun EvGo(ui: Ui) {
                 H(w.w.plain, 30.sp)
                 P("${w.w.action ?: f.t("level_${w.w.level}")} ${f.t("takeMeds")}", 20.sp, bold = true)
                 Badge(ui, if (w.w.by == "keywords") "keywords" else w.w.by, text = f.t(when (w.w.by) { "device" -> "plainOnPhone"; "cloud" -> "officialCloud"; else -> "plainByRules" }))
+                if (w.w.by != "cloud" && w.text.isNotBlank()) P("${f.t("original")}: “${w.text}”", 15.sp)
                 w.sources.forEach { s -> P(s.title ?: s.uri ?: "", 14.sp) }
             }
         }
@@ -170,7 +171,7 @@ fun EvWay(ui: Ui) {
 fun EvPickup(ui: Ui) {
     val f = ui.f
     val scope = rememberCoroutineScope()
-    var text by remember { mutableStateOf("") }
+    var text by remember { mutableStateOf(takeHandOff()) }
     var busy by remember { mutableStateOf(false) }
     var p by remember { mutableStateOf<Pickup?>(null) }
     val locate = rememberLocate { la, ln -> f.myPos.value = la to ln }
@@ -199,7 +200,7 @@ fun EvPickup(ui: Ui) {
         } else {
             val sent = f.pickupSent()
             Row(Modifier.fillMaxWidth().clip(R16).background(if (sent) NM.Sage else NM.Honey).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Ic(ui.icons, if (sent) "check" else "clock", 22.dp, if (sent) NM.SageInk else NM.HoneyInk); Spacer(Modifier.width(10.dp)); P(f.t(if (sent) "pickupSent" else "pickupWaiting"), 17.sp, if (sent) NM.SageInk else NM.HoneyInk, bold = true) }
+                Ic(ui.icons, if (sent) "check" else "clock", 22.dp, if (sent) NM.SageInk else NM.HoneyInk); Spacer(Modifier.width(10.dp)); P(f.t(if (sent) "pickupSent" else if (f.signal.value == "back") "pickupSending" else "pickupWaiting"), 17.sp, if (sent) NM.SageInk else NM.HoneyInk, bold = true) }
             Column(Modifier.fillMaxWidth().soft(R22).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Image(qr(encodePickupQr(mine.first), 560).asImageBitmap(), f.t("showVolunteer"), Modifier.size(240.dp)); H(mine.first.who, 20.sp); P(f.t("showVolunteer"), 15.sp, NM.Ink2)
             }

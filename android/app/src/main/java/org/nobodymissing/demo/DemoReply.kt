@@ -31,7 +31,15 @@ object DemoReply {
                 // Demo: pick the notice sharing a word with the question (the real model reads them in any language).
                 val words = t.lowercase().split(Regex("\\W+")).filter { it.length > 3 && it !in setOf("when", "what", "where", "does", "will", "there") }
                 val hit = Regex("""id=(\S+) text=([^\n]*)""").findAll(r.prompt).firstOrNull { m -> words.any { m.groupValues[2].lowercase().contains(it) } }
-                if (hit != null) """{"cardId":"${hit.groupValues[1]}","answer":"${hit.groupValues[2].replace(Regex(" \\(said:.*$"), "").replace("\"", "")}"}""" else """{"cardId":null,"answer":"Please ask a volunteer."}"""
+                val intent = when {
+                    Regex("^(hi|halo|hello|hai|hey|thanks|terima kasih|makasih)\\b", RegexOption.IGNORE_CASE).containsMatchIn(t) -> "greeting"
+                    Regex("tidak bisa (jalan|keluar)|can't (walk|get out)|jemput|pickup", RegexOption.IGNORE_CASE).containsMatchIn(t) -> "pickup"
+                    Regex("keluarga|family|anak saya|my (mother|father|son|daughter|child)", RegexOption.IGNORE_CASE).containsMatchIn(t) -> "family"
+                    Regex("sakit|sick|obat|medicine|tolong|help", RegexOption.IGNORE_CASE).containsMatchIn(t) -> "help"
+                    hit != null -> "notice"
+                    else -> "unknown"
+                }
+                if (intent == "notice") """{"intent":"notice","cardId":"${hit!!.groupValues[1]}","answer":"${hit.groupValues[2].replace(Regex(" \\(said:.*$"), "").replace("\"", "")}"}""" else """{"intent":"$intent","cardId":null,"answer":""}"""
             }
             else -> "{}"
         }

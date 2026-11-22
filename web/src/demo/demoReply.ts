@@ -33,7 +33,9 @@ export function demoReply(r: InferenceRequest): InferenceResult {
       // Demo: pick the notice sharing a word with the question (the real model reads them in any language).
       const words = t.toLowerCase().split(/\W+/).filter(w => w.length > 3 && !['when', 'what', 'where', 'does', 'will', 'there'].includes(w));
       const hit = [...r.prompt.matchAll(/id=(\S+) text=([^\n]*)/g)].find(m => words.some(w => m[2].toLowerCase().includes(w)));
-      return JSON.stringify(hit ? { cardId: hit[1], answer: hit[2].replace(/ \(said:.*$/, '') } : { cardId: null, answer: 'Please ask a volunteer.' });
+      const intent = /^(hi|halo|hello|hai|hey|thanks|terima kasih|makasih)\b/i.test(t) ? 'greeting' : /tidak bisa (jalan|keluar)|can't (walk|get out)|jemput|pickup/i.test(t) ? 'pickup'
+        : /keluarga|family|anak saya|my (mother|father|son|daughter|child)/i.test(t) ? 'family' : /sakit|sick|obat|medicine|tolong|help/i.test(t) ? 'help' : hit ? 'notice' : 'unknown';
+      return JSON.stringify(intent === 'notice' ? { intent, cardId: hit![1], answer: hit![2].replace(/ \(said:.*$/, '') } : { intent, cardId: null, answer: '' });
     })(),
   };
   raw.announcement_id = raw.announcement;

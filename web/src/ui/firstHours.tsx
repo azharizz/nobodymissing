@@ -3,7 +3,7 @@ import { useState, type CSSProperties } from 'react';
 import { encodeCheckinQr, encodePickupQr } from '../domain/firstHours';
 import { distanceM } from '../domain/regionPack';
 import { fmt } from './i18n';
-import { Icon, Kit, MicButton, navigate, QR, SayButton, ShelterMap, useAppState, useF, useT } from './common';
+import { Icon, Kit, MicButton, navigate, takeHandOff, QR, SayButton, ShelterMap, useAppState, useF, useT } from './common';
 
 const go = (p: string) => navigate(`#/public/${p}`);
 const tr = (t: Record<string, string>, k: string, fb = k) => t[k] ?? fb;
@@ -35,6 +35,7 @@ export function GoNow() {
           <h2>{w.plain}</h2>
           <p>{w.action ?? tr(t, `level_${w.level}`)} {t.takeMeds}</p>
           <span className={`badge ${w.by === 'device' ? 'local' : w.by === 'cloud' ? 'cloud' : 'kw'}`}><Icon name={w.by === 'cloud' ? 'cloud' : w.by === 'device' ? 'device' : 'keywords'} size={15} />{w.by === 'device' ? t.plainOnPhone : w.by === 'cloud' ? t.officialCloud : t.plainByRules}</span>
+          {w.by !== 'cloud' && w.text && <p className="orig">{t.original}: “{w.text}”</p>}
           {w.sources.map(x => <a key={x.uri} className="src" href={x.uri} target="_blank" rel="noreferrer">{x.title ?? x.uri}</a>)}
         </header>
       ) : <Top title={t.goSafety} sub={t.goSafetySub} />}
@@ -111,7 +112,7 @@ export function Way() {
 /** 3 · I need pickup: spoken words understood on the phone; sent on tap, through the outbox (waits for signal); QR for a passing volunteer. */
 export function PickupPage() {
   const t = useT(), f = useF(), s = useAppState();
-  const [text, setText] = useState('');
+  const [text, setText] = useState(takeHandOff);
   const [busy, setBusy] = useState(false);
   const [p, setP] = useState<Awaited<ReturnType<typeof f.first.understandPickup>> | null>(null);
   const mine = s.myPickup, job = mine && s.jobs.find(j => j.id === mine.jobId);
@@ -134,7 +135,7 @@ export function PickupPage() {
           </div>}
         </>}
         {mine && <>
-          <div className={`wait ${job?.state === 'sent' ? 'ok' : ''}`}><Icon name={job?.state === 'sent' ? 'check' : 'clock'} />{job?.state === 'sent' ? t.pickupSent : t.pickupWaiting}</div>
+          <div className={`wait ${job?.state === 'sent' ? 'ok' : ''}`}><Icon name={job?.state === 'sent' ? 'check' : 'clock'} />{job?.state === 'sent' ? t.pickupSent : s.signal === 'back' ? t.pickupSending : t.pickupWaiting}</div>
           <div className="qr-show"><QR text={encodePickupQr(mine)} size={240} label={t.showVolunteer} /><b className="h" style={{ fontSize: 20 }}>{mine.who}</b><span className="muted" style={{ textAlign: 'center' }}>{t.showVolunteer}</span></div>
         </>}
       </main>

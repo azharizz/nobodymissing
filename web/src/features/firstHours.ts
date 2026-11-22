@@ -58,7 +58,7 @@ export function createFirstHours(d: Deps, enqueue: (type: string, payload: unkno
   async function understandPickup(text: string) {
     const r = await d.router.run<Pickup>('pickup_request', { text: text.trim() });
     const ai = (r.status === 'ok' || r.status === 'draft') && r.source === 'device' && r.data ? r.data : null;
-    return mergePickup(ai, text, d.rules.needWords, d.rules.mobilityWords);
+    return mergePickup(ai, text, d.rules.needWords, d.rules.mobilityWords, d.rules.peopleWords);
   }
   /** Send only on the person's tap. Goes to the nearest shelter's pickup list through the outbox (waits for signal). */
   function sendPickup(p: Pickup) {

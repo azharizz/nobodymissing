@@ -30,7 +30,7 @@ export function priority(p: PriorityInput, ev: Event, w: Weights) {
   const mob = p.mobility ?? 0;
   s += mob; if (mob >= 2) why.push('limited mobility');
   const lowSupply = !!p.cantMiss && (p.supplyDays ?? 0) <= w.lowSupplyDays;
-  if (p.cantMiss) { s += w.cantMiss + (lowSupply ? w.cantMissLowSupply : 0); why.push(`can't-miss treatment, ${p.supplyDays ?? '?'} day(s) left`); }
+  if (p.cantMiss) { s += w.cantMiss + (lowSupply ? w.cantMissLowSupply : 0); why.push(p.supplyDays == null ? "can't-miss treatment" : `can't-miss treatment, ${p.supplyDays} day(s) left`); }
   else if (p.dailyMeds) s += w.dailyMeds;
   if (p.hearing) { s += w.hearing; why.push('hard of hearing'); }
   if (p.dementia) { s += w.dementia; why.push('dementia'); }

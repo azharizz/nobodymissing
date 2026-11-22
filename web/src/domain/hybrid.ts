@@ -37,8 +37,17 @@ export function groundedPlaces<P extends { name: string }>(places: P[], chunks: 
 }
 
 /** Ask Kit may only answer from today's notices: an answer must cite a real card, otherwise it is discarded. */
-export function askKitAnswer(result: { cardId: string | null; answer: string }, cardIds: string[]) {
-  return result.cardId && cardIds.includes(result.cardId) && result.answer.trim() ? { answer: result.answer.trim(), cardId: result.cardId } : null;
+export const urgentWordsIn = (text: string, words: string[]) => { const t = ` ${text.toLowerCase()} `; return words.some(w => t.includes(w.toLowerCase())); };
+export const KIT_INTENTS = ['greeting', 'where_to_go', 'help', 'pickup', 'family', 'notice', 'unknown'] as const;
+export type KitIntent = (typeof KIT_INTENTS)[number];
+/** Ask Kit: the model only picks what the person wants; the app answers with its own words and real screens.
+ *  Only a notice answer shows model text, and only if it cites a real notice. Urgent words always mean help. */
+export function askKitAnswer(result: { intent?: string; cardId: string | null; answer: string }, cardIds: string[], text = '', urgentWords: string[] = []) {
+  if (urgentWordsIn(text, urgentWords)) return { intent: 'help' as KitIntent, answer: null, cardId: null };
+  const real = !!result.cardId && cardIds.includes(result.cardId) && !!result.answer?.trim();
+  const intent: KitIntent = (KIT_INTENTS as readonly string[]).includes(result.intent ?? '') ? (result.intent as KitIntent) : real ? 'notice' : 'unknown';
+  if (intent === 'notice') return real ? { intent, answer: result.answer.trim(), cardId: result.cardId } : { intent: 'unknown' as KitIntent, answer: null, cardId: null };
+  return { intent, answer: null, cardId: null };
 }
 
 const ICON_KIND: Record<string, string> = { medicine: 'medicine', doctor: 'sick', food: 'food', water: 'water', toilet: 'toilet', baby: 'baby', move: 'moving' };

@@ -3,8 +3,9 @@
 // 2 Find it open: Grounding with Google Maps near a rounded location -> only places Google Maps returned.
 // 5 Ask Kit: an evacuee's question answered only from today's shown notices (device first), or "ask a volunteer".
 import keywords from '../../../shared/rules/keywords.json';
-import { askKitAnswer, coarseLocation, crossCheck, groundedPlaces, medCheckInput, triageHelp } from '../domain/hybrid';
+import { askKitAnswer, urgentWordsIn, type KitIntent, coarseLocation, crossCheck, groundedPlaces, medCheckInput, triageHelp } from '../domain/hybrid';
 import { keywordIcons } from '../domain/keywordIcons';
+import { isWhereToGo } from '../domain/firstHours';
 import { drugList as drugs, regionPack as pack } from './regionData';
 import type { Deps } from './deps';
 import type { Job, MedCheck, OpenPlace } from './state';
@@ -58,17 +59,20 @@ export function createHybrid(d: Deps, enqueue: (type: string, payload: unknown, 
   }
 
   /** The question is never stored or synced. No valid card -> null, and the UI says "ask a volunteer". */
+  /** Ask Kit. "Where do I go?" -> offline flood map (no model). Otherwise the phone's model picks the intent; the app answers. */
   async function askKit(question: string) {
-    const s = d.store.get();
+    const s = d.store.get(), q = question.trim();
+    if (isWhereToGo(q, d.rules.whereWords)) return { intent: 'where_to_go' as KitIntent, answer: null, cardId: null, urgent: false, card: null, source: 'rules' as const };
     const cards = s.announcements.filter(a => a.shown).slice(0, 8);
-    if (!cards.length || !question.trim()) return { answer: null, card: null, source: null };
     const list = cards.map(a => {
       const c = a.cards?.[0];
       return `id=${a.id} text=${[c?.title, c?.time ?? a.times[0], c?.place ?? a.place].filter(Boolean).join(' · ')} (said: ${a.text})`;
-    }).join('\n');
-    const r = await d.router.run<{ cardId: string | null; answer: string }>('ask_kit', { text: question.trim(), vars: { cards: list, lang: s.lang === 'id' ? 'Indonesian' : 'English' } });
-    const ok = (r.status === 'ok' || r.status === 'draft') && r.data ? askKitAnswer(r.data, cards.map(a => a.id)) : null;
-    return { answer: ok?.answer ?? null, card: ok ? cards.find(a => a.id === ok.cardId)! : null, source: ok ? r.source! : null };
+    }).join('\n') || '(none today)';
+    const r = await d.router.run<{ intent: string; cardId: string | null; answer: string }>('ask_kit', { text: q, vars: { cards: list, lang: s.lang === 'id' ? 'Indonesian' : 'English' } });
+    const ok = (r.status === 'ok' || r.status === 'draft') && r.data;
+    const k = askKitAnswer(ok ? r.data! : { cardId: null, answer: '' }, cards.map(a => a.id), q, d.rules.urgentWords);
+    const urgent = urgentWordsIn(q, d.rules.urgentWords);
+    return { ...k, urgent, card: k.cardId ? cards.find(a => a.id === k.cardId)! : null, source: ok ? r.source! : 'rules' as const };
   }
 
   /** "I need help" in the evacuee's own words: understood on this phone only (health words are private).

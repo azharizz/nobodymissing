@@ -478,5 +478,29 @@
     "tempat yang aman",
     "mengungsi ke",
     "lari ke"
-  ]
+  ],
+  "peopleWords": {
+    "2": [
+      "berdua",
+      "kami dua",
+      "two of us",
+      "we are two",
+      "both of us"
+    ],
+    "3": [
+      "bertiga",
+      "three of us",
+      "we are three"
+    ],
+    "4": [
+      "berempat",
+      "four of us",
+      "we are four"
+    ],
+    "5": [
+      "berlima",
+      "five of us",
+      "we are five"
+    ]
+  }
 }

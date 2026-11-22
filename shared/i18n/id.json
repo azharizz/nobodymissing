@@ -384,5 +384,17 @@
   "go": "Pergi",
   "goAnswer": "Pergi ke {name}: {m} m ke {dir}, {gain} m lebih tinggi dari {where}. Bawa obat dan dokumen Anda.",
   "fromFloodMap": "Dari peta banjir di HP ini (bisa tanpa sinyal)",
-  "kitThinking": "Kit sedang berpikir… dulu di HP ini, lalu online bila perlu."
+  "kitThinking": "Kit sedang berpikir… dulu di HP ini, lalu online bila perlu.",
+  "kitHi": "Halo! Saya Kit. Saya bisa bantu Anda ke tempat lebih tinggi, minta jemputan, cari keluarga, atau baca pengumuman hari ini. Pilih di bawah.",
+  "kitToHelp": "Beri tahu relawan apa yang Anda butuhkan. Tekan di bawah, Kit bantu menyampaikannya.",
+  "kitToPickup": "Jika tidak bisa keluar sendiri, minta jemputan. Tekan di bawah.",
+  "kitToFamily": "Kit bisa bantu cari keluarga atau kabari mereka bahwa Anda selamat. Tekan di bawah.",
+  "kitUnknown": "Kit kurang yakin. Coba salah satu ini, atau tanya relawan.",
+  "todayNotices": "Pengumuman hari ini",
+  "findFamily": "Cari keluarga",
+  "whereGo": "Ke mana saya pergi?",
+  "kitUrgent": "Ini terdengar darurat. Tunjukkan layar ini ke relawan terdekat sekarang, atau tekan di bawah.",
+  "someone": "Seseorang (tempat tidak diisi)",
+  "pickupSending": "Sedang dikirim ke relawan…",
+  "askedWhen": "minta {when}"
 }

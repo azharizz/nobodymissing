@@ -74,11 +74,16 @@ class FeaturesTest {
 
     @Test fun askKitNeedsARealCard() = runBlocking {
         var id = ""
-        val f = features(FakeInference("available") { InferenceResult("""{"cardId":"$id","answer":"Lunch is at 12:00."}""", "device") })
+        var intent = "notice"
+        val inf = FakeInference("available") { InferenceResult("""{"intent":"$intent","cardId":"$id","answer":"Lunch is at 12:00."}""", "device") }
+        val f = features(inf)
         val a = f.announce("Lunch 12.00 in the hall", "en"); f.approve(a.id); id = a.id
-        assertEquals("Lunch is at 12:00.", f.askKit("When is lunch?")!!.answer)
+        assertEquals("Lunch is at 12:00.", f.askKit("When is lunch?").answer)
         id = "nope"
-        assertEquals(null, f.askKit("When is lunch?"))
+        assertEquals("unknown", f.askKit("When is lunch?").intent)
+        intent = "greeting"; assertEquals(AskAnswer("greeting", null, null, "device"), f.askKit("hi bro"))
+        val n = inf.calls.size
+        assertEquals("where_to_go", f.askKit("where should I go?").intent); assertEquals(n, inf.calls.size)
     }
 
     @Test fun helpTriageStaysOnDevice() = runBlocking {

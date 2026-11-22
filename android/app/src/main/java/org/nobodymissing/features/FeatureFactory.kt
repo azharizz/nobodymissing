@@ -47,7 +47,8 @@ data class Interaction(val a: String, val b: String, val severity: String, val n
 data class MedCheckUi(val items: List<MedCheckItem>, val interactions: List<Interaction>, val cross: List<Cross>, val pending: Boolean)
 data class OpenPlace(val name: String, val kind: String?, val distanceKm: Double?, val openNow: Boolean?, val hours: String?, val uri: String?)
 data class OpenUi(val need: String, val places: List<OpenPlace>, val pending: Boolean)
-data class AskAnswer(val answer: String, val card: UiAnnouncement, val source: String)
+const val JOB_TIMEOUT_MS = 30_000L
+data class AskAnswer(val intent: String, val answer: String?, val card: UiAnnouncement?, val source: String, val urgent: Boolean = false)
 data class UiJob(val id: String, val type: String, val path: String, val payload: Map<String, Any?>, val createdAt: Long, var status: JobStatus = JobStatus("waiting", 0))
 
 /** FeatureFactory: wires every feature to its ports. Features never construct adapters. */
@@ -204,15 +205,16 @@ class Features(val adapters: Adapters, val shared: Shared) {
     fun needs() = shared.defaults["findOpen"]!!.jsonObject.strings("needs")
 
     /** 5 · Ask Kit: answers only from today's shown notices (device first). The question is never stored or synced. */
-    suspend fun askKit(question: String): AskAnswer? {
+    /** Ask Kit. "Where do I go?" -> offline flood map (no model). Otherwise the phone's model picks the intent; the app answers. */
+    suspend fun askKit(question: String): AskAnswer {
+        val q = question.trim()
+        if (isWhere(q)) return AskAnswer("where_to_go", null, null, "rules")
         val cards = announcements.filter { it.shown }.take(8)
-        if (cards.isEmpty() || question.isBlank()) return null
-        val list = cards.joinToString("\n") { a -> val c = a.cards.firstOrNull(); "id=${a.id} text=${listOfNotNull(c?.title, c?.time, c?.place).joinToString(" · ")} (said: ${a.text})" }
-        val r = router.run("ask_kit", text = question.trim(), extra = Extra(mapOf("cards" to list, "lang" to if (lang.value == "id") "Indonesian" else "English")))
-        if (r.status != "ok" && r.status != "draft") return null
-        val o = r.data!!.jsonObject
-        val ok = askKitAnswer(o.s("cardId"), o.s("answer") ?: "", cards.map { it.id }) ?: return null
-        return AskAnswer(ok.first, cards.first { it.id == ok.second }, r.source!!)
+        val list = cards.joinToString("\n") { a -> val c = a.cards.firstOrNull(); "id=${a.id} text=${listOfNotNull(c?.title, c?.time, c?.place).joinToString(" · ")} (said: ${a.text})" }.ifEmpty { "(none today)" }
+        val r = router.run("ask_kit", text = q, extra = Extra(mapOf("cards" to list, "lang" to if (lang.value == "id") "Indonesian" else "English")))
+        val o = if (r.status == "ok" || r.status == "draft") r.data?.jsonObject else null
+        val k = askKitAnswer(o?.s("intent"), o?.s("cardId"), o?.s("answer") ?: "", cards.map { it.id }, q, words("urgentWords"))
+        return AskAnswer(k.intent, k.answer, k.cardId?.let { id -> cards.first { it.id == id } }, if (o != null) r.source!! else "rules", urgentWordsIn(q, words("urgentWords")))
     }
 
     /** Queued cloud questions run again when the signal returns. */
@@ -276,7 +278,7 @@ class Features(val adapters: Adapters, val shared: Shared) {
     suspend fun understandPickup(text: String): Pickup {
         val r = router.run("pickup_request", text = text.trim())
         val ai = if ((r.status == "ok" || r.status == "draft") && r.source == "device") r.data!!.jsonObject.let { Pickup(it.s("who") ?: "", it.i("mobility") ?: 0, it.strings("needs"), it.i("people") ?: 1) } else null
-        return mergePickup(ai, text, wordMap("needWords"), wordMap("mobilityWords"))
+        return mergePickup(ai, text, wordMap("needWords"), wordMap("mobilityWords"), wordMap("peopleWords"))
     }
     /** Sent only on the person's tap, to the nearest shelter's pickup list through the outbox (waits for signal). */
     fun sendPickup(p: Pickup): PickupRecord {
@@ -405,12 +407,19 @@ class Features(val adapters: Adapters, val shared: Shared) {
         return fresh.size
     }
 
+    private var flushing = false
+    /** One flush at a time; a job that hangs (Firestore waits for the server) times out so it can't block the pickup behind it. */
     suspend fun flush() {
-        for (j in orderJobs(jobs.filter { it.status.state != "sent" }, rules.queuePriority, { it.type }, { it.createdAt })) {
-            if (j.status.state == "failed") j.status = transition(j.status, "retry")
-            j.status = transition(transition(j.status, "start"), "send")
-            j.status = runCatching { adapters.sync.put(j.path, j.payload); transition(j.status, "ack") }.getOrElse { transition(j.status, "fail") }
-        }
+        if (flushing) return
+        flushing = true
+        try {
+            for (j in orderJobs(jobs.filter { it.status.state == "waiting" || it.status.state == "failed" }, rules.queuePriority, { it.type }, { it.createdAt })) {
+                if (j.status.state == "failed") j.status = transition(j.status, "retry")
+                j.status = transition(transition(j.status, "start"), "send")
+                val ok = runCatching { kotlinx.coroutines.withTimeout(JOB_TIMEOUT_MS) { adapters.sync.put(j.path, j.payload) } }.isSuccess
+                j.status = transition(j.status, if (ok) "ack" else "fail")
+            }
+        } finally { flushing = false }
         val copy = jobs.toList(); jobs.clear(); jobs.addAll(copy) // refresh Compose
     }
 }

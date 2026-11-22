@@ -37,15 +37,16 @@ export function mergeCheckin(ai: Checkin | null, text: string, flagWords: Record
 
 export type Pickup = { who: string; mobility: number; needs: string[]; people: number };
 /** "My mother can't walk, needs insulin" -> pickup request (keywords). */
-export function parsePickup(text: string, needWords: Record<string, string[]>, mobilityWords: Record<string, string[]>): Pickup {
+export function parsePickup(text: string, needWords: Record<string, string[]>, mobilityWords: Record<string, string[]>, peopleWords: Record<string, string[]> = {}): Pickup {
   const mobility = Math.max(0, ...Object.entries(mobilityWords).filter(([, w]) => has(text, w)).map(([k]) => Number(k)));
-  return { who: text.split(/[,;.]/)[0].trim().slice(0, 40), mobility, needs: Object.keys(needWords).filter(n => has(text, needWords[n])), people: 1 };
+  const people = Math.max(1, ...Object.entries(peopleWords).filter(([, w]) => has(text, w)).map(([k]) => Number(k)));
+  return { who: text.split(/[,;.]/)[0].trim().slice(0, 40), mobility, needs: Object.keys(needWords).filter(n => has(text, needWords[n])), people };
 }
-/** Mobility and needs can only go up. */
-export function mergePickup(ai: Pickup | null, text: string, needWords: Record<string, string[]>, mobilityWords: Record<string, string[]>) {
-  const r = parsePickup(text, needWords, mobilityWords);
+/** Mobility, needs and headcount can only go up. */
+export function mergePickup(ai: Pickup | null, text: string, needWords: Record<string, string[]>, mobilityWords: Record<string, string[]>, peopleWords: Record<string, string[]> = {}) {
+  const r = parsePickup(text, needWords, mobilityWords, peopleWords);
   if (!ai) return { ...r, by: 'keywords' as const };
-  return { who: ai.who || r.who, mobility: Math.max(ai.mobility, r.mobility), needs: [...new Set([...ai.needs, ...r.needs])], people: Math.max(1, ai.people), by: 'device' as const };
+  return { who: ai.who || r.who, mobility: Math.max(ai.mobility, r.mobility), needs: [...new Set([...ai.needs, ...r.needs])], people: Math.max(1, ai.people, r.people), by: 'device' as const };
 }
 /** A pickup becomes a Field Check entry ranked by the same priority rules. */
 export const pickupPriority = (p: Pickup) => ({

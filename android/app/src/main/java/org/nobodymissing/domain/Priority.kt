@@ -49,7 +49,7 @@ fun priority(p: PriorityInput, ev: String, w: Map<String, Double>): PriorityResu
     if (p.hazard.unknown) why += "location unknown"
     s += p.mobility; if (p.mobility >= 2) why += "limited mobility"
     val lowSupply = p.cantMiss && (p.supplyDays ?: 0) <= w.getValue("lowSupplyDays")
-    if (p.cantMiss) { s += pt("cantMiss") + if (lowSupply) pt("cantMissLowSupply") else 0; why += "can't-miss treatment, ${p.supplyDays ?: "?"} day(s) left" }
+    if (p.cantMiss) { s += pt("cantMiss") + if (lowSupply) pt("cantMissLowSupply") else 0; why += if (p.supplyDays == null) "can't-miss treatment" else "can't-miss treatment, ${p.supplyDays} day(s) left" }
     else if (p.dailyMeds) s += pt("dailyMeds")
     if (p.hearing) { s += pt("hearing"); why += "hard of hearing" }
     if (p.dementia) { s += pt("dementia"); why += "dementia" }

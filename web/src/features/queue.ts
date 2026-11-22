@@ -13,12 +13,20 @@ export function createQueue(d: Deps, reRun: (j: Job) => Promise<boolean>) {
   const update = (id: string, fn: (j: Job) => Job) => d.store.set(s => ({ ...s, jobs: s.jobs.map(j => (j.id === id ? fn(j) : j)) }));
   const step = (id: string, ev: Parameters<typeof transition>[1]) => update(id, j => ({ ...j, ...transition(j, ev) }));
 
+  // A job cut off mid-send (page closed, phone died) is marked failed so the next flush retries it instead of leaving it stuck.
+  if (d.store.get().jobs.some(j => j.state === 'processing' || j.state === 'sending'))
+    d.store.set(s => ({ ...s, jobs: s.jobs.map(j => (j.state === 'processing' || j.state === 'sending' ? { ...j, ...transition(j, 'fail') } : j)) }));
+
   function enqueue(type: string, payload: unknown, path?: string | null): Job {
     const id = uid();
     const job: Job = { id, type, payload, path: path === undefined ? `${COLLECTION[type] ?? 'other'}/${id}` : path, createdAt: d.clock.now(), state: 'waiting', retries: 0 };
     d.store.set(s => ({ ...s, jobs: [...s.jobs, job] }));
+    if (d.store.get().signal === 'back') queueMicrotask(() => void flush()); // signal now: send now, don't wait for the next scout tick
     return job;
   }
+  // Firestore waits for the server ack; with a weak link that can take forever. One stuck job must not block the pickup behind it.
+  const JOB_TIMEOUT_MS = 30_000;
+  const limit = <T,>(p: Promise<T>) => Promise.race([p, new Promise<never>((_, rej) => setTimeout(() => rej(new Error('job timeout')), JOB_TIMEOUT_MS))]);
 
   let flushing = false;
   async function flush() {
@@ -30,8 +38,8 @@ export function createQueue(d: Deps, reRun: (j: Job) => Promise<boolean>) {
         if (j.state === 'failed') step(j.id, 'retry');
         step(j.id, 'start');
         try {
-          if (j.path) { step(j.id, 'send'); await d.sync.put(j.path, j.payload as object); }
-          else { if (!(await reRun(j))) { step(j.id, 'fail'); continue; } step(j.id, 'send'); }
+          if (j.path) { step(j.id, 'send'); await limit(d.sync.put(j.path, j.payload as object)); }
+          else { if (!(await limit(reRun(j)))) { step(j.id, 'fail'); continue; } step(j.id, 'send'); }
           step(j.id, 'ack');
         } catch { step(j.id, 'fail'); }
       }

@@ -1,10 +1,23 @@
 {
   "type": "object",
   "required": [
+    "intent",
     "cardId",
     "answer"
   ],
   "properties": {
+    "intent": {
+      "type": "string",
+      "enum": [
+        "greeting",
+        "where_to_go",
+        "help",
+        "pickup",
+        "family",
+        "notice",
+        "unknown"
+      ]
+    },
     "cardId": {
       "type": [
         "string",

@@ -154,9 +154,11 @@
   ],
   "askKit": [
     {
-      "name": "valid card id is kept",
+      "name": "notice with a real card id is kept",
       "input": {
+        "text": "When is lunch?",
         "result": {
+          "intent": "notice",
           "cardId": "a1",
           "answer": "Lunch is at 12:00 in the hall."
         },
@@ -166,6 +168,7 @@
         ]
       },
       "expected": {
+        "intent": "notice",
         "answer": "Lunch is at 12:00 in the hall.",
         "cardId": "a1"
       }
@@ -173,7 +176,9 @@
     {
       "name": "unknown card id is discarded",
       "input": {
+        "text": "bus?",
         "result": {
+          "intent": "notice",
           "cardId": "zz",
           "answer": "The bus leaves at 9."
         },
@@ -181,11 +186,16 @@
           "a1"
         ]
       },
-      "expected": null
+      "expected": {
+        "intent": "unknown",
+        "answer": null,
+        "cardId": null
+      }
     },
     {
-      "name": "null card id is discarded",
+      "name": "older reply without intent and no card = unknown",
       "input": {
+        "text": "bus?",
         "result": {
           "cardId": null,
           "answer": "Please ask a volunteer."
@@ -194,7 +204,83 @@
           "a1"
         ]
       },
-      "expected": null
+      "expected": {
+        "intent": "unknown",
+        "answer": null,
+        "cardId": null
+      }
+    },
+    {
+      "name": "greeting: the model's own words are not shown (app copy only)",
+      "input": {
+        "text": "hi bro",
+        "result": {
+          "intent": "greeting",
+          "cardId": null,
+          "answer": "Hey! The bus leaves at 9."
+        },
+        "cardIds": []
+      },
+      "expected": {
+        "intent": "greeting",
+        "answer": null,
+        "cardId": null
+      }
+    },
+    {
+      "name": "routing intents drop any card",
+      "input": {
+        "text": "ibu saya tidak bisa jalan",
+        "result": {
+          "intent": "pickup",
+          "cardId": "a1",
+          "answer": "x"
+        },
+        "cardIds": [
+          "a1"
+        ]
+      },
+      "expected": {
+        "intent": "pickup",
+        "answer": null,
+        "cardId": null
+      }
+    },
+    {
+      "name": "made-up intent falls back to unknown",
+      "input": {
+        "text": "pizza?",
+        "result": {
+          "intent": "pizza",
+          "cardId": null,
+          "answer": "Yes"
+        },
+        "cardIds": [
+          "a1"
+        ]
+      },
+      "expected": {
+        "intent": "unknown",
+        "answer": null,
+        "cardId": null
+      }
+    },
+    {
+      "name": "urgent words always mean help, whatever the model says",
+      "input": {
+        "text": "tolong, ayah sesak napas",
+        "result": {
+          "intent": "greeting",
+          "cardId": null,
+          "answer": ""
+        },
+        "cardIds": []
+      },
+      "expected": {
+        "intent": "help",
+        "answer": null,
+        "cardId": null
+      }
     }
   ],
   "helpTriage": [
@@ -661,6 +747,29 @@
           "insulin"
         ],
         "people": 1,
+        "by": "device"
+      }
+    },
+    {
+      "name": "headcount only goes up: 'kami berdua' = 2 even if the model says 1",
+      "input": {
+        "ai": {
+          "who": "Ibu saya",
+          "mobility": 3,
+          "needs": [
+            "insulin"
+          ],
+          "people": 1
+        },
+        "text": "Ibu saya 82 tahun tidak bisa jalan, perlu insulin. Kami berdua di rumah."
+      },
+      "expected": {
+        "who": "Ibu saya",
+        "mobility": 3,
+        "needs": [
+          "insulin"
+        ],
+        "people": 2,
         "by": "device"
       }
     }

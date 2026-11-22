@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -116,7 +118,7 @@ fun EvHelp(ui: Ui) {
     val scope = rememberCoroutineScope()
     var spot by remember { mutableStateOf("") }
     var sent by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
-    var words by remember { mutableStateOf("") }
+    var words by remember { mutableStateOf(takeHandOff()) }
     var busy by remember { mutableStateOf(false) }
     var tri by remember { mutableStateOf<org.nobodymissing.domain.Triage?>(null) }
     val kinds = listOf(Triple("medicine", "medicine", NM.SAGE), Triple("sick", "sick", NM.ROSE), Triple("moving", "mobility", NM.SKY), Triple("baby", "baby", NM.LAV))
@@ -191,7 +193,7 @@ fun EvMap(ui: Ui) {
 fun EvFamily(ui: Ui) {
     val f = ui.f
     val scope = rememberCoroutineScope()
-    var q by remember { mutableStateOf("") }
+    var q by remember { mutableStateOf(takeHandOff()) }
     var busy by remember { mutableStateOf(false) }
     var res by remember { mutableStateOf<org.nobodymissing.features.SmartFamily?>(null) }
     EvTop(ui, f.t("myFamily"), f.t("everyShelter"))
@@ -266,54 +268,72 @@ fun FamilyGroupCard(ui: Ui) {
     }
 }
 
+/** Kit -> Help / Pickup / Family: carry the person's own words so nobody types twice. In memory only. */
+private var handOff = ""
+fun takeHandOff(): String { val t = handOff; handOff = ""; return t }
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun EvAsk(ui: Ui) {
     val f = ui.f
     val scope = rememberCoroutineScope()
     var q by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
-    var asked by remember { mutableStateOf(false) }
     var ans by remember { mutableStateOf<AskAnswer?>(null) }
-    var way by remember { mutableStateOf<String?>(null) }
-    var hasWay by remember { mutableStateOf(false) }
+    fun ask(text: String) { if (text.isBlank()) return; q = text; busy = true; ans = null; scope.launch { ans = f.askKit(text); busy = false } }
+    // The model only picks the intent; these words and buttons are the app's own (rules in code).
+    val a = ans
+    val dest = if (a?.intent == "where_to_go") f.destination() else null
+    val reply = when (a?.intent) {
+        null -> ""
+        "notice" -> a.answer!!
+        "where_to_go" -> dest?.let { f.t("goAnswer", "name" to it.h.name, "m" to it.h.distanceM, "dir" to it.h.direction, "gain" to it.h.handGain, "where" to f.t(if (it.gps) "myLocation" else "theShelter")) } ?: f.t("noHigher")
+        "greeting" -> f.t("kitHi"); "help" -> f.t(if (a.urgent) "kitUrgent" else "kitToHelp"); "pickup" -> f.t("kitToPickup"); "family" -> f.t("kitToFamily")
+        else -> f.t("kitUnknown")
+    }
+    data class Go(val to: String, val icon: String, val label: String, val style: BtnStyle)
+    val main = when {
+        a?.intent == "where_to_go" && dest != null -> Go("way", "nav", f.t("showWay"), BtnStyle.PRIMARY)
+        a?.intent == "help" -> Go("help", "help", f.t("needHelp"), BtnStyle.DANGER)
+        a?.intent == "pickup" -> Go("pickup", "mobility", f.t("needPickup"), BtnStyle.DANGER)
+        a?.intent == "family" -> Go("family", "family", f.t("findFamily"), BtnStyle.PRIMARY)
+        else -> null
+    }
     EvTop(ui, f.t("askKit"), f.t("askPrivate"))
     Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        if (!asked && way == null) Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (a == null) Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Kit(ui.kit, if (busy) Mood.THINK else Mood.IDLE, 120.dp)
-            H(f.t("askKitHello"), 20.sp, NM.Navy, Modifier.soft(R22).padding(horizontal = 20.dp, vertical = 16.dp))
+            H(f.t(if (busy) "kitThinking" else "askKitHello"), 20.sp, NM.Navy, Modifier.soft(R22).padding(horizontal = 20.dp, vertical = 16.dp))
         }
         Column(Modifier.fillMaxWidth().soft(R28).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.heightIn(min = 72.dp)) { if (q.isEmpty()) H(f.t("askKitHint"), 24.sp, NM.Ink2.copy(alpha = .5f)); BasicTextField(q, { q = it }, Modifier.fillMaxWidth(), textStyle = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, color = NM.Navy)) }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                MicButton(ui, Modifier.weight(1f)) { q = it }
-                Btn(ui, f.t("ask"), "send", BtnStyle.PRIMARY, enabled = q.isNotBlank() && !busy, modifier = Modifier.weight(1f)) {
-                    asked = false; way = null
-                    if (f.isWhere(q)) { val d = f.destination(); hasWay = d != null
-                        way = d?.let { f.t("goAnswer", "name" to it.h.name, "m" to it.h.distanceM, "dir" to it.h.direction, "gain" to it.h.handGain, "where" to f.t(if (it.gps) "myLocation" else "theShelter")) } ?: f.t("noHigher")
-                    } else { busy = true; asked = true; scope.launch { ans = f.askKit(q); busy = false } }
-                }
+                MicButton(ui, Modifier.weight(1f)) { ask(it) }
+                Btn(ui, f.t("ask"), "send", BtnStyle.PRIMARY, enabled = q.isNotBlank() && !busy, modifier = Modifier.weight(1f)) { ask(q) }
             }
         }
-        if (busy && asked) Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) { Kit(ui.kit, Mood.THINK, 110.dp); P(f.t("kitThinking"), 16.sp, NM.Ink2, bold = true) }
-        way?.let { txt -> Rise(0) { Column(Modifier.fillMaxWidth().soft(R28, NM.Lav).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        if (a != null) Rise(0) { Column(Modifier.fillMaxWidth().soft(R28, NM.Lav).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             CompositionLocalProvider(LocalContentColor provides NM.LavInk) {
-                Row(verticalAlignment = Alignment.CenterVertically) { Kit(ui.kit, Mood.DEVICE, 56.dp); Spacer(Modifier.width(10.dp)); Badge(ui, "device", text = f.t("fromFloodMap")) }
-                H(txt, 24.sp)
-                SayButton(ui, "ask", txt, NM.LavInk)
-                if (hasWay) Btn(ui, f.t("showWay"), "nav", BtnStyle.PRIMARY, full = true) { ui.go("way") }
-                Btn(ui, f.t("needPickup"), "mobility", BtnStyle.DANGER, full = true) { ui.go("pickup") }
-            }
-        } } }
-        if (asked && !busy) Rise(0) { Column(Modifier.fillMaxWidth().soft(R28, NM.Lav).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            CompositionLocalProvider(LocalContentColor provides NM.LavInk) {
-                val a = ans
-                Row(verticalAlignment = Alignment.CenterVertically) { Kit(ui.kit, if (a?.source == "cloud") Mood.CLOUD else Mood.DEVICE, 56.dp); Spacer(Modifier.width(10.dp)); a?.let { Badge(ui, it.source) } }
-                H(a?.answer ?: f.t("askVolunteer"), 26.sp)
-                a?.let { Row(Modifier.fillMaxWidth().clip(R16).background(Color.White.copy(alpha = .65f)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Ic(ui.icons, cardIcon(it.card), 22.dp); Spacer(Modifier.width(10.dp)); P("${f.t("fromNotice")}: “${it.card.text}”", 16.sp, bold = true) } }
-                SayButton(ui, "ask", a?.answer ?: f.t("askVolunteer"), NM.LavInk)
-                if (a == null) Btn(ui, f.t("needHelp"), "help", BtnStyle.DANGER, full = true) { ui.go("help") }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Kit(ui.kit, if (a.source == "cloud") Mood.CLOUD else Mood.DEVICE, 56.dp); Spacer(Modifier.width(10.dp))
+                    when {
+                        a.source == "rules" && a.intent == "where_to_go" -> Badge(ui, "device", text = f.t("fromFloodMap"))
+                        a.source == "rules" -> Badge(ui, "keywords", text = f.t("plainByRules"))
+                        a.intent == "notice" -> Badge(ui, a.source)
+                        else -> Badge(ui, a.source, text = f.t("kitUnderstood"))
+                    }
+                }
+                H(reply, 24.sp)
+                a.card?.let { Row(Modifier.fillMaxWidth().clip(R16).background(Color.White.copy(alpha = .65f)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Ic(ui.icons, cardIcon(it), 22.dp); Spacer(Modifier.width(10.dp)); P("${f.t("fromNotice")}: “${it.text}”", 16.sp, bold = true) } }
+                SayButton(ui, "ask", reply, NM.LavInk)
+                main?.let { m -> Btn(ui, m.label, m.icon, m.style, full = true) { handOff = q.trim(); ui.go(m.to) } }
             }
         } }
+        if (!busy) FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Btn(ui, f.t("whereGo"), "higher", small = true) { ask(f.t("whereGo")) }
+            listOf(Triple("pickup", "mobility", "needPickup"), Triple("help", "help", "needHelp"), Triple("family", "family", "findFamily"), Triple("home", "announce", "todayNotices"))
+                .filter { it.first != main?.to }.forEach { (to, icon, key) -> Btn(ui, f.t(key), icon, small = true) { ui.go(to) } }
+        }
     }
 }

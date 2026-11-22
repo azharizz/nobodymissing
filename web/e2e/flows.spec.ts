@@ -76,7 +76,7 @@ test('medicine check + find it open: wait offline, run with names kept on the ph
   await expect(page.getByRole('link', { name: 'Open in Google Maps' }).first()).toBeVisible();
 });
 
-test('Ask Kit answers from today\'s notice, or sends them to a volunteer', async ({ page }) => {
+test('Ask Kit: notices, greeting, where to go, urgent help with the words carried over', async ({ page }) => {
   await page.goto('/#/staff/announce');
   await page.locator('textarea').fill('Lunch at 12.00 in the hall');
   await page.getByRole('button', { name: /Make cards/ }).click();
@@ -88,7 +88,22 @@ test('Ask Kit answers from today\'s notice, or sends them to a volunteer', async
   await expect(page.locator('.answer')).toContainText("From today's notice");
   await page.locator('textarea').fill('When does the bus leave?');
   await page.getByRole('button', { name: 'Ask', exact: true }).click();
-  await expect(page.locator('.answer')).toContainText('Please ask a volunteer');
+  await expect(page.locator('.answer')).toContainText("Kit isn't sure");
+  // Greeting: the app's own words + shortcuts, never model small talk.
+  await page.locator('textarea').fill('hi bro');
+  await page.getByRole('button', { name: 'Ask', exact: true }).click();
+  await expect(page.locator('.answer')).toContainText("I'm Kit");
+  // Where to go: offline flood map, instantly, with the way.
+  await page.locator('textarea').fill('Hello, where i should go');
+  await page.getByRole('button', { name: 'Ask', exact: true }).click();
+  await expect(page.locator('.answer')).toContainText('higher than');
+  await expect(page.locator('.answer').getByRole('button', { name: 'Show the way' })).toBeVisible();
+  // Urgent words always mean help, and the person's words travel with them.
+  await page.locator('textarea').fill('tolong ayah saya sesak napas');
+  await page.getByRole('button', { name: 'Ask', exact: true }).click();
+  await expect(page.locator('.answer')).toContainText('This sounds urgent');
+  await page.locator('.answer').getByRole('button', { name: 'I need help' }).click();
+  await expect(page.locator('textarea')).toHaveValue('tolong ayah saya sesak napas');
 });
 
 test('I need help in my own words: urgent goes to the top of staff Now', async ({ page }) => {

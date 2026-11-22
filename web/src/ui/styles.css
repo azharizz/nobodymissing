@@ -465,3 +465,7 @@ body.flash .app { animation: flash 1s 2; } @keyframes flash { 50% { background: 
 .auto { display: flex; flex-direction: column; gap: 6px; font-size: 15px; color: var(--ink-2); }
 .auto div { display: flex; gap: 8px; align-items: center; }
 .auto .icon { color: var(--done); }
+/* Ask Kit shortcuts: big enough for older thumbs, wrap on small phones. */
+.kit-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.kit-chips .chip { min-height: 48px; font-size: 16px; padding: 10px 16px; }
+.warn-hero .orig { font-size: 15px; font-weight: 600; opacity: .85; margin: 0; }

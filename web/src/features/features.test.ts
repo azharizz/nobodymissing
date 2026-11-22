@@ -76,6 +76,16 @@ describe('features (wired by FeatureFactory with test adapters)', () => {
     expect(docs).toMatch(/insulin glargine/);
   });
 
+  it('outbox: a job cut off mid-send is retried after restart, not stuck forever', async () => {
+    const a = await createAdapters('test');
+    a.storage.save('state', { jobs: [{ id: 'j1', type: 'pickup', path: 'shelters/SD3/pickups/j1', payload: { who: 'Ibu' }, createdAt: 0, state: 'sending', retries: 0 }] });
+    const f = createFeatures(a);
+    expect(f.store.get().jobs[0].state).toBe('failed');
+    await f.queue.flush();
+    expect(f.store.get().jobs[0].state).toBe('sent');
+    expect((a.sync as MemorySync).docs.has('shelters/SD3/pickups/j1')).toBe(true);
+  });
+
   it('courier: worker exports its queue, scout imports it', async () => {
     const w = await setup(); const s = await setup();
     w.f.store.set(st => ({ ...st, jobs: [] })); s.f.store.set(st => ({ ...st, jobs: [] }));
@@ -161,14 +171,19 @@ describe('features (wired by FeatureFactory with test adapters)', () => {
   });
 
   it('Ask Kit: answers only with a real notice, on the device first', async () => {
-    const { f, inf } = await setup(r => ({ raw: JSON.stringify({ cardId: /id=(\S+)/.exec(r.prompt)![1], answer: 'Lunch is at 12:00.' }), source: 'device' }));
+    const { f, inf } = await setup(r => ({ raw: JSON.stringify({ intent: 'notice', cardId: /id=(\S+)/.exec(r.prompt)![1], answer: 'Lunch is at 12:00.' }), source: 'device' }));
     f.store.set(s => ({ ...s, announcements: [{ id: 'a1', text: 'Lunch 12.00 in the hall', lang: 'en', icons: ['food'], times: ['12:00'], place: 'hall', cards: null, source: 'keywords', draft: false, shown: true, told: [], createdAt: 0 }] }));
     const r = await f.hybrid.askKit('When is lunch?');
     expect(r).toMatchObject({ answer: 'Lunch is at 12:00.', source: 'device' });
     expect(inf.calls[0].mode).toBe('prefer_on_device');
-    const bad = await setup(() => ({ raw: '{"cardId":"nope","answer":"The bus leaves at 9."}', source: 'device' }));
+    const bad = await setup(() => ({ raw: '{"intent":"notice","cardId":"nope","answer":"The bus leaves at 9."}', source: 'device' }));
     bad.f.store.set(s => ({ ...s, announcements: f.store.get().announcements }));
-    expect((await bad.f.hybrid.askKit('bus?')).answer).toBeNull();
+    expect(await bad.f.hybrid.askKit('bus?')).toMatchObject({ intent: 'unknown', answer: null });
+    // No notices today: a greeting still gets the intent (app's own words), where-to-go never asks the model.
+    const hi = await setup(() => ({ raw: '{"intent":"greeting","cardId":null,"answer":""}', source: 'device' }));
+    expect(await hi.f.hybrid.askKit('hi bro')).toMatchObject({ intent: 'greeting', source: 'device' });
+    expect(await hi.f.hybrid.askKit('where should I go?')).toMatchObject({ intent: 'where_to_go', source: 'rules' });
+    expect(hi.inf.calls.length).toBe(1);
   });
 
   it('help triage: understood on the device only; no device = keywords, never the cloud', async () => {

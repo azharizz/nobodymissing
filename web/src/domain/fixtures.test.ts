@@ -120,7 +120,7 @@ describe('hybrid AI safety contracts (shared fixtures)', () => {
   it('location is rounded before it leaves', () => { for (const c of hybridFx.coarseLocation) expect(coarseLocation(c.input.lat, c.input.lng, c.input.decimals)).toEqual(c.expected); });
   it('cloud generic names are cross-checked against the offline list', () => { for (const c of hybridFx.crossCheck) expect(crossCheck(c.input.items, drugs.drugs), c.name).toEqual(c.expected); });
   it('only Google Maps places survive', () => { for (const c of hybridFx.groundedPlaces) expect(groundedPlaces(c.input.places as any, c.input.chunks).map(p => ({ name: p.name, uri: p.uri })), c.name).toEqual(c.expected); });
-  it('Ask Kit answers must cite a real card', () => { for (const c of hybridFx.askKit) expect(askKitAnswer(c.input.result, c.input.cardIds), c.name).toEqual(c.expected); });
+  it('Ask Kit: intent routes, notices must cite a real card, urgent = help', () => { for (const c of hybridFx.askKit) expect(askKitAnswer(c.input.result as any, c.input.cardIds, c.input.text, rules.urgentWords), c.name).toEqual(c.expected); });
 });
 
 import { triageHelp } from './hybrid';
@@ -153,8 +153,8 @@ describe('first hours: warning, pickup, check-in (shared fixtures)', () => {
     for (const c of hybridFx.checkinMerge) expect(mergeCheckin(c.input.ai, c.input.text, rules.flagWords), c.name).toEqual(c.expected);
   });
   it('pickup rules + merge only go up', () => {
-    for (const c of hybridFx.pickupRules) expect(parsePickup(c.input, rules.needWords, rules.mobilityWords), c.input).toEqual(c.expected);
-    for (const c of hybridFx.pickupMerge) expect(mergePickup(c.input.ai, c.input.text, rules.needWords, rules.mobilityWords), c.name).toEqual(c.expected);
+    for (const c of hybridFx.pickupRules) expect(parsePickup(c.input, rules.needWords, rules.mobilityWords, rules.peopleWords), c.input).toEqual(c.expected);
+    for (const c of hybridFx.pickupMerge) expect(mergePickup(c.input.ai, c.input.text, rules.needWords, rules.mobilityWords, rules.peopleWords), c.name).toEqual(c.expected);
   });
   it('check-in and pickup QR codes', () => {
     for (const c of hybridFx.checkinQr) { const q = encodeCheckinQr(c.input); expect(q).toBe(c.expected); expect(decodeCheckinQr(q)!.flags).toEqual(c.input.flags); }

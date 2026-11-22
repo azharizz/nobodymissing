@@ -173,7 +173,7 @@ fun Now(ui: Ui) {
     val tasks = buildList<@Composable () -> Unit> {
         // Urgent evacuee requests first, then can't-miss medicine.
         f.help.filter { !it.done }.sortedByDescending { it.urgent }.forEach { h -> add { Task(ui, if (h.urgent) "alert" else if (h.kind == "write") "chat" else "help", if (h.kind == "write" && !h.urgent) NM.LAV else NM.ROSE,
-            f.t("asksFor", "spot" to h.spot, "kind" to f.t("kind_${h.kind}")), listOfNotNull(h.summary?.let { s -> s + if (h.by == "device") " · " + f.t("readsOnPhone") else "" }, h.text?.takeIf { it != h.summary }?.let { "“$it”" }).joinToString("\n").ifEmpty { null },
+            f.t("asksFor", "spot" to (if (h.spot.isBlank() || h.spot == "?") f.t("someone") else h.spot), "kind" to f.t("kind_${h.kind}")), listOfNotNull(h.summary?.let { s -> s + if (h.by == "device") " · " + f.t("readsOnPhone") else "" }, h.text?.takeIf { it != h.summary }?.let { "“$it”" }).joinToString("\n").ifEmpty { null },
             tag = if (h.urgent) f.t("urgent") else null, act = "check", onAct = { f.helpDone(h.id) }) } }
         sch.alerts.forEach { a -> add { Task(ui, "medicine", NM.ROSE, "${name(a.personId)} · ${a.generic}", f.t("onlyDaysLeft", "n" to (a.supplyDays ?: "?")), f.t("cantMiss")) { ui.go("person", a.personId) } } }
         sch.alerts.forEach { a -> add { Task(ui, "medicine", NM.ROSE, "${name(a.personId)} · ${a.generic}", f.t("onlyDaysLeft", "n" to (a.supplyDays ?: "?")), f.t("cantMiss")) { ui.go("person", a.personId) } } }
@@ -554,7 +554,7 @@ fun FieldMap(ui: Ui, arg: String?) {
                     Column(Modifier.weight(1f)) {
                         Text(if (e.pickup != null) f.t("pickupFirst") else if (r.result.tier == "P1") f.t("visitFirst").uppercase() else r.result.tier, Modifier.clip(RoundedCornerShape(8.dp)).background(color[r.result.tier]!!).padding(horizontal = 8.dp, vertical = 3.dp), color = Color.White, fontFamily = Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
                         H("$n${e.person.age?.let { ", $it" } ?: ""}", 22.sp)
-                        P(f.t("lastChecked", "when" to (e.hoursSinceContact?.let { f.t("hAgo", "n" to it.toInt()) } ?: f.t("never"))), 15.sp, NM.Ink2)
+                        P(e.pickup?.let { pk -> f.t("askedWhen", "when" to f.t("minAgo", "n" to maxOf(0L, (System.currentTimeMillis() - pk.at) / 60_000))) } ?: f.t("lastChecked", "when" to (e.hoursSinceContact?.let { f.t("hAgo", "n" to it.toInt()) } ?: f.t("never"))), 15.sp, NM.Ink2)
                     }
                     if (e.needsReview) Badge(ui, null, true)
                 }

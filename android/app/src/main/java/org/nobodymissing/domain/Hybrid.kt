@@ -34,8 +34,18 @@ fun groundedPlaces(names: List<String>, chunks: List<GroundedChunk>): List<Pair<
 }
 
 /** Ask Kit may only answer from today's notices: an answer must cite a real card, otherwise it is discarded. */
-fun askKitAnswer(cardId: String?, answer: String, cardIds: List<String>): Pair<String, String>? =
-    if (cardId != null && cardId in cardIds && answer.isNotBlank()) answer.trim() to cardId else null
+fun urgentWordsIn(text: String, words: List<String>): Boolean { val t = " ${text.lowercase()} "; return words.any { t.contains(it.lowercase()) } }
+val KIT_INTENTS = listOf("greeting", "where_to_go", "help", "pickup", "family", "notice", "unknown")
+data class KitReply(val intent: String, val answer: String?, val cardId: String?)
+/** Ask Kit: the model only picks what the person wants; the app answers with its own words and real screens.
+ *  Only a notice answer shows model text, and only if it cites a real notice. Urgent words always mean help. */
+fun askKitAnswer(intent: String?, cardId: String?, answer: String, cardIds: List<String>, text: String = "", urgentWords: List<String> = emptyList()): KitReply {
+    if (urgentWordsIn(text, urgentWords)) return KitReply("help", null, null)
+    val real = cardId != null && cardId in cardIds && answer.isNotBlank()
+    val i = if (intent in KIT_INTENTS) intent!! else if (real) "notice" else "unknown"
+    if (i == "notice") return if (real) KitReply(i, answer.trim(), cardId) else KitReply("unknown", null, null)
+    return KitReply(i, null, null)
+}
 
 data class Triage(val kind: String, val urgent: Boolean, val summary: String, val by: String)
 private val ICON_KIND = mapOf("medicine" to "medicine", "doctor" to "sick", "food" to "food", "water" to "water", "toilet" to "toilet", "baby" to "baby", "move" to "moving")
