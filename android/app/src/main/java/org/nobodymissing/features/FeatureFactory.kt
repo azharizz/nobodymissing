@@ -18,7 +18,7 @@ class Shared(private val read: (String) -> String, remoteRules: String? = null) 
         JsonObject(d + r + ("routerPolicy" to JsonObject(d["routerPolicy"]!!.jsonObject + (r["routerPolicy"] as? JsonObject ?: JsonObject(emptyMap())))))
     }.getOrNull() } ?: d }
     val rules = Rules.from(defaults)
-    val schemas = listOf("roster", "careCard", "announcementCard", "fieldReport", "request", "translation", "medCheck", "findOpen", "askKit").associateWith { json("schemas/$it.json") }
+    val schemas = listOf("roster", "careCard", "announcementCard", "fieldReport", "request", "translation", "medCheck", "findOpen", "askKit", "helpTriage").associateWith { json("schemas/$it.json") }
     val prompts = json("prompts/pack.json")["tasks"]!!.jsonObject.mapValues { it.value.jsonPrimitive.content }
     // ponytail: only the synthetic demo drug list and region pack exist today; swap in real region packs when tools/region-pack ships them.
     val drugs = Drug.listFrom(json("demo/drugs.json"))
@@ -37,7 +37,8 @@ data class UiMed(val personId: String, val nameAsWritten: String, val match: Dru
 data class UiCard(val icon: String, val title: String, val time: String?, val place: String?)
 data class UiAnnouncement(val id: String, val text: String, val icons: List<String>, val cards: List<UiCard>, val source: String, val draft: Boolean, val shown: Boolean = false, val told: Set<String> = emptySet())
 data class UiField(val id: String, val name: String, val lat: Double?, val lng: Double?, val hoursSinceContact: Double?, val person: PriorityInput, val needsReview: Boolean = false, val status: String = "unchecked")
-data class UiHelp(val id: String, val kind: String, val spot: String, val text: String?, val done: Boolean = false)
+data class UiHelp(val id: String, val kind: String, val spot: String, val text: String?, val done: Boolean = false, val summary: String? = null, val urgent: Boolean = false, val by: String? = null)
+data class FamilyGroup(val fam: String, val me: Member, val members: List<Member>, val via: Map<String, String>)
 data class MedCheckItem(val name: String, val generic: String?, val alsoKnownAs: List<String>, val swaps: List<String>, val cantMiss: Boolean, val note: String?)
 data class Interaction(val a: String, val b: String, val severity: String, val note: String?)
 data class MedCheckUi(val items: List<MedCheckItem>, val interactions: List<Interaction>, val cross: List<Cross>, val pending: Boolean)
@@ -216,7 +217,43 @@ class Features(val adapters: Adapters, val shared: Shared) {
 
     // Evacuee requests ("I need help"), shown on the staff Now list.
     val help = mutableStateListOf<UiHelp>()
-    fun askHelp(kind: String, spot: String, text: String? = null) { help += UiHelp(java.util.UUID.randomUUID().toString(), kind, spot.ifBlank { "?" }, text) }
+    fun askHelp(kind: String, spot: String, text: String? = null, t: Triage? = null) { help += UiHelp(java.util.UUID.randomUUID().toString(), kind, spot.ifBlank { "?" }, text, summary = t?.summary, urgent = t?.urgent ?: false, by = t?.by) }
+
+    /** "I need help" in the evacuee's own words: understood on this phone only (health words are private).
+     *  No device model -> keyword rules. Urgency can only go up. Nothing is sent until the evacuee taps Send. */
+    suspend fun triage(text: String): Triage {
+        val r = router.run("help_triage", text = text.trim())
+        val ai = if ((r.status == "ok" || r.status == "draft") && r.source == "device") r.data!!.jsonObject.let { Triple(it.s("kind")!!, it.b("urgent")!!, it.s("summary")!!) } else null
+        return triageHelp(text, ai, shared.defaults.strings("urgentWords"), keywordIcons(text, shared.keywords).icons)
+    }
+
+    // ---- Family group by QR: offline the QR carries the latest status both ways; online it syncs via families/{id} ----
+    val familyGroup = mutableStateOf<FamilyGroup?>(null)
+    private fun publishMe() = familyGroup.value?.let { g -> enqueue("family_member", "families/${g.fam}/members", mapOf("name" to g.me.name, "shelter" to g.me.shelter, "status" to g.me.status, "at" to g.me.at), g.me.id) }
+    fun setMe(name: String, status: String) {
+        val g = familyGroup.value
+        val me = Member(g?.me?.id ?: java.util.UUID.randomUUID().toString().take(12), name.trim().take(60), shelterId.value, status, System.currentTimeMillis())
+        familyGroup.value = FamilyGroup(g?.fam ?: newFamilyId(), me, g?.members ?: emptyList(), g?.via ?: emptyMap())
+        publishMe()
+    }
+    fun myQr() = familyGroup.value?.let { encodeFamilyQr(it.fam, it.me) }
+    fun scanFamily(text: String): Member? {
+        val (fam, m) = decodeFamilyQr(text) ?: return null
+        val g = familyGroup.value ?: return null
+        if (m.id == g.me.id) return null
+        familyGroup.value = g.copy(fam = fam, members = mergeMembers(g.members, listOf(m)), via = g.via + (m.id to "qr"))
+        if (fam != g.fam) publishMe()
+        return m
+    }
+    suspend fun syncFamily() {
+        val g = familyGroup.value ?: return
+        if (signal.value != "back") return
+        val remote = runCatching { adapters.sync.list("families/${g.fam}/members") }.getOrElse { return }
+            .filter { it["id"] != g.me.id && it["name"] is String }
+            .map { Member(it["id"].toString(), it["name"].toString(), it["shelter"].toString(), if (it["status"] == "need_help") "need_help" else "safe", (it["at"] as? Number)?.toLong() ?: 0L) }
+        val via = g.via + remote.filter { r -> g.members.none { it.id == r.id && it.at >= r.at } }.associate { it.id to "online" }
+        familyGroup.value = g.copy(members = mergeMembers(g.members, remote), via = via)
+    }
     fun helpDone(id: String) = help.replaceAll { if (it.id == id) it.copy(done = true) else it }
 
     // F3 family search: this shelter only (minimal fields, D6)
@@ -226,13 +263,13 @@ class Features(val adapters: Adapters, val shared: Shared) {
     fun keywordCard(text: String) = keywordIcons(text, shared.keywords)
 
     // F11 outbox + scout
-    fun enqueue(type: String, collection: String, payload: Map<String, Any?>) { val id = java.util.UUID.randomUUID().toString(); jobs += UiJob(id, type, "$collection/$id", payload, System.currentTimeMillis()) }
+    fun enqueue(type: String, collection: String, payload: Map<String, Any?>, docId: String? = null) { val id = java.util.UUID.randomUUID().toString(); jobs += UiJob(id, type, "$collection/${docId ?: id}", payload, System.currentTimeMillis()) }
     suspend fun scoutCheck() {
         val s = scoutStep(scoutRun, adapters.connectivity.check(), rules.scoutSuccessesNeeded)
         scoutRun = s.run; signal.value = s.state
         if (s.state != "no_signal") lastSignalAt.value = System.currentTimeMillis()
         if (s.alert) scoutAlert.value = true
-        if (s.state == "back") { flush(); rerunPending() }
+        if (s.state == "back") { flush(); rerunPending(); syncFamily() }
     }
     // QR courier (6.10 level 2): small structured JSON only, never photos.
     fun exportChunks(size: Int = 700): List<String> = chunk(JsonArray(jobs.filter { it.status.state != "sent" }.map { j ->

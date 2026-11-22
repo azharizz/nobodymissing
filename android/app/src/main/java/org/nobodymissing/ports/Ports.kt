@@ -15,5 +15,9 @@ interface InferencePort {
     suspend fun onDeviceStatus(): String
     suspend fun generate(r: InferenceRequest): InferenceResult
 }
-interface SyncPort { suspend fun put(path: String, data: Map<String, Any?>) }
+interface SyncPort {
+    suspend fun put(path: String, data: Map<String, Any?>)
+    /** Documents of a collection, each with its "id". */
+    suspend fun list(collection: String): List<Map<String, Any?>> = emptyList()
+}
 interface ConnectivityPort { suspend fun check(): Boolean }

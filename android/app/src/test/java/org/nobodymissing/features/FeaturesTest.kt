@@ -81,6 +81,31 @@ class FeaturesTest {
         assertEquals(null, f.askKit("When is lunch?"))
     }
 
+    @Test fun helpTriageStaysOnDevice() = runBlocking {
+        val inf = FakeInference("available") { InferenceResult("""{"kind":"sick","urgent":false,"summary":"Father has chest pain"}""", "device") }
+        val f = features(inf).also { it.signal.value = "back" }
+        val t = f.triage("bapak saya nyeri dada")
+        assertEquals("device", t.by); assertTrue(t.urgent)
+        assertEquals("only_on_device", inf.calls.single().mode)
+        val off = FakeInference("unavailable")
+        val g = features(off).also { it.signal.value = "back" }
+        assertEquals("keywords", g.triage("need insulin").by)
+        assertTrue(off.calls.isEmpty())
+    }
+
+    @Test fun familyGroupLinksByQrAndSyncs() = runBlocking {
+        val sync = MemorySync()
+        val a = FeatureFactory.create(Adapters("test", FakeInference("unavailable"), sync, FakeConnectivity(true)), shared)
+        val b = FeatureFactory.create(Adapters("test", FakeInference("unavailable"), sync, FakeConnectivity(true)), shared)
+        a.setMe("Cut Nurlaila", "safe"); b.setMe("Teuku Hasballah", "need_help")
+        assertEquals("Cut Nurlaila", b.scanFamily(a.myQr()!!)!!.name)
+        assertEquals(null, b.scanFamily("hello"))
+        b.signal.value = "back"; b.flush()
+        a.familyGroup.value = a.familyGroup.value!!.copy(fam = b.familyGroup.value!!.fam)
+        a.signal.value = "back"; a.syncFamily()
+        assertEquals("need_help", a.familyGroup.value!!.members.single { it.name == "Teuku Hasballah" }.status)
+    }
+
     @Test fun familySearchLocalMinimalFields() {
         val f = features(FakeInference("unavailable")).also { it.loadDemo() }
         assertEquals("80-89", f.familySearch("Hasan").single().ageBand)

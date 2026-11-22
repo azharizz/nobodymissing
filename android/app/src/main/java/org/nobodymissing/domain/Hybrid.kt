@@ -36,3 +36,13 @@ fun groundedPlaces(names: List<String>, chunks: List<GroundedChunk>): List<Pair<
 /** Ask Kit may only answer from today's notices: an answer must cite a real card, otherwise it is discarded. */
 fun askKitAnswer(cardId: String?, answer: String, cardIds: List<String>): Pair<String, String>? =
     if (cardId != null && cardId in cardIds && answer.isNotBlank()) answer.trim() to cardId else null
+
+data class Triage(val kind: String, val urgent: Boolean, val summary: String, val by: String)
+private val ICON_KIND = mapOf("medicine" to "medicine", "doctor" to "sick", "food" to "food", "water" to "water", "toilet" to "toilet", "baby" to "baby", "move" to "moving")
+/** "I need help" in the evacuee's own words. Urgency can only go up; no device model -> keyword rules and the original words. */
+fun triageHelp(text: String, ai: Triple<String, Boolean, String>?, urgentWords: List<String>, icons: List<String>): Triage {
+    val t = " ${text.lowercase()} "
+    val urgentWord = urgentWords.any { t.contains(it.lowercase()) }
+    if (ai != null) return Triage(ai.first, ai.second || urgentWord, ai.third, "device")
+    return Triage(icons.firstNotNullOfOrNull { ICON_KIND[it] } ?: if (urgentWord) "sick" else "other", urgentWord, text.trim(), "keywords")
+}

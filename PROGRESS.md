@@ -10,7 +10,10 @@ Hybrid AI now does real cloud work, not just fallback: **Medicine check** (drug 
 - Android: the same domain contracts + features + Maps grounding (`Tool.googleMaps()`, `RetrievalConfig.builder()`); demo replies in `demo/DemoReply.kt`; new Compose UI (staff + evacuee mode); fonts bundled (OFL).
   - **34 JUnit tests pass**; `assembleDebug` builds. **Not checked on a device or emulator yet.**
 
+- Follow-up (same day): OpenStreetMap maps on both apps (offline-cached); "I need help" with on-device triage (urgent first on staff Now); Ask Kit greets with Kit; family group by QR with online sync. Web 153 unit + 10 e2e + 9 rules tests pass; Android 37 tests pass.
+
 ## PENDING HUMAN
+- Deploy the updated Firestore rules (`firebase deploy --only firestore:rules`): family sync needs the new `families/` rule.
 - Install the debug APK on a phone and look at every screen (no emulator space on this Mac).
 - Live check of Maps grounding on the free tier (`find_open` with real Firebase): quota, and that `gemini-3.8-flash` returns grounding chunks.
 - Republish the Remote Config template with the new `rules` / `promptPack` (the app merges key by key, so the old template doesn't break it).

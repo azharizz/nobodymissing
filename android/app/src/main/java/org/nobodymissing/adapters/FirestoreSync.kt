@@ -10,4 +10,5 @@ class FirestoreSync : SyncPort {
     override suspend fun put(path: String, data: Map<String, Any?>) {
         Firebase.firestore.document(path).set(data + ("updatedAt" to System.currentTimeMillis()), SetOptions.merge()).await()
     }
+    override suspend fun list(collection: String) = Firebase.firestore.collection(collection).get().await().documents.map { (it.data ?: emptyMap()) + ("id" to it.id) }
 }

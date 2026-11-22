@@ -34,6 +34,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -227,37 +228,78 @@ fun headline(a: UiAnnouncement): Triple<String, String?, String?> {
 }
 fun cardIcon(a: UiAnnouncement) = a.cards.firstOrNull()?.icon ?: a.icons.firstOrNull() ?: "info"
 
-// ---------- Map: the offline region pack drawn as a calm map (no tiles, no network) ----------
+// ---------- Map: OpenStreetMap tiles (cached on disk for offline) + our hazard overlay + markers. Same projection as web. ----------
 data class Marker(val id: String, val lat: Double, val lng: Double, val icon: String, val color: Color, val label: String, val halo: Boolean = false, val sel: Boolean = false, val onClick: (() -> Unit)? = null)
+
+private const val TILE = 256.0
+fun worldPx(lat: Double, lng: Double, z: Int): Pair<Double, Double> {
+    val n = TILE * (1 shl z); val r = Math.toRadians(lat)
+    return (lng + 180) / 360 * n to (1 - kotlin.math.ln(kotlin.math.tan(r) + 1 / kotlin.math.cos(r)) / Math.PI) / 2 * n
+}
+/** Highest zoom where the points use at most 60% of the box (same rule as web fitView). */
+fun fitView(pts: List<Pair<Double, Double>>, w: Double, h: Double, maxZoom: Int): Triple<Int, Double, Double> {
+    var z = maxZoom
+    while (z > 3) {
+        val px = pts.map { worldPx(it.first, it.second, z) }
+        if (px.maxOf { it.first } - px.minOf { it.first } <= w * .6 && px.maxOf { it.second } - px.minOf { it.second } <= h * .6) break
+        z--
+    }
+    val px = pts.map { worldPx(it.first, it.second, z) }
+    return Triple(z, (px.maxOf { it.first } + px.minOf { it.first }) / 2 - w / 2, (px.maxOf { it.second } + px.minOf { it.second }) / 2 + h * .04 - h / 2)
+}
+
+/** Tiles this phone has seen stay on disk, so the map still shows with no signal (no bulk download). */
+object Tiles {
+    suspend fun get(ctx: Context, url: String): androidx.compose.ui.graphics.ImageBitmap? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        runCatching<androidx.compose.ui.graphics.ImageBitmap?> {
+            val f = java.io.File(ctx.cacheDir, "tiles/" + url.substringAfter("://").replace('/', '_'))
+            if (!f.exists()) {
+                f.parentFile!!.mkdirs()
+                val c = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                c.setRequestProperty("User-Agent", "NobodyMissing-App/1.0"); c.connectTimeout = 8000; c.readTimeout = 8000
+                c.inputStream.use { i -> f.outputStream().use { i.copyTo(it) } }
+            }
+            BitmapFactory.decodeFile(f.path)?.asImageBitmap()
+        }.getOrNull()
+    }
+}
 
 @Composable
 fun ShelterMap(ui: Ui, markers: List<Marker>, you: Pair<Double, Double>? = null, aspect: Float = .8f, modifier: Modifier = Modifier, chips: @Composable RowScope.() -> Unit = {}) {
     val p = ui.f.shared.pack
-    val pts = markers.map { it.lat to it.lng } + listOfNotNull(you)
-    var minLat = pts.minOfOrNull { it.first } ?: p.originLat; var maxLat = pts.maxOfOrNull { it.first } ?: (p.originLat + p.rows * p.step)
-    var minLng = pts.minOfOrNull { it.second } ?: p.originLng; var maxLng = pts.maxOfOrNull { it.second } ?: (p.originLng + p.cols * p.step)
-    var spanLat = maxOf(maxLat - minLat, .006) * 1.6; var spanLng = maxOf(maxLng - minLng, .006) * 1.5
-    if (spanLng / spanLat > aspect) spanLat = spanLng / aspect else spanLng = spanLat * aspect
-    val cLat = (minLat + maxLat) / 2 + spanLat * .04; val cLng = (minLng + maxLng) / 2
-    minLat = cLat - spanLat / 2; maxLat = cLat + spanLat / 2; minLng = cLng - spanLng / 2; maxLng = cLng + spanLng / 2
-    val mLng = minLng; val mLat = maxLat; val sLng = spanLng; val sLat = spanLat
-    val fx = { lng: Double -> ((lng - mLng) / sLng).toFloat() }
-    val fy = { lat: Double -> ((mLat - lat) / sLat).toFloat() }
-    BoxWithConstraints(modifier.fillMaxWidth().aspectRatio(aspect).background(Color(0xFFEEEDE6))) {
-        val w = maxWidth; val h = maxHeight
+    val cfg = ui.f.shared.defaults["map"]!! as kotlinx.serialization.json.JsonObject
+    val tileUrl = (cfg["tiles"] as kotlinx.serialization.json.JsonPrimitive).content
+    val maxZoom = (cfg["maxZoom"] as kotlinx.serialization.json.JsonPrimitive).content.toInt()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    BoxWithConstraints(modifier.fillMaxWidth().aspectRatio(aspect).clip(RoundedCornerShape(0.dp)).background(Color(0xFFEEEDE6))) {
+        val w = maxWidth.value.toDouble(); val h = maxHeight.value.toDouble()
+        val pts = (markers.map { it.lat to it.lng } + listOfNotNull(you)).ifEmpty { listOf(p.originLat to p.originLng, p.originLat + p.rows * p.step to p.originLng + p.cols * p.step) }
+        val (z, left, top) = fitView(pts, w, h, maxZoom)
+        fun xy(lat: Double, lng: Double) = worldPx(lat, lng, z).let { (x, y) -> (x - left) to (y - top) }
+        var tx = kotlin.math.floor(left / TILE).toInt()
+        while (tx * TILE < left + w) {
+            var ty = kotlin.math.floor(top / TILE).toInt()
+            while (ty * TILE < top + h) {
+                val url = tileUrl.replace("{z}", "$z").replace("{x}", "$tx").replace("{y}", "$ty")
+                val bmp by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, url) { value = Tiles.get(ctx, url) }
+                bmp?.let { androidx.compose.foundation.Image(it, null, Modifier.offset((tx * TILE - left).dp, (ty * TILE - top).dp).size(TILE.dp), alpha = .9f) }
+                ty++
+            }
+            tx++
+        }
         Canvas(Modifier.fillMaxSize()) {
+            val k = density
             for (r in 0 until p.rows) for (c in 0 until p.cols) {
                 val hand = p.hand[r][c]; if (hand > 5) continue
-                val lat0 = p.originLat + r * p.step; val lng0 = p.originLng + c * p.step
-                val x0 = fx(lng0) * size.width; val y0 = fy(lat0 + p.step) * size.height
-                val sz = Size(fx(lng0 + p.step) * size.width - x0, fy(lat0) * size.height - y0)
-                drawRoundRect(if (hand < 2) Color(0xFFA9C7E3) else Color(0xFFCFE0EF), Offset(x0, y0), sz, CornerRadius(40f))
-                if (hand >= 2) { var k = -sz.height; while (k < sz.width) { drawLine(Color(0xFFB9D1E8), Offset(x0 + maxOf(k, 0f), y0 + maxOf(-k, 0f)), Offset(x0 + minOf(k + sz.height, sz.width), y0 + minOf(sz.width - k, sz.height)), 7f); k += 22f } }
+                val (x0, y1) = xy(p.originLat + r * p.step, p.originLng + c * p.step); val (x1, y0) = xy(p.originLat + (r + 1) * p.step, p.originLng + (c + 1) * p.step)
+                val o = Offset((x0 * k).toFloat(), (y0 * k).toFloat()); val sz = Size(((x1 - x0) * k).toFloat(), ((y1 - y0) * k).toFloat())
+                drawRect(if (hand < 2) Color(0x472C5A8C) else Color(0x2E5E95CF), o, sz)
+                if (hand >= 2) { var d = -sz.height; while (d < sz.width) { drawLine(Color(0x592C5A8C), Offset(o.x + maxOf(d, 0f), o.y + maxOf(-d, 0f)), Offset(o.x + minOf(d + sz.height, sz.width), o.y + minOf(sz.width - d, sz.height)), 3f * k); d += 11f * k } }
             }
         }
-        you?.let { (la, ln) -> Box(Modifier.offset(w * fx(ln) - 13.dp, h * fy(la) - 13.dp).size(26.dp).shadow(0.dp, CircleShape).clip(CircleShape).background(NM.Navy).border(5.dp, Color.White, CircleShape)) }
-        markers.forEach { m ->
-            Column(Modifier.offset(w * fx(m.lng) - 50.dp, h * fy(m.lat) - 72.dp).width(100.dp).then(if (m.onClick != null) Modifier.clickable(onClick = m.onClick) else Modifier), horizontalAlignment = Alignment.CenterHorizontally) {
+        you?.let { (la, ln) -> val (x, y) = xy(la, ln); Box(Modifier.offset((x - 13).dp, (y - 13).dp).size(26.dp).clip(CircleShape).background(NM.Navy).border(5.dp, Color.White, CircleShape)) }
+        markers.forEach { m -> val (x, y) = xy(m.lat, m.lng)
+            Column(Modifier.offset((x - 50).dp, (y - 72).dp).width(100.dp).then(if (m.onClick != null) Modifier.clickable(onClick = m.onClick) else Modifier), horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(Modifier.size(46.dp).then(if (m.halo) Modifier.border(8.dp, NM.Urgent.copy(alpha = .2f), RoundedCornerShape(50)) else Modifier).rotate(-45f)
                     .shadow(6.dp, RoundedCornerShape(23.dp, 23.dp, 23.dp, 6.dp)).clip(RoundedCornerShape(23.dp, 23.dp, 23.dp, 6.dp)).background(m.color).border(3.dp, Color.White, RoundedCornerShape(23.dp, 23.dp, 23.dp, 6.dp)), contentAlignment = Alignment.Center) {
                     Box(Modifier.rotate(45f)) { Ic(ui.icons, m.icon, 20.dp, Color.White) }
@@ -268,6 +310,7 @@ fun ShelterMap(ui: Ui, markers: List<Marker>, you: Pair<Double, Double>? = null,
             }
         }
         Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), content = chips)
+        Text(ui.f.t("mapCredit"), Modifier.align(Alignment.BottomEnd).padding(6.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha = .85f)).padding(horizontal = 6.dp, vertical = 2.dp), fontSize = 11.sp, color = NM.Ink2, fontWeight = FontWeight.Bold)
     }
 }
 @Composable

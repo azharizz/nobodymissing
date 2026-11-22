@@ -169,9 +169,12 @@ fun Now(ui: Ui) {
     val given = slot?.let { s -> sch.slots[s]!!.count { f.round["$s|${it.personId}|${it.generic}"] == "taken" } } ?: 0
     val toCheck = f.people.count { !it.confirmed }
     val tasks = buildList<@Composable () -> Unit> {
+        // Urgent evacuee requests first, then can't-miss medicine.
+        f.help.filter { !it.done }.sortedByDescending { it.urgent }.forEach { h -> add { Task(ui, if (h.urgent) "alert" else if (h.kind == "write") "chat" else "help", if (h.kind == "write" && !h.urgent) NM.LAV else NM.ROSE,
+            f.t("asksFor", "spot" to h.spot, "kind" to f.t("kind_${h.kind}")), listOfNotNull(h.summary?.let { s -> s + if (h.by == "device") " · " + f.t("readsOnPhone") else "" }, h.text?.takeIf { it != h.summary }?.let { "“$it”" }).joinToString("\n").ifEmpty { null },
+            tag = if (h.urgent) f.t("urgent") else null, act = "check", onAct = { f.helpDone(h.id) }) } }
         sch.alerts.forEach { a -> add { Task(ui, "medicine", NM.ROSE, "${name(a.personId)} · ${a.generic}", f.t("onlyDaysLeft", "n" to (a.supplyDays ?: "?")), f.t("cantMiss")) { ui.go("person", a.personId) } } }
-        f.help.filter { !it.done }.forEach { h -> add { Task(ui, if (h.kind == "write") "chat" else "help", if (h.kind == "write") NM.LAV else NM.ROSE,
-            if (h.kind == "write") f.t("wrote", "spot" to h.spot) else f.t("asksFor", "spot" to h.spot, "kind" to helpWord(ui, h.kind)), h.text?.let { "“$it”" }, act = "check", onAct = { f.helpDone(h.id) }) } }
+        sch.alerts.forEach { a -> add { Task(ui, "medicine", NM.ROSE, "${name(a.personId)} · ${a.generic}", f.t("onlyDaysLeft", "n" to (a.supplyDays ?: "?")), f.t("cantMiss")) { ui.go("person", a.personId) } } }
         p1.forEach { (n, r) -> add { Task(ui, "field", NM.ROSE, n, r.result.why.joinToString(" · "), f.t("visitFirst")) { ui.go("map", r.id) } } }
         slot?.let { s -> add { Task(ui, "clock", NM.HONEY, f.t("roundAt", "slot" to s), f.t("roundSub", "n" to sch.slots[s]!!.size, "given" to given)) { ui.go("round") } } }
         if (toCheck > 0) add { Task(ui, "people", NM.SKY, f.t("checkList"), f.t("toCheck", "n" to toCheck)) { ui.go("review") } }

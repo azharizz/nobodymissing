@@ -195,4 +195,26 @@ class FixturesTest {
             assertEquals(c.name(), e?.let { it.s("answer")!! to it.s("cardId")!! }, askKitAnswer(r.s("cardId"), r.s("answer")!!, i.strings("cardIds")))
         }
     }
+
+    @Test fun helpTriageAndFamilyQr() {
+        val fx = load("fixtures/hybrid.json")
+        for (c in fx["helpTriage"]!!.jsonArray.map { it.jsonObject }) {
+            val i = c["input"]!!.jsonObject; val text = i.s("text")!!
+            val ai = (i["ai"] as? JsonObject)?.let { Triple(it.s("kind")!!, it.b("urgent")!!, it.s("summary")!!) }
+            val e = c["expected"]!!.jsonObject
+            assertEquals(c.name(), Triage(e.s("kind")!!, e.b("urgent")!!, e.s("summary")!!, e.s("by")!!), triageHelp(text, ai, load("rules/defaults.json").strings("urgentWords"), keywordIcons(text, keywords).icons))
+        }
+        fun member(o: JsonObject) = Member(o.s("id")!!, o.s("name")!!, o.s("shelter")!!, o.s("status")!!, o["at"]!!.jsonPrimitive.long)
+        for (c in fx["familyQr"]!!.jsonArray.map { it.jsonObject }) {
+            val i = c["input"]!!.jsonObject; val me = member(i["me"]!!.jsonObject)
+            val q = encodeFamilyQr(i.s("fam")!!, me)
+            assertEquals(c["expected"]!!.jsonPrimitive.content, q)
+            assertEquals(i.s("fam")!! to me, decodeFamilyQr(q))
+        }
+        for (bad in fx["familyQrReject"]!!.jsonArray.map { it.jsonPrimitive.content }) assertEquals(bad, null, decodeFamilyQr(bad))
+        for (c in fx["familyMerge"]!!.jsonArray.map { it.jsonObject }) {
+            val i = c["input"]!!.jsonObject
+            assertEquals(c.name(), c["expected"]!!.jsonArray.map { member(it.jsonObject) }, mergeMembers(i["mine"]!!.jsonArray.map { member(it.jsonObject) }, i["theirs"]!!.jsonArray.map { member(it.jsonObject) }))
+        }
+    }
 }
