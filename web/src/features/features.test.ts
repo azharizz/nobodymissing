@@ -170,4 +170,31 @@ describe('features (wired by FeatureFactory with test adapters)', () => {
     bad.f.store.set(s => ({ ...s, announcements: f.store.get().announcements }));
     expect((await bad.f.hybrid.askKit('bus?')).answer).toBeNull();
   });
+
+  it('help triage: understood on the device only; no device = keywords, never the cloud', async () => {
+    const { f, inf } = await setup(() => ({ raw: '{"kind":"sick","urgent":false,"summary":"Father has chest pain"}', source: 'device' }));
+    f.store.set(s => ({ ...s, signal: 'back' }));
+    expect(await f.hybrid.triage('bapak saya nyeri dada')).toMatchObject({ kind: 'sick', urgent: true, by: 'device' });
+    expect(inf.calls[0].mode).toBe('only_on_device');
+    const off = await setup(undefined, 'unavailable');
+    off.f.store.set(s => ({ ...s, signal: 'back' }));
+    expect(await off.f.hybrid.triage('need insulin')).toMatchObject({ kind: 'medicine', by: 'keywords' });
+    expect(off.inf.calls.length).toBe(0);
+  });
+
+  it('family group: scan links offline, then syncs through families/{id} when online', async () => {
+    const a = await setup(), b = await setup();
+    b.a.sync = a.a.sync; // same cloud
+    a.f.familyGroup.setMe('Cut Nurlaila', 'safe');
+    b.f.familyGroup.setMe('Teuku Hasballah', 'need_help');
+    expect(b.f.familyGroup.scan(a.f.familyGroup.myQr()!)?.name).toBe('Cut Nurlaila');
+    expect(a.f.familyGroup.scan(b.f.familyGroup.myQr()!)?.name).toBe('Teuku Hasballah');
+    expect(a.f.store.get().familyGroup!.fam).toBe(b.f.store.get().familyGroup!.fam);
+    expect(a.f.familyGroup.scan('hello')).toBeNull();
+    a.f.store.set(s => ({ ...s, signal: 'back' }));
+    await a.f.queue.flush();
+    const docs = [...(a.a.sync as MemorySync).docs.keys()].filter(k => k.startsWith('families/'));
+    expect(docs.length).toBeGreaterThan(0);
+    expect(JSON.stringify([...(a.a.sync as MemorySync).docs.values()])).not.toMatch(/flags|needs_meds/);
+  });
 });

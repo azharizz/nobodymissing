@@ -17,6 +17,12 @@ const stranger = () => env.authenticatedContext('someone').firestore();
 const anon = () => env.unauthenticatedContext().firestore();
 
 describe('firestore.rules', () => {
+  it('family group: minimal fields under a random family id only', async () => {
+    await assertSucceeds(setDoc(doc(stranger(), 'families/f-8c1e2b7a9d4f4a51b2c3/members/m1'), { name: 'Cut', shelter: 'SD3', status: 'safe', at: 1 }));
+    await assertSucceeds(getDoc(doc(stranger(), 'families/f-8c1e2b7a9d4f4a51b2c3/members/m1')));
+    await assertFails(setDoc(doc(stranger(), 'families/smith/members/m1'), { name: 'Cut', shelter: 'SD3', status: 'safe', at: 1 }));
+    await assertFails(setDoc(doc(stranger(), 'families/f-8c1e2b7a9d4f4a51b2c3/members/m2'), { name: 'Cut', shelter: 'SD3', status: 'safe', at: 1, flags: ['diabetes'] }));
+  });
   it('a member writes the shelter roster', () => assertSucceeds(setDoc(doc(staff(), 'shelters/SD3/people/p1'), { nameAsWritten: 'Hasan' })));
   it('a non-member cannot write or read the roster', async () => {
     await assertFails(setDoc(doc(stranger(), 'shelters/SD3/people/p2'), { nameAsWritten: 'X' }));

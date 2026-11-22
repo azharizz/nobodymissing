@@ -4,7 +4,7 @@ import { regionPack as pack } from '../features/regionData';
 import { distanceM, nearestHigher } from '../domain/regionPack';
 import type { Announcement } from '../features/state';
 import { fmt } from './i18n';
-import { Badge, cardIcon, greeting, Icon, Kit, MicButton, navigate, QR, SayButton, ShelterMap, useAppState, useF, useT } from './common';
+import { Badge, cardIcon, greeting, Icon, Kit, MicButton, navigate, QR, QrScanner, SayButton, ShelterMap, useAppState, useF, useT } from './common';
 
 const go = (p: string) => navigate(`#/public/${p}`);
 const PLACE_ICON: Record<string, string> = { medical: 'doctor', water: 'water', toilet: 'toilet', kitchen: 'food' };
@@ -72,25 +72,37 @@ function BigBtn({ tone, icon, title, sub, onClick, i }: { tone: string; icon: st
 function HelpPage() {
   const f = useF(), t = useT();
   const [spot, setSpot] = useState('');
-  const [sent, setSent] = useState('');
-  const [writing, setWriting] = useState(false);
-  const [msg, setMsg] = useState('');
-  const kinds: [string, string, string][] = [['medicine', 'medicine', 'sage'], ['sick', 'sick', 'rose'], ['moving', 'mobility', 'sky'], ['write', 'chat', 'lav']];
-  const label = (k: string) => ({ medicine: t.helpMedicine, sick: t.helpSick, moving: t.helpMoving, write: t.helpWrite })[k]!;
-  const send = (k: string, text?: string) => { f.settings.help(k, spot.trim() || '?', text); setSent(k); setWriting(false); setMsg(''); };
+  const [sent, setSent] = useState<{ kind: string; urgent: boolean } | null>(null);
+  const [words, setWords] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [tri, setTri] = useState<Awaited<ReturnType<typeof f.hybrid.triage>> | null>(null);
+  const kinds: [string, string, string][] = [['medicine', 'medicine', 'sage'], ['sick', 'sick', 'rose'], ['moving', 'mobility', 'sky'], ['baby', 'baby', 'lav']];
+  const send = (kind: string, text?: string, more: Parameters<typeof f.settings.help>[3] = {}) => { f.settings.help(kind, spot.trim() || '?', text, more); setSent({ kind, urgent: !!more.urgent }); setTri(null); setWords(''); };
+  const understand = async () => { setBusy(true); setTri(await f.hybrid.triage(words)); setBusy(false); };
   return (
     <>
       <Top title={t.needHelp} sub={t.helpTap} />
       <main className="content">
         <label className="spot"><span className="disc"><Icon name="bed" /></span><span className="grow"><small>{t.mySpot}</small><input value={spot} placeholder={t.spotHint} onChange={e => setSpot(e.target.value)} /></span></label>
+        <div className="ask-box">
+          <div className="place"><Kit mood={busy ? 'think' : 'idle'} size={52} /><b className="h" style={{ fontSize: 22, color: 'var(--navy)' }}>{t.tellKit}</b></div>
+          <textarea rows={2} value={words} placeholder={t.tellKitHint} aria-label={t.tellKit} onChange={e => { setWords(e.target.value); setTri(null); }} />
+          <div className="tools"><MicButton onText={w => { setWords(w); setTri(null); }} /><button className="btn primary" style={{ flex: 1 }} disabled={!words.trim() || busy} onClick={understand}><Icon name="sparkle" />{t.ask}</button></div>
+        </div>
+        {tri && <div className={`answer rise ${tri.urgent ? 'urgent' : ''}`}>
+          <span className="eyebrow">{t.kitUnderstood}</span>
+          <div className="pills"><span className="pill" style={{ background: '#fff' }}>{(t as Record<string, string>)[`kind_${tri.kind}`] ?? tri.kind}</span>{tri.urgent && <span className="pill urgent"><Icon name="alert" size={14} />{t.urgent}</span>}</div>
+          <p>{tri.summary}</p>
+          <span className={`badge ${tri.by === 'device' ? 'local' : 'kw'}`}><Icon name={tri.by === 'device' ? 'device' : 'keywords'} size={15} />{tri.by === 'device' ? t.understoodOnPhone : t.keywordsOnly}</span>
+          <button className="btn primary" onClick={() => send(tri.kind, words.trim(), { summary: tri.summary, urgent: tri.urgent, by: tri.by })}><Icon name="send" />{t.sendToStaff}</button>
+        </div>}
+        <span className="preview-label">{t.orTapOne}</span>
         <div className="tiles">{kinds.map(([k, icon, tone], i) => (
-          <button key={k} className={`tile b-${tone} rise ${sent === k ? 'sel' : ''}`} style={{ '--d': i } as CSSProperties} onClick={() => (k === 'write' ? setWriting(true) : send(k))}>
-            {sent === k && <span className="sent"><Icon name="check" size={15} sw={3} />{t.sent}</span>}
-            <span className="disc"><Icon name={icon} size={30} /></span><b>{label(k)}</b></button>
+          <button key={k} className={`tile b-${tone} rise ${sent?.kind === k ? 'sel' : ''}`} style={{ '--d': i } as CSSProperties} onClick={() => send(k)}>
+            {sent?.kind === k && <span className="sent"><Icon name="check" size={15} sw={3} />{t.sent}</span>}
+            <span className="disc"><Icon name={icon} size={30} /></span><b>{(t as Record<string, string>)[`kind_${k}`]}</b></button>
         ))}</div>
-        {writing && <div className="ask-box rise"><textarea rows={3} value={msg} placeholder={t.writeHint} aria-label={t.helpWrite} onChange={e => setMsg(e.target.value)} />
-          <button className="btn primary" disabled={!msg.trim()} onClick={() => send('write', msg.trim())}><Icon name="send" />{t.send}</button></div>}
-        {sent && <div className="toast rise" role="status"><Kit mood="idle" size={52} /><span>{fmt(t.volunteerComing, { spot: spot.trim() || t.mySpot })}</span></div>}
+        {sent && <div className={`toast rise ${sent.urgent ? 'urgent' : ''}`} role="status"><Kit mood={sent.urgent ? 'alert' : 'idle'} size={52} /><span>{sent.urgent ? t.urgentNow : fmt(t.volunteerComing, { spot: spot.trim() || t.mySpot })}</span></div>}
       </main>
     </>
   );
@@ -143,8 +155,48 @@ function Family() {
             <div className="grow"><b>{h.name}</b><span>{h.ageBand} · {h.shelterId}</span><div style={{ marginTop: 8 }}><span className={`pill ${h.status === 'safe' ? 'safe' : 'warn'}`}><Icon name="check" size={16} />{h.status === 'safe' ? t.safe : h.status}</span></div></div></div>
         ))}
         {(!res || !res.cloud) && s.signal !== 'back' && <p className="note"><Icon name="device" size={16} />{t.offlineFamily}</p>}
+        <FamilyGroup />
       </main>
     </>
+  );
+}
+
+/** Family group by QR: show mine, scan theirs. Works offline face to face; syncs online when apart. */
+function FamilyGroup() {
+  const t = useT(), f = useF(), s = useAppState();
+  const g = s.familyGroup;
+  const [name, setName] = useState(g?.me.name ?? '');
+  const [show, setShow] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [paste, setPaste] = useState('');
+  const [msg, setMsg] = useState('');
+  const got = (text: string) => { const m = f.familyGroup.scan(text); setMsg(m ? fmt(t.linked, { name: m.name }) : t.badQr); if (m) { setScanning(false); setPaste(''); } return !!m; };
+  const ago = (at: number) => { const m = Math.round((Date.now() - at) / 60000); return m < 1 ? t.justNow : m < 60 ? fmt(t.minAgo, { n: m }) : fmt(t.hAgo, { n: Math.round(m / 60) }); };
+  const row = (m: { id: string; name: string; shelter: string; status: string; at: number }, me = false) => (
+    <div key={m.id} className="family-hit" style={{ padding: 14 }}><span className="avatar" style={me ? { background: 'var(--honey)', color: 'var(--honey-ink)' } : undefined}>{m.name.slice(0, 1).toUpperCase()}</span>
+      <div className="grow"><b style={{ fontSize: 20 }}>{me ? `${m.name} · ${t.me}` : m.name}</b><span style={{ fontSize: 15 }}>{m.shelter} · {fmt(t.updatedAgo, { when: ago(m.at) })}{!me && g?.via[m.id] ? ` · ${g.via[m.id] === 'qr' ? t.viaQr : t.viaOnline}` : ''}</span></div>
+      <span className={`pill ${m.status === 'safe' ? 'safe' : 'urgent'}`}>{(t as Record<string, string>)[`status_${m.status}`]}</span></div>
+  );
+  return (
+    <section className="card" style={{ background: 'var(--sage)', color: 'var(--sage-ink)', gap: 12 }}>
+      <h3><Icon name="family" />{t.familyGroup}</h3>
+      <p style={{ fontSize: 16 }}>{t.familyGroupWhy}</p>
+      <label className="field" style={{ color: 'var(--sage-ink)' }}>{t.yourName}<input value={name} onChange={e => setName(e.target.value)} /></label>
+      <div className="seg" role="group" aria-label={t.myStatus}>{(['safe', 'need_help'] as const).map(st => (
+        <button key={st} aria-pressed={(g?.me.status ?? 'safe') === st} disabled={!name.trim()} onClick={() => f.familyGroup.setMe(name, st)}>{(t as Record<string, string>)[`status_${st}`]}</button>))}</div>
+      <div className="cta fam" style={{ gridTemplateColumns: '1fr 1fr' }}>
+        <button className="btn" disabled={!name.trim()} onClick={() => { if (!g || g.me.name !== name.trim()) f.familyGroup.setMe(name, g?.me.status ?? 'safe'); setShow(!show); setScanning(false); }}><Icon name="qr" />{t.showMyQr}</button>
+        <button className="btn primary" disabled={!name.trim()} onClick={() => { if (!g) f.familyGroup.setMe(name, 'safe'); setScanning(!scanning); setShow(false); }}><Icon name="camera" />{t.scanFamilyQr}</button>
+      </div>
+      {show && g && <div className="qr-show rise"><QR text={f.familyGroup.myQr()!} size={240} label={t.showMyQr} /><span className="muted">{g.me.name} · {g.me.shelter}</span></div>}
+      {scanning && <QrScanner onText={got} />}
+      {scanning && <div className="tools"><input className="paste" value={paste} placeholder={t.pasteCode} aria-label={t.pasteCode} onChange={e => setPaste(e.target.value)} /><button className="btn small" disabled={!paste.trim()} onClick={() => got(paste)}>{t.import}</button></div>}
+      {msg && <p className="note" role="status" style={{ color: 'var(--sage-ink)' }}><Icon name="info" size={16} />{msg}</p>}
+      {g && row(g.me, true)}
+      {g?.members.map(m => row(m))}
+      {g && !g.members.length && <p style={{ fontSize: 16 }}>{t.noFamilyYet}</p>}
+      <p className="note" style={{ color: 'var(--sage-ink)' }}><Icon name="device" size={16} />{t.familyOfflineNote}</p>
+    </section>
   );
 }
 
@@ -158,11 +210,11 @@ function AskKit() {
     <>
       <Top title={t.askKit} sub={t.askPrivate} />
       <main className="content">
+        {!r && <div className="hello rise"><Kit mood={busy ? 'think' : 'idle'} size={busy ? 130 : 120} /><p className="bubble">{t.askKitHello}</p></div>}
         <div className="ask-box">
           <textarea rows={2} value={q} placeholder={t.askKitHint} aria-label={t.askKit} onChange={e => setQ(e.target.value)} />
           <div className="tools"><MicButton onText={setQ} /><button className="btn primary" style={{ flex: 1 }} disabled={!q.trim() || busy} onClick={ask}><Icon name="send" />{t.ask}</button></div>
         </div>
-        {busy && <div className="empty"><Kit mood="think" size={110} /></div>}
         {r && (r.answer ? (
           <div className="answer rise" aria-live="polite">
             <div className="place"><Kit mood={r.source === 'cloud' ? 'cloud' : 'device'} size={56} /><Badge source={r.source} /></div>

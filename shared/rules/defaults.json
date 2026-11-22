@@ -139,6 +139,13 @@
       "schema": "askKit",
       "model": "cloudLite",
       "_comment": "Answers only from today's shown notices; an answer without a valid cardId is discarded."
+    },
+    "help_triage": {
+      "sensitive": true,
+      "cloudOnly": false,
+      "schema": "helpTriage",
+      "model": "cloudLite",
+      "_comment": "An evacuee's own words about their health: on this phone only. No device model -> keyword rules (no AI), never the cloud."
     }
   },
   "fieldPriority": {
@@ -171,5 +178,42 @@
       "dialysis",
       "health_post"
     ]
+  },
+  "urgentWords": [
+    "chest pain",
+    "can't breathe",
+    "cannot breathe",
+    "not breathing",
+    "unconscious",
+    "fainted",
+    "bleeding",
+    "seizure",
+    "stroke",
+    "choking",
+    "sesak",
+    "sesak napas",
+    "nyeri dada",
+    "pingsan",
+    "tidak sadar",
+    "pendarahan",
+    "berdarah",
+    "kejang",
+    "tersedak",
+    "stroke"
+  ],
+  "helpKinds": [
+    "medicine",
+    "sick",
+    "moving",
+    "baby",
+    "food",
+    "water",
+    "toilet",
+    "other"
+  ],
+  "map": {
+    "tiles": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    "attribution": "© OpenStreetMap contributors",
+    "maxZoom": 17
   }
 }

@@ -32,5 +32,13 @@ service cloud.firestore {
     match /fieldReports/{id} { allow create: if signedIn(); allow read: if signedIn(); }
     match /announcements/{id} { allow create: if signedIn(); allow read: if true; }
     match /roster/{id} { allow create: if signedIn(); }
+    // Family group by QR: the random family id (f- + 20 hex) is the only key; minimal fields, no health data.
+    match /families/{fid}/members/{mid} {
+      allow read: if signedIn() && fid.matches('f-[0-9a-f]{20}');
+      allow write: if signedIn() && fid.matches('f-[0-9a-f]{20}')
+        && request.resource.data.keys().hasOnly(['name', 'shelter', 'status', 'at', 'updatedAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() <= 60
+        && request.resource.data.status in ['safe', 'need_help'];
+    }
   }
 }

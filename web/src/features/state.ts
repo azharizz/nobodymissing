@@ -34,7 +34,7 @@ export type FieldEntry = {
   needsReview?: boolean;
 };
 export type Job = { id: string; type: string; payload: unknown; path: string | null; createdAt: number; state: JobState; retries: number };
-export type Help = { id: string; kind: string; spot: string; at: number; done: boolean; text?: string };
+export type Help = { id: string; kind: string; spot: string; at: number; done: boolean; text?: string; summary?: string; urgent?: boolean; by?: 'device' | 'keywords' };
 export type BatchItem = { id: string; kind: 'roster' | 'med'; personId?: string; image: ImageInput; approved: boolean };
 
 export type State = {
@@ -43,13 +43,14 @@ export type State = {
   privateMode: boolean; signal: SignalState; scoutRun: number; scoutAlert: boolean; lastSignalAt: number | null;
   lang: 'en' | 'id'; volunteerPos: { lat: number; lng: number } | null;
   open: { need: string; places: OpenPlace[]; at: number; pending: boolean } | null;
+  familyGroup: { fam: string; me: import('../domain/family').Member; members: import('../domain/family').Member[]; via: Record<string, 'qr' | 'online'> } | null;
 };
 
 /** A real shelter starts empty: people come from scanned lists, never from bundled data. */
 export function initialState(): State {
   return {
     shelter: { id: 'shelter-1', name: 'Shelter' }, people: [], cards: [], round: {}, announcements: [], field: [], jobs: [], help: [], batch: [],
-    privateMode: false, signal: 'no_signal', scoutRun: 0, scoutAlert: false, lastSignalAt: null, lang: 'en', volunteerPos: null, open: null,
+    privateMode: false, signal: 'no_signal', scoutRun: 0, scoutAlert: false, lastSignalAt: null, lang: 'en', volunteerPos: null, open: null, familyGroup: null,
   };
 }
 

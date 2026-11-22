@@ -22,6 +22,7 @@ export function demoReply(r: InferenceRequest): InferenceResult {
       { name: 'amlodipine', generic: 'amlodipine', alsoKnownAs: ['Norvasc', 'Tensivask'], swaps: ['nifedipine (long-acting)'], cantMiss: false, note: null } ],
       interactions: [] }),
     find_open: JSON.stringify({ places: [{ name: 'Apotek Sehat Keluarga', kind: 'pharmacy', distanceKm: 1.2, openNow: true, hours: 'until 21:00', note: null }, { name: 'Puskesmas Kota (demo)', kind: 'health post', distanceKm: 2.4, openNow: true, hours: '24 hours', note: null }] }),
+    help_triage: JSON.stringify({ kind: /insulin|obat|medic/i.test(t) ? 'medicine' : /sick|sakit|demam|fever|pain|nyeri/i.test(t) ? 'sick' : 'other', urgent: /chest|dada|breath|napas/i.test(t), summary: t.slice(0, 80) }),
     ask_kit: (() => {
       // Demo: pick the notice sharing a word with the question (the real model reads them in any language).
       const words = t.toLowerCase().split(/\W+/).filter(w => w.length > 3 && !['when', 'what', 'where', 'does', 'will', 'there'].includes(w));

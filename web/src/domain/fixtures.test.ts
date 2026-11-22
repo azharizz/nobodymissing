@@ -122,3 +122,16 @@ describe('hybrid AI safety contracts (shared fixtures)', () => {
   it('only Google Maps places survive', () => { for (const c of hybridFx.groundedPlaces) expect(groundedPlaces(c.input.places as any, c.input.chunks).map(p => ({ name: p.name, uri: p.uri })), c.name).toEqual(c.expected); });
   it('Ask Kit answers must cite a real card', () => { for (const c of hybridFx.askKit) expect(askKitAnswer(c.input.result, c.input.cardIds), c.name).toEqual(c.expected); });
 });
+
+import { triageHelp } from './hybrid';
+import { decodeFamilyQr, encodeFamilyQr, mergeMembers } from './family';
+describe('help triage + family QR (shared fixtures)', () => {
+  it('urgency never goes down; no model = keyword rules', () => {
+    for (const c of hybridFx.helpTriage) expect(triageHelp(c.input.text, c.input.ai, rules.urgentWords, keywordIcons(c.input.text, keywords).icons), c.name).toEqual(c.expected);
+  });
+  it('family QR round trip and rejects', () => {
+    for (const c of hybridFx.familyQr) { const q = encodeFamilyQr(c.input.fam, c.input.me as any); expect(q).toBe(c.expected); expect(decodeFamilyQr(q)).toEqual({ fam: c.input.fam, member: c.input.me }); }
+    for (const bad of hybridFx.familyQrReject) expect(decodeFamilyQr(bad), bad).toBeNull();
+  });
+  it('family merge: newer wins, nobody dropped', () => { for (const c of hybridFx.familyMerge) expect(mergeMembers(c.input.mine as any, c.input.theirs as any), c.name).toEqual(c.expected); });
+});

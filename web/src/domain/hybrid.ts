@@ -40,3 +40,14 @@ export function groundedPlaces<P extends { name: string }>(places: P[], chunks: 
 export function askKitAnswer(result: { cardId: string | null; answer: string }, cardIds: string[]) {
   return result.cardId && cardIds.includes(result.cardId) && result.answer.trim() ? { answer: result.answer.trim(), cardId: result.cardId } : null;
 }
+
+const ICON_KIND: Record<string, string> = { medicine: 'medicine', doctor: 'sick', food: 'food', water: 'water', toilet: 'toilet', baby: 'baby', move: 'moving' };
+/** "I need help" in the evacuee's own words. Urgency can only go up: the keyword list wins over a calm AI answer.
+ *  No device model -> keyword rules and the original words (this task never goes to the cloud). */
+export function triageHelp(text: string, ai: { kind: string; urgent: boolean; summary: string } | null, urgentWords: string[], icons: string[]) {
+  const t = ` ${text.toLowerCase()} `;
+  const urgentWord = urgentWords.some(w => t.includes(w.toLowerCase()));
+  if (ai) return { kind: ai.kind, urgent: ai.urgent || urgentWord, summary: ai.summary, by: 'device' as const };
+  const kind = icons.map(i => ICON_KIND[i]).find(Boolean) ?? (urgentWord ? 'sick' : 'other');
+  return { kind, urgent: urgentWord, summary: text.trim(), by: 'keywords' as const };
+}

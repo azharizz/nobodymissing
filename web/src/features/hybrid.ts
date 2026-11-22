@@ -2,7 +2,9 @@
 // 1 Medicine check: drug names + strengths only -> generic names, swaps for a pharmacist, interactions (never auto-accepted).
 // 2 Find it open: Grounding with Google Maps near a rounded location -> only places Google Maps returned.
 // 5 Ask Kit: an evacuee's question answered only from today's shown notices (device first), or "ask a volunteer".
-import { askKitAnswer, coarseLocation, crossCheck, groundedPlaces, medCheckInput } from '../domain/hybrid';
+import keywords from '../../../shared/rules/keywords.json';
+import { askKitAnswer, coarseLocation, crossCheck, groundedPlaces, medCheckInput, triageHelp } from '../domain/hybrid';
+import { keywordIcons } from '../domain/keywordIcons';
 import { drugList as drugs, regionPack as pack } from './regionData';
 import type { Deps } from './deps';
 import type { Job, MedCheck, OpenPlace } from './state';
@@ -69,6 +71,14 @@ export function createHybrid(d: Deps, enqueue: (type: string, payload: unknown, 
     return { answer: ok?.answer ?? null, card: ok ? cards.find(a => a.id === ok.cardId)! : null, source: ok ? r.source! : null };
   }
 
+  /** "I need help" in the evacuee's own words: understood on this phone only (health words are private).
+   *  No device model -> keyword rules. Urgency can only go up. Nothing is sent until the evacuee taps Send. */
+  async function triage(text: string) {
+    const r = await d.router.run<{ kind: string; urgent: boolean; summary: string }>('help_triage', { text: text.trim() });
+    const ai = (r.status === 'ok' || r.status === 'draft') && r.source === 'device' ? r.data! : null;
+    return triageHelp(text, ai, d.rules.urgentWords, keywordIcons(text, keywords).icons);
+  }
+
   /** Queued cloud questions run again when the signal returns. */
   async function reRun(j: Job) {
     if (j.type === 'med_check') return (await checkMeds((j.payload as { personId: string }).personId, true)) === 'done';
@@ -76,5 +86,5 @@ export function createHybrid(d: Deps, enqueue: (type: string, payload: unknown, 
     return false;
   }
 
-  return { checkMeds, findOpen, askKit, reRun };
+  return { checkMeds, findOpen, askKit, triage, reRun };
 }

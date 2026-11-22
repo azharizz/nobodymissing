@@ -1,5 +1,6 @@
 import { createContext, useContext, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
 import QRCode from 'qrcode';
+import jsQR from 'jsqr';
 import iconSet from '../../../shared/icons/icons.json';
 import kit from '../../../shared/mascot/kit.json';
 import type { Features } from '../features/featureFactory';
@@ -175,41 +176,83 @@ export function MicButton({ onText, label }: { onText: (t: string) => void; labe
   );
 }
 
-// ---------- Map: the offline region pack drawn as a calm map (no tiles, no network) ----------
+/** Live QR scanner (camera via a ref callback, no useEffect). Calls onText for each decoded code until it returns true. */
+export function QrScanner({ onText }: { onText: (text: string) => boolean }) {
+  const t = useT();
+  const [noCam, setNoCam] = useState(false);
+  const attach = (v: HTMLVideoElement | null) => {
+    if (!v) return;
+    let stream: MediaStream | null = null, stop = false, last = '';
+    const c = document.createElement('canvas'), ctx = c.getContext('2d', { willReadFrequently: true })!;
+    const loop = () => {
+      if (stop) return;
+      if (v.videoWidth) {
+        c.width = v.videoWidth; c.height = v.videoHeight; ctx.drawImage(v, 0, 0);
+        const code = jsQR(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height);
+        if (code?.data && code.data !== last) { last = code.data; if (onText(code.data)) return; }
+      }
+      requestAnimationFrame(loop);
+    };
+    navigator.mediaDevices?.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+      .then(st => { if (stop) return st.getTracks().forEach(x => x.stop()); stream = st; v.srcObject = st; v.play().catch(() => {}); loop(); })
+      .catch(() => setNoCam(true));
+    return () => { stop = true; stream?.getTracks().forEach(x => x.stop()); };
+  };
+  return <div className="qr-scan">{noCam ? <p className="note"><Icon name="camera" size={16} />{t.noCamera}</p> : <><video ref={attach} playsInline muted /><span className="qr-frame" /><span className="glass">{t.scanHint}</span></>}</div>;
+}
+
+// ---------- Map: OpenStreetMap tiles (cached by the service worker for offline) + our hazard overlay + markers ----------
 export type Marker = { id: string; lat: number; lng: number; icon: string; color: string; label: string; halo?: boolean; sel?: boolean; onClick?: () => void };
+const TILE = 256;
+/** Web Mercator world pixels at zoom z (same projection as the tile servers). */
+export function worldPx(lat: number, lng: number, z: number) {
+  const n = TILE * 2 ** z, r = (lat * Math.PI) / 180;
+  return [((lng + 180) / 360) * n, ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * n];
+}
+/** Fit the points into a W x H view: highest zoom where they use at most 60% of the box. */
+export function fitView(pts: { lat: number; lng: number }[], W: number, H: number, maxZoom: number) {
+  let z = maxZoom;
+  for (; z > 3; z--) {
+    const px = pts.map(p => worldPx(p.lat, p.lng, z));
+    const w = Math.max(...px.map(p => p[0])) - Math.min(...px.map(p => p[0])), h = Math.max(...px.map(p => p[1])) - Math.min(...px.map(p => p[1]));
+    if (w <= W * 0.6 && h <= H * 0.6) break;
+  }
+  const px = pts.map(p => worldPx(p.lat, p.lng, z));
+  const cx = (Math.max(...px.map(p => p[0])) + Math.min(...px.map(p => p[0]))) / 2, cy = (Math.max(...px.map(p => p[1])) + Math.min(...px.map(p => p[1]))) / 2 + H * 0.04;
+  return { z, left: cx - W / 2, top: cy - H / 2 };
+}
+
 export function ShelterMap({ markers, you, chips, aspect = 4 / 5, className = '' }: { markers: Marker[]; you?: { lat: number; lng: number } | null; chips?: ReactNode; aspect?: number; className?: string }) {
-  const g = pack.grid;
-  const pts = [...markers, ...(you ? [you] : [])];
-  let [minLat, maxLat, minLng, maxLng] = pts.length
-    ? [Math.min(...pts.map(p => p.lat)), Math.max(...pts.map(p => p.lat)), Math.min(...pts.map(p => p.lng)), Math.max(...pts.map(p => p.lng))]
-    : [g.origin[1], g.origin[1] + g.rows * g.step, g.origin[0], g.origin[0] + g.cols * g.step];
-  // Pad, keep a minimum span, then match the box's aspect ratio (roughly equal metres per pixel near the equator).
-  let spanLat = Math.max(maxLat - minLat, 0.006) * 1.6, spanLng = Math.max(maxLng - minLng, 0.006) * 1.5;
-  if (spanLng / spanLat > aspect) spanLat = spanLng / aspect; else spanLng = spanLat * aspect;
-  const cLat = (minLat + maxLat) / 2 + spanLat * 0.04, cLng = (minLng + maxLng) / 2;
-  [minLat, maxLat, minLng, maxLng] = [cLat - spanLat / 2, cLat + spanLat / 2, cLng - spanLng / 2, cLng + spanLng / 2];
+  const f = useF(), t = useT();
+  const g = pack.grid, cfg = f.rules.map;
   const W = 400, H = W / aspect;
-  const x = (lng: number) => ((lng - minLng) / spanLng) * W, y = (lat: number) => ((maxLat - lat) / spanLat) * H;
-  const pct = (p: { lat: number; lng: number }) => ({ left: `${(x(p.lng) / W) * 100}%`, top: `${(y(p.lat) / H) * 100}%` });
+  const pts = [...markers, ...(you ? [you] : [])];
+  const { z, left, top } = fitView(pts.length ? pts : [{ lat: g.origin[1], lng: g.origin[0] }, { lat: g.origin[1] + g.rows * g.step, lng: g.origin[0] + g.cols * g.step }], W, H, cfg.maxZoom);
+  const xy = (lat: number, lng: number) => { const [x, y] = worldPx(lat, lng, z); return [x - left, y - top]; };
+  const tiles: { x: number; y: number; url: string }[] = [];
+  for (let tx = Math.floor(left / TILE); tx * TILE < left + W; tx++) for (let ty = Math.floor(top / TILE); ty * TILE < top + H; ty++)
+    tiles.push({ x: tx * TILE - left, y: ty * TILE - top, url: cfg.tiles.replace('{z}', String(z)).replace('{x}', String(tx)).replace('{y}', String(ty)) });
+  const pct = (p: { lat: number; lng: number }) => { const [x, y] = xy(p.lat, p.lng); return { left: `${(x / W) * 100}%`, top: `${(y / H) * 100}%` }; };
   return (
     <div className={`map ${className}`} style={{ aspectRatio: String(aspect) }}>
       <svg className="base" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden>
-        <defs><pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#CFE0EF" /><rect width="4" height="10" fill="#B9D1E8" /></pattern></defs>
+        <defs><pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#5E95CF" opacity=".18" /><rect width="3" height="8" fill="#2C5A8C" opacity=".35" /></pattern></defs>
         <rect width={W} height={H} fill="#EEEDE6" />
+        {tiles.map(tl => <image key={tl.url} href={tl.url} x={tl.x} y={tl.y} width={TILE} height={TILE} style={{ filter: 'saturate(.55) contrast(.95)' }} />)}
         {g.hand.map((row, r) => row.map((hand, c) => {
           if (hand > 5) return null;
-          const lat0 = g.origin[1] + r * g.step, lng0 = g.origin[0] + c * g.step;
-          return <rect key={`${r}-${c}`} x={x(lng0)} y={y(lat0 + g.step)} width={x(lng0 + g.step) - x(lng0)} height={y(lat0) - y(lat0 + g.step)} rx={18} fill={hand < 2 ? '#A9C7E3' : 'url(#hatch)'} />;
+          const [x0, y1] = xy(g.origin[1] + r * g.step, g.origin[0] + c * g.step), [x1, y0] = xy(g.origin[1] + (r + 1) * g.step, g.origin[0] + (c + 1) * g.step);
+          return <rect key={`${r}-${c}`} x={x0} y={y0} width={x1 - x0} height={y1 - y0} fill={hand < 2 ? 'rgba(44,90,140,.28)' : 'url(#hatch)'} />;
         }))}
       </svg>
       {chips && <div className="chips">{chips}</div>}
-      {you && <span className="you" style={pct(you)} aria-label="You" />}
+      {you && <span className="you" style={pct(you)} aria-label={t.you} />}
       {markers.map(m => (
         <button key={m.id} className={`marker ${m.halo ? 'halo' : ''} ${m.sel ? 'sel' : ''}`} style={pct(m)} onClick={m.onClick} aria-label={m.label} tabIndex={m.onClick ? 0 : -1}>
           <span className="m" style={{ background: m.color }}><Icon name={m.icon} size={20} /></span><span className="t">{m.label}</span>
         </button>
       ))}
+      <a className="map-credit" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">{t.mapCredit}</a>
     </div>
   );
 }
-

@@ -68,13 +68,14 @@ function Now() {
   const given = slot ? sch.slots[slot].filter(e => s.round[f.medicine.key(slot, e.personId, e.generic)] === 'taken').length : 0;
   const toCheck = s.people.filter(p => !p.confirmedBy).length;
   const tasks: React.ReactNode[] = [
+    ...s.help.filter(h => !h.done).sort((a, b) => Number(!!b.urgent) - Number(!!a.urgent)).map(h => <div key={h.id} className={`task ${h.urgent ? 'urgent' : ''}`}><span className={`sq ${h.urgent ? 'rose' : h.kind === 'write' ? 'lav' : 'rose'}`}><Icon name={h.urgent ? 'alert' : h.kind === 'write' ? 'chat' : 'help'} /></span>
+      <span className="tx">{h.urgent && <span className="tagline">{t.urgent}</span>}<b>{fmt(t.asksFor, { spot: h.spot, kind: (t as Record<string, string>)[`kind_${h.kind}`] ?? helpWord(t, h.kind) })}</b>
+        {h.summary && <span>{h.summary}{h.by === 'device' ? ' · ' + t.readsOnPhone : ''}</span>}{h.text && h.text !== h.summary && <span>“{h.text}”</span>}</span>
+      <button className="act" aria-label={t.confirm} onClick={() => f.settings.helpDone(h.id)}><Icon name="check" /></button></div>),
     ...sch.alerts.map(a => <button key={'a' + a.personId + a.generic} className="task urgent" onClick={() => go(`person/${a.personId}`)}><span className="sq"><Icon name="medicine" /></span>
       <span className="tx"><span className="tagline">{t.cantMiss}</span><b>{name(a.personId)} · {a.generic}</b><span>{fmt(t.onlyDaysLeft, { n: a.supplyDays ?? '?' })}</span></span><span className="act plain"><Icon name="chevron" /></span></button>),
     ...(s.batch.length ? [<button key="batch" className="task" onClick={() => f.roster.processBatch()}><span className="sq lav"><Icon name="clock" /></span>
       <span className="tx"><b>{fmt(t.photosWaiting, { n: s.batch.length })}</b><span>{t.processNow}</span></span><span className="act"><Icon name="sync" /></span></button>] : []),
-    ...s.help.filter(h => !h.done).map(h => <div key={h.id} className="task"><span className={`sq ${h.kind === 'write' ? 'lav' : 'rose'}`}><Icon name={h.kind === 'write' ? 'chat' : 'help'} /></span>
-      <span className="tx"><b>{h.kind === 'write' ? fmt(t.wrote, { spot: h.spot }) : fmt(t.asksFor, { spot: h.spot, kind: helpWord(t, h.kind) })}</b>{h.text && <span>“{h.text}”</span>}</span>
-      <button className="act" aria-label={t.confirm} onClick={() => f.settings.helpDone(h.id)}><Icon name="check" /></button></div>),
     ...p1.map(r => <button key={'f' + r.id} className="task urgent" onClick={() => go(`map/${r.id}`)}><span className="sq"><Icon name="field" /></span>
       <span className="tx"><span className="tagline">{t.visitFirst}</span><b>{r.name}</b><span>{r.why.join(' · ')}</span></span><span className="act plain"><Icon name="chevron" /></span></button>),
     ...(slot ? [<button key="round" className="task" onClick={() => go('round')}><span className="sq honey"><Icon name="clock" /></span>

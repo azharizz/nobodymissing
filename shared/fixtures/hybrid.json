@@ -196,5 +196,161 @@
       },
       "expected": null
     }
+  ],
+  "helpTriage": [
+    {
+      "name": "AI says not urgent but the words say chest pain: urgent wins (never downgraded)",
+      "input": {
+        "text": "bapak saya nyeri dada sejak pagi",
+        "ai": {
+          "kind": "sick",
+          "urgent": false,
+          "summary": "Father has chest pain since morning"
+        }
+      },
+      "expected": {
+        "kind": "sick",
+        "urgent": true,
+        "summary": "Father has chest pain since morning",
+        "by": "device"
+      }
+    },
+    {
+      "name": "no device model: keyword rules only, original words kept",
+      "input": {
+        "text": "Need insulin for my mother",
+        "ai": null
+      },
+      "expected": {
+        "kind": "medicine",
+        "urgent": false,
+        "summary": "Need insulin for my mother",
+        "by": "keywords"
+      }
+    },
+    {
+      "name": "no keyword match: other",
+      "input": {
+        "text": "Where can I charge my phone?",
+        "ai": null
+      },
+      "expected": {
+        "kind": "other",
+        "urgent": false,
+        "summary": "Where can I charge my phone?",
+        "by": "keywords"
+      }
+    },
+    {
+      "name": "no model, urgent words only: counted as sick",
+      "input": {
+        "text": "ibu pingsan",
+        "ai": null
+      },
+      "expected": {
+        "kind": "sick",
+        "urgent": true,
+        "summary": "ibu pingsan",
+        "by": "keywords"
+      }
+    }
+  ],
+  "familyQr": [
+    {
+      "name": "round trip",
+      "input": {
+        "fam": "f-8c1e2b7a9d4f4a51b2c3",
+        "me": {
+          "id": "m1",
+          "name": "Cut Nurlaila",
+          "shelter": "SD3",
+          "status": "safe",
+          "at": 1000
+        }
+      },
+      "expected": "NMF1:f-8c1e2b7a9d4f4a51b2c3:m1:SD3:safe:1000:Cut Nurlaila"
+    },
+    {
+      "name": "names with colons survive",
+      "input": {
+        "fam": "f-8c1e2b7a9d4f4a51b2c3",
+        "me": {
+          "id": "m2",
+          "name": "Teuku: Hasballah",
+          "shelter": "MSJ1",
+          "status": "need_help",
+          "at": 2000
+        }
+      },
+      "expected": "NMF1:f-8c1e2b7a9d4f4a51b2c3:m2:MSJ1:need_help:2000:Teuku: Hasballah"
+    }
+  ],
+  "familyQrReject": [
+    "hello",
+    "NMF1:short:m1:SD3:safe:1:x",
+    "NMF1:f-8c1e2b7a9d4f4a51b2c3:m1:SD3:dead:1:x",
+    "NMF2:f-8c1e2b7a9d4f4a51b2c3:m1:SD3:safe:1:x"
+  ],
+  "familyMerge": [
+    {
+      "name": "newer update wins, nobody is dropped",
+      "input": {
+        "mine": [
+          {
+            "id": "m1",
+            "name": "Cut",
+            "shelter": "SD3",
+            "status": "safe",
+            "at": 5
+          },
+          {
+            "id": "m2",
+            "name": "Teuku",
+            "shelter": "SD3",
+            "status": "need_help",
+            "at": 1
+          }
+        ],
+        "theirs": [
+          {
+            "id": "m2",
+            "name": "Teuku",
+            "shelter": "MSJ1",
+            "status": "safe",
+            "at": 9
+          },
+          {
+            "id": "m3",
+            "name": "Rizki",
+            "shelter": "MSJ1",
+            "status": "safe",
+            "at": 3
+          }
+        ]
+      },
+      "expected": [
+        {
+          "id": "m1",
+          "name": "Cut",
+          "shelter": "SD3",
+          "status": "safe",
+          "at": 5
+        },
+        {
+          "id": "m2",
+          "name": "Teuku",
+          "shelter": "MSJ1",
+          "status": "safe",
+          "at": 9
+        },
+        {
+          "id": "m3",
+          "name": "Rizki",
+          "shelter": "MSJ1",
+          "status": "safe",
+          "at": 3
+        }
+      ]
+    }
   ]
 }

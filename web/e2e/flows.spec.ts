@@ -90,3 +90,32 @@ test('Ask Kit answers from today\'s notice, or sends them to a volunteer', async
   await page.getByRole('button', { name: 'Ask', exact: true }).click();
   await expect(page.locator('.answer')).toContainText('Please ask a volunteer');
 });
+
+test('I need help in my own words: urgent goes to the top of staff Now', async ({ page }) => {
+  await page.goto('/#/public/help');
+  await page.getByPlaceholder('Bed 12 · Hall A').fill('Bed 4');
+  await page.getByLabel('Tell Kit what you need').fill('bapak saya nyeri dada sejak pagi');
+  await page.getByRole('button', { name: 'Ask', exact: true }).click();
+  await expect(page.locator('.answer')).toContainText('Urgent');
+  await page.getByRole('button', { name: /Send to staff/ }).click();
+  await expect(page.getByText(/volunteer is coming now/)).toBeVisible();
+  await page.goto('/#/staff/now');
+  await expect(page.locator('.task').first()).toContainText('Urgent');
+  await expect(page.locator('.task').first()).toContainText('Bed 4');
+});
+
+test('family group: link by QR code, see each other with status', async ({ page }) => {
+  await page.goto('/#/public/family');
+  await page.getByLabel('Your name').fill('Cut Nurlaila');
+  await page.getByRole('button', { name: /Show my QR/ }).click();
+  await expect(page.locator('.qr-show img')).toBeVisible();
+  await page.getByRole('button', { name: /Scan family QR/ }).click();
+  await page.getByLabel('Or paste the code').fill(`NMF1:f-8c1e2b7a9d4f4a51b2c3:m9:MSJ1:need_help:${Date.now()}:Teuku Hasballah`);
+  await page.getByRole('button', { name: 'Import' }).click();
+  await expect(page.getByText('Linked with Teuku Hasballah')).toBeVisible();
+  await expect(page.locator('.family-hit', { hasText: 'Teuku Hasballah' })).toContainText('Needs help');
+  await page.getByRole('button', { name: /Scan family QR/ }).click(); // scanning closes after a successful link
+  await page.getByLabel('Or paste the code').fill('not a family code');
+  await page.getByRole('button', { name: 'Import' }).click();
+  await expect(page.getByText(/not a family QR/)).toBeVisible();
+});

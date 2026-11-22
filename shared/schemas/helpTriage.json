@@ -1,0 +1,30 @@
+{
+  "type": "object",
+  "required": [
+    "kind",
+    "urgent",
+    "summary"
+  ],
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": [
+        "medicine",
+        "sick",
+        "moving",
+        "baby",
+        "food",
+        "water",
+        "toilet",
+        "other"
+      ]
+    },
+    "urgent": {
+      "type": "boolean"
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 90
+    }
+  }
+}
