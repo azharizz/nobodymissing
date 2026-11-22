@@ -14,7 +14,10 @@ Hybrid AI now does real cloud work, not just fallback: **Medicine check** (drug 
 
 - Follow-up 2: real map data for Kuala Simpang (Global HAND 30 m + OSM) via `tools/region-pack/build.mjs`; family QR carries the whole group + gossip sync; hybrid family search; Android live QR scanner. Web 157 unit + 11 e2e tests pass; Android 38 tests pass.
 
+- Follow-up 3 (first hours): Go now / Show the way / I need pickup / check-in card (evacuee) + Check-in tab and pickups on the map (staff), web + Android. Web 164 unit + 12 e2e + 10 rules tests pass; Android 40 tests pass, APK builds (not run on a device: no phone, no disk for an emulator).
+
 ## PENDING HUMAN
+- Live check of `warning_latest` (Google Search grounding) and `find_open` (Maps grounding) on the real project.
 - Deploy the updated Firestore rules (`firebase deploy --only firestore:rules`): family sync needs the new `families/` rule.
 - Install the debug APK on a phone and look at every screen (no emulator space on this Mac).
 - Live check of Maps grounding on the free tier (`find_open` with real Firebase): quota, and that `gemini-3.8-flash` returns grounding chunks.

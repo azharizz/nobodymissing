@@ -39,18 +39,18 @@ class FirebaseAiLogicInference : InferencePort {
             else -> InferenceMode.ONLY_IN_CLOUD
         }
         // Grounding with Google Maps (cloud only): no JSON mode with tools; the router parses + validates the text.
-        val maps = r.grounding == "maps"
+        val maps = r.grounding == "maps"; val search = r.grounding == "search"
         val model = ai.generativeModel(
             modelName = r.model,
-            generationConfig = if (maps) null else generationConfig { responseMimeType = "application/json" },
-            tools = if (maps) listOf(Tool.googleMaps()) else null,
+            generationConfig = if (maps || search) null else generationConfig { responseMimeType = "application/json" },
+            tools = if (maps) listOf(Tool.googleMaps()) else if (search) listOf(Tool.googleSearch()) else null,
             toolConfig = if (maps && r.lat != null && r.lng != null) ToolConfig(retrievalConfig = RetrievalConfig.builder().setLatLng(LatLng(r.lat, r.lng)).build()) else null,
             onDeviceConfig = OnDeviceConfig(mode = mode),
         )
         // The schema travels in the prompt too; the output is always validated by domain/Validate.kt.
         val prompt = "${r.prompt}\nReturn only JSON matching this JSON Schema: ${r.schema}" + (r.text?.let { "\n\n$it" } ?: "")
         val res = model.generateContent(content { r.image?.let { image(it) }; text(prompt) })
-        val places = res.candidates.firstOrNull()?.groundingMetadata?.groundingChunks.orEmpty().mapNotNull { it.maps }.map { GroundingPlace(it.title, it.uri, it.placeId) }
+        val places = res.candidates.firstOrNull()?.groundingMetadata?.groundingChunks.orEmpty().mapNotNull { c -> c.maps?.let { GroundingPlace(it.title, it.uri, it.placeId) } ?: c.web?.let { GroundingPlace(it.title, it.uri, null) } }
         return InferenceResult(res.text ?: "", if (res.inferenceSource == InferenceSource.ON_DEVICE) "device" else "cloud", places)
     }
 }

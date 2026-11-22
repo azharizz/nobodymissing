@@ -18,7 +18,7 @@ class Shared(private val read: (String) -> String, remoteRules: String? = null) 
         JsonObject(d + r + ("routerPolicy" to JsonObject(d["routerPolicy"]!!.jsonObject + (r["routerPolicy"] as? JsonObject ?: JsonObject(emptyMap())))))
     }.getOrNull() } ?: d }
     val rules = Rules.from(defaults)
-    val schemas = listOf("roster", "careCard", "announcementCard", "fieldReport", "request", "translation", "medCheck", "findOpen", "askKit", "helpTriage", "familyQuery", "nameVariants").associateWith { json("schemas/$it.json") }
+    val schemas = listOf("roster", "careCard", "announcementCard", "fieldReport", "request", "translation", "medCheck", "findOpen", "askKit", "helpTriage", "familyQuery", "nameVariants", "warningPlain", "pickup", "checkin").associateWith { json("schemas/$it.json") }
     val prompts = json("prompts/pack.json")["tasks"]!!.jsonObject.mapValues { it.value.jsonPrimitive.content }
     // ponytail: only the synthetic demo drug list and region pack exist today; swap in real region packs when tools/region-pack ships them.
     val drugs = Drug.listFrom(json("demo/drugs.json"))
@@ -36,7 +36,9 @@ data class UiPerson(val id: String, val name: String, val age: Int?, val flags: 
 data class UiMed(val personId: String, val nameAsWritten: String, val match: DrugMatch, val strength: String?, val dose: String?, val timesPerDay: Int?, val qtyLeft: Int?, val generic: String?, val confirmedBy: String?)
 data class UiCard(val icon: String, val title: String, val time: String?, val place: String?)
 data class UiAnnouncement(val id: String, val text: String, val icons: List<String>, val cards: List<UiCard>, val source: String, val draft: Boolean, val shown: Boolean = false, val told: Set<String> = emptySet())
-data class UiField(val id: String, val name: String, val lat: Double?, val lng: Double?, val hoursSinceContact: Double?, val person: PriorityInput, val needsReview: Boolean = false, val status: String = "unchecked")
+data class UiField(val id: String, val name: String, val lat: Double?, val lng: Double?, val hoursSinceContact: Double?, val person: PriorityInput, val needsReview: Boolean = false, val status: String = "unchecked", val pickup: PickupRecord? = null)
+data class ActiveWarning(val w: WarningPlain, val text: String, val at: Long, val sources: List<org.nobodymissing.ports.GroundingPlace>)
+data class Destination(val h: HigherPlace, val lat: Double, val lng: Double, val from: Pair<Double, Double>, val gps: Boolean)
 data class UiHelp(val id: String, val kind: String, val spot: String, val text: String?, val done: Boolean = false, val summary: String? = null, val urgent: Boolean = false, val by: String? = null)
 data class FamilyGroup(val fam: String, val fams: List<String>, val me: Member, val members: List<Member>, val via: Map<String, String>)
 data class SmartFamily(val name: String, val age: Int?, val place: String?, val parsedBy: String, val variants: List<String>, val variantsBy: String, val hits: List<FamilyHit>)
@@ -230,6 +232,89 @@ class Features(val adapters: Adapters, val shared: Shared) {
 
     fun helpDone(id: String) = help.replaceAll { if (it.id == id) it.copy(done = true) else it }
 
+    // ---- The first hours: warning -> the way -> pickup -> check-in (same as web features/firstHours.ts) ----
+    private fun words(k: String) = shared.defaults.strings(k)
+    private fun wordMap(k: String) = shared.defaults[k]!!.jsonObject.mapValues { it.value.jsonArray.map { x -> x.jsonPrimitive.content } }
+    private val warnRules by lazy { WarnRules(words("goNowWords"), wordMap("hazardWords")) }
+    val warning = mutableStateOf<ActiveWarning?>(null)
+    val myPos = mutableStateOf<Pair<Double, Double>?>(null)
+    val myPickup = mutableStateOf<Pair<PickupRecord, String>?>(null) // record + outbox path
+    private fun langName() = if (lang.value == "id") "Indonesian" else "English"
+
+    /** Any warning text -> plain words, on the phone first. Go-now words can only raise the level. */
+    suspend fun warn(text: String): ActiveWarning {
+        val r = router.run("warning_plain", text = text.trim(), extra = Extra(mapOf("lang" to langName())))
+        val ai = if ((r.status == "ok" || r.status == "draft") && r.data != null) r.data.jsonObject.let { WarningPlain(it.s("hazard")!!, it.s("level")!!, it.s("plain")!!, it.s("action"), r.source!!) } else null
+        return ActiveWarning(plainWarning(text, ai, r.source ?: "device", warnRules), text.trim(), System.currentTimeMillis(), emptyList()).also { warning.value = it }
+    }
+    /** Online only: latest official BMKG/BPBD warning (Grounding with Google Search, rounded location). */
+    suspend fun latestWarning(): String {
+        val p = here() ?: return "failed"
+        if (signal.value != "back") return "offline"
+        val (lat, lng) = coarseLocation(p.first, p.second, shared.defaults["findOpen"]!!.jsonObject.i("precisionDecimals")!!)
+        val r = router.run("warning_latest", extra = Extra(mapOf("place" to "Kuala Simpang, Aceh Tamiang", "lang" to langName()), lat, lng))
+        if (r.status != "ok") return "failed"
+        val o = r.data!!.jsonObject
+        val prev = warning.value
+        val w = plainWarning(prev?.text ?: "", WarningPlain(o.s("hazard")!!, o.s("level")!!, o.s("plain")!!, o.s("action"), "cloud"), "cloud", warnRules)
+        val level = if (prev?.w?.level == "go_now" && w.level != "go_now") "go_now" else w.level // a newer answer never lowers go-now
+        warning.value = ActiveWarning(w.copy(level = level), o.s("source") ?: "", System.currentTimeMillis(), r.places.filter { it.uri != null }.take(3))
+        return "done"
+    }
+    fun here(): Pair<Double, Double>? = myPos.value ?: (shared.pack.shelters.firstOrNull { it.id == shelterId.value } ?: shared.pack.shelters.firstOrNull())?.let { it.lat to it.lng }
+    /** The higher place for this hazard from the offline flood data. Never "safe", only "higher". */
+    fun destination(): Destination? {
+        val p = here() ?: return null
+        val ev = warning.value?.w?.hazard?.takeIf { it in listOf("flood", "tsunami", "landslide", "earthquake") } ?: rules.currentEvent
+        val h = nearestHigher(shared.pack, p.first, p.second, ev, shared.defaults.d("higherMinGainM") ?: 2.0) ?: return null
+        val sh = shared.pack.shelters.first { it.id == h.id }
+        return Destination(h, sh.lat, sh.lng, p, myPos.value != null)
+    }
+    /** "My mother can't walk, needs insulin": understood on this phone only; keywords if no model. Not sent yet. */
+    suspend fun understandPickup(text: String): Pickup {
+        val r = router.run("pickup_request", text = text.trim())
+        val ai = if ((r.status == "ok" || r.status == "draft") && r.source == "device") r.data!!.jsonObject.let { Pickup(it.s("who") ?: "", it.i("mobility") ?: 0, it.strings("needs"), it.i("people") ?: 1) } else null
+        return mergePickup(ai, text, wordMap("needWords"), wordMap("mobilityWords"))
+    }
+    /** Sent only on the person's tap, to the nearest shelter's pickup list through the outbox (waits for signal). */
+    fun sendPickup(p: Pickup): PickupRecord {
+        val pos = here()!!
+        val near = shared.pack.shelters.minBy { distanceM(pos.first, pos.second, it.lat, it.lng) }
+        val rec = PickupRecord(java.util.UUID.randomUUID().toString().take(12), Math.round(pos.first * 1e5) / 1e5, Math.round(pos.second * 1e5) / 1e5, p.mobility, p.needs, p.people, System.currentTimeMillis(), p.who)
+        enqueue("pickup", "shelters/${near.id}/pickups", mapOf("id" to rec.id, "who" to rec.who, "lat" to rec.lat, "lng" to rec.lng, "mobility" to rec.mobility, "needs" to rec.needs, "people" to rec.people, "at" to rec.at), rec.id)
+        myPickup.value = rec to "shelters/${near.id}/pickups/${rec.id}"
+        return rec
+    }
+    fun pickupSent() = myPickup.value?.let { (_, path) -> jobs.any { it.path == path && it.status.state == "sent" } } ?: false
+    /** Staff: a pickup (synced or scanned) becomes a Field Check entry ranked by the same rules. */
+    fun importPickup(p: PickupRecord): Boolean {
+        val id = "pk-${p.id}"
+        if (field.any { it.id == id }) return false
+        field.add(0, UiField(id, p.who, p.lat, p.lng, 0.0, pickupPriority(Pickup(p.who, p.mobility, p.needs, p.people)), pickup = p))
+        return true
+    }
+    suspend fun syncPickups() {
+        if (signal.value != "back") return
+        runCatching { adapters.sync.list("shelters/${shelterId.value}/pickups") }.getOrNull()?.forEach { r ->
+            val who = r["who"] as? String ?: return@forEach
+            importPickup(PickupRecord(r["id"].toString(), (r["lat"] as Number).toDouble(), (r["lng"] as Number).toDouble(), (r["mobility"] as? Number)?.toInt() ?: 0,
+                (r["needs"] as? List<*>)?.map { it.toString() } ?: emptyList(), (r["people"] as? Number)?.toInt() ?: 1, (r["at"] as? Number)?.toLong() ?: 0L, who))
+        }
+    }
+    /** Staff at the door: one spoken sentence -> name, age, flags (on this phone only). */
+    suspend fun understandCheckin(text: String): Checkin {
+        val r = router.run("checkin_parse", text = text.trim())
+        val ai = if ((r.status == "ok" || r.status == "draft") && r.source == "device") r.data!!.jsonObject.let { Checkin(it.s("name") ?: "", it.i("age"), it.strings("flags")) } else null
+        return mergeCheckin(ai, text, wordMap("flagWords"))
+    }
+    /** Confirmed by a person: joins the roster with its flags (tell-in-person and medicine follow from the flags). */
+    fun checkin(c: Checkin): String {
+        val id = java.util.UUID.randomUUID().toString()
+        people += UiPerson(id, c.name.trim(), c.age, c.flags, false, false, "staff")
+        confirmPerson(id, c.flags)
+        return id
+    }
+
     // ---- Family group by QR: the QR carries the whole group (news hops phone to phone offline);
     // online, each phone shares everyone it knows into every family id it has seen (gossip), so groups join up.
     val familyGroup = mutableStateOf<FamilyGroup?>(null)
@@ -301,7 +386,7 @@ class Features(val adapters: Adapters, val shared: Shared) {
         scoutRun = s.run; signal.value = s.state
         if (s.state != "no_signal") lastSignalAt.value = System.currentTimeMillis()
         if (s.alert) scoutAlert.value = true
-        if (s.state == "back") { flush(); rerunPending(); syncFamily() }
+        if (s.state == "back") { flush(); rerunPending(); syncFamily(); syncPickups() }
     }
     // QR courier (6.10 level 2): small structured JSON only, never photos.
     fun exportChunks(size: Int = 700): List<String> = chunk(JsonArray(jobs.filter { it.status.state != "sent" }.map { j ->

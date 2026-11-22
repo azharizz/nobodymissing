@@ -52,6 +52,7 @@ import kotlinx.coroutines.launch
 import org.nobodymissing.NobodyMissingApp
 import org.nobodymissing.adapters.FirebaseAiLogicInference
 import org.nobodymissing.features.RouteResult
+import org.nobodymissing.domain.strings
 
 // Same screens, words, icons, colours and mascot as the web app (web/src/ui/staff.tsx + public.tsx). Design: docs/design/index.html.
 private const val HOSTED = "https://nobodymissing.web.app/"
@@ -85,6 +86,7 @@ fun App(ui: Ui) {
                     "camera" -> Camera(ui, s.arg)
                     "map" -> FieldMap(ui, s.arg)
                     "announce" -> Announce(ui)
+                    "checkin" -> StaffCheckIn(ui)
                     "people" -> People(ui)
                     "person" -> CareCard(ui, s.arg!!)
                     "review" -> Review(ui)
@@ -111,7 +113,7 @@ fun TabBar(ui: Ui, on: String, modifier: Modifier = Modifier) {
                     Ic(ui.icons, icon, 22.dp, if (sel) NM.Navy else NM.Ink2); Text(label, color = if (sel) NM.Navy else NM.Ink2, fontFamily = Manrope, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
-            tab("now", "home", f.t("tabNow")); tab("map", "map", f.t("map")); Spacer(Modifier.weight(1.25f)); tab("announce", "announce", f.t("announce")); tab("people", "people", f.t("people"))
+            tab("now", "home", f.t("tabNow")); tab("map", "map", f.t("map")); Spacer(Modifier.weight(1.25f)); tab("checkin", "door", f.t("checkIn")); tab("people", "people", f.t("people"))
         }
         Box(Modifier.size(74.dp).shadow(12.dp, CircleShape, spotColor = NM.Navy.copy(alpha = .4f)).clip(CircleShape).background(NM.Navy).border(6.dp, NM.Ivory, CircleShape)
             .clickable { ui.go("camera") }.align(Alignment.TopCenter), contentAlignment = Alignment.Center) { Ic(ui.icons, "camera", 30.dp, Color.White, f.t("tabCamera")) }
@@ -205,7 +207,7 @@ fun Now(ui: Ui) {
             }
         }
     }) {
-        pad { Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.Bottom) { H(f.t("needsYouNow"), 22.sp, modifier = Modifier.weight(1f)); P(java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date()), 15.sp, NM.Ink2) } }
+        pad { Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) { H(f.t("needsYouNow"), 22.sp, modifier = Modifier.weight(1f)); Btn(ui, f.t("announce"), "announce", small = true) { ui.go("announce") } } }
         (if (more) tasks else tasks.take(4)).forEachIndexed { i, t -> pad { Rise(i) { t() } } }
         if (tasks.size > 4) pad { Btn(ui, if (more) f.t("seeLess") else f.t("seeMore", "n" to tasks.size - 4), style = BtnStyle.LINK) { more = !more } }
         if (tasks.isEmpty()) pad { Empty(ui, if (f.people.isEmpty()) f.t("emptyShelter") else f.t("allClear"), if (f.people.isEmpty()) Mood.SLEEP else Mood.IDLE) }
@@ -525,19 +527,24 @@ fun Round(ui: Ui) {
 fun FieldMap(ui: Ui, arg: String?) {
     val f = ui.f
     val rows = f.fieldList()
-    var sel by remember { mutableStateOf(arg ?: rows.firstOrNull { f.fieldEntry(it.second.id).status == "unchecked" }?.second?.id) }
+    var sel by remember { mutableStateOf(arg ?: (rows.firstOrNull { f.fieldEntry(it.second.id).let { e -> e.status == "unchecked" && e.pickup != null } } ?: rows.firstOrNull { f.fieldEntry(it.second.id).status == "unchecked" })?.second?.id) }
+    val ctx = LocalContext.current
+    fun scanPickup() = com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(ctx, com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions.Builder()
+        .setBarcodeFormats(com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE).build()).startScan()
+        .addOnSuccessListener { b -> b.rawValue?.let { org.nobodymissing.domain.decodePickupQr(it) }?.let { p -> f.importPickup(p); sel = "pk-${p.id}" } }
     val sh = f.shared.pack.shelters.firstOrNull { it.id == f.shelterId.value } ?: f.shared.pack.shelters.first()
     val color = mapOf("P1" to NM.Urgent, "P2" to NM.AmberInk, "P3" to NM.Ink2)
     val hp = rows.firstOrNull { it.second.id == sel }?.let { f.higherPlace(f.fieldEntry(it.second.id)) }?.let { h -> f.shared.pack.shelters.firstOrNull { it.id == h.id } }
     val markers = listOf(Marker("shelter", sh.lat, sh.lng, "home", NM.Navy, shelterName(ui))) + listOfNotNull(hp?.let { Marker("higher", it.lat, it.lng, "higher", NM.SageAcc, f.t("higherPlace")) }) + rows.mapNotNull { (n, r) ->
         val e = f.fieldEntry(r.id); if (e.lat == null || e.lng == null) null else {
             val open = e.status == "unchecked"
-            Marker(r.id, e.lat, e.lng, if (!open) "check" else if (r.result.tier == "P1") "mobility" else "pin", if (open) color[r.result.tier]!! else NM.Done, n, open && r.result.tier == "P1", sel == r.id) { sel = r.id }
+            Marker(r.id, e.lat, e.lng, if (!open) "check" else if (r.result.tier == "P1") "mobility" else "pin", if (open) color[r.result.tier]!! else NM.Done, if (n.length > 16) n.take(15) + "…" else n, open && r.result.tier == "P1", sel == r.id) { sel = r.id }
         } }
     val row = rows.firstOrNull { it.second.id == sel }
     val p1 = rows.count { it.second.result.tier == "P1" && f.fieldEntry(it.second.id).status == "unchecked" }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 130.dp)) {
-        item { ShelterMap(ui, markers, aspect = 1f) { MapChip("${f.t("visitFirst")} · $p1", NM.Urgent); MapChip(f.t("floodRisk"), Color(0xFFB9D1E8)) } }
+        item { ShelterMap(ui, markers, aspect = 1f) { MapChip("${f.t("visitFirst")} · $p1", NM.Urgent)
+            Row(Modifier.soft(RoundedCornerShape(50)).clickable { scanPickup() }.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) { Ic(ui.icons, "qr", 16.dp, NM.Ink); Spacer(Modifier.width(6.dp)); Text(f.t("scanPickup"), fontFamily = Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = NM.Ink) } } }
         item { Column(Modifier.offset(y = (-30).dp).fillMaxWidth().shadow(16.dp, RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)).clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)).background(NM.Card).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Box(Modifier.align(Alignment.CenterHorizontally).size(44.dp, 5.dp).clip(RoundedCornerShape(3.dp)).background(Color(0xFFD9D4CB)))
             if (row != null) {
@@ -545,17 +552,18 @@ fun FieldMap(ui: Ui, arg: String?) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Avatar(n, NM.ROSE); Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(if (r.result.tier == "P1") f.t("visitFirst").uppercase() else r.result.tier, Modifier.clip(RoundedCornerShape(8.dp)).background(color[r.result.tier]!!).padding(horizontal = 8.dp, vertical = 3.dp), color = Color.White, fontFamily = Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
+                        Text(if (e.pickup != null) f.t("pickupFirst") else if (r.result.tier == "P1") f.t("visitFirst").uppercase() else r.result.tier, Modifier.clip(RoundedCornerShape(8.dp)).background(color[r.result.tier]!!).padding(horizontal = 8.dp, vertical = 3.dp), color = Color.White, fontFamily = Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
                         H("$n${e.person.age?.let { ", $it" } ?: ""}", 22.sp)
                         P(f.t("lastChecked", "when" to (e.hoursSinceContact?.let { f.t("hAgo", "n" to it.toInt()) } ?: f.t("never"))), 15.sp, NM.Ink2)
                     }
                     if (e.needsReview) Badge(ui, null, true)
                 }
-                @OptIn(ExperimentalLayoutApi::class) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { r.result.why.forEach { Pill(it, NM.Rose, NM.RoseInk) } }
+                @OptIn(ExperimentalLayoutApi::class) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { e.pickup?.needs?.forEach { Pill(f.t("need_$it"), NM.Rose, NM.RoseInk) }; r.result.why.forEach { Pill(it, NM.Rose, NM.RoseInk) } }
                 f.higherPlace(e)?.let { h -> Row(Modifier.fillMaxWidth().clip(R16).background(NM.Sage).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     Ic(ui.icons, "higher", 20.dp, NM.SageInk); Spacer(Modifier.width(12.dp)); P(f.t("higherFor", "name" to h.name, "m" to h.distanceM, "dir" to h.direction), 16.sp, NM.SageInk, bold = true) } }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Btn(ui, f.t("safeAtHome"), "check", modifier = Modifier.weight(1f)) { f.visited(r.id, "safe_home"); sel = rows.firstOrNull { it.second.id != r.id && f.fieldEntry(it.second.id).status == "unchecked" }?.second?.id }
+                    if (e.pickup != null) Btn(ui, f.t("pickedUp"), "check", BtnStyle.PRIMARY, modifier = Modifier.weight(1f)) { f.visited(r.id, "moved_to_shelter") }
+                    else Btn(ui, f.t("safeAtHome"), "check", modifier = Modifier.weight(1f)) { f.visited(r.id, "safe_home"); sel = rows.firstOrNull { it.second.id != r.id && f.fieldEntry(it.second.id).status == "unchecked" }?.second?.id }
                     Btn(ui, f.t("needsEvacuation"), "evacuate", BtnStyle.DANGER, modifier = Modifier.weight(1f)) { f.visited(r.id, "needs_evacuation") }
                 }
                 Btn(ui, f.t("report"), "mic", BtnStyle.PRIMARY, full = true) { ui.go("camera", "report") }
@@ -563,6 +571,55 @@ fun FieldMap(ui: Ui, arg: String?) {
             } else Empty(ui, f.t("allChecked"), Mood.IDLE)
             FindOpenCard(ui)
         } }
+    }
+}
+
+// ---------- Check-in at the door: one spoken sentence (or their card) per person, understood on this phone ----------
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun StaffCheckIn(ui: Ui) {
+    val f = ui.f
+    val scope = rememberCoroutineScope()
+    val ctx = LocalContext.current
+    var text by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var c by remember { mutableStateOf<org.nobodymissing.domain.Checkin?>(null) }
+    var card by remember { mutableStateOf(false) }
+    var done by remember { mutableStateOf<Pair<String, org.nobodymissing.domain.Checkin>?>(null) }
+    fun scanCard() = com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(ctx, com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions.Builder()
+        .setBarcodeFormats(com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE).build()).startScan()
+        .addOnSuccessListener { b -> b.rawValue?.let { org.nobodymissing.domain.decodeCheckinQr(it) }?.let { c = it; card = true } }
+    val reachFlags = f.shared.defaults.strings("reachFlags")
+    Screen({ Top(ui, f.t("checkIn"), back = null) { Badge(ui, "device", text = f.t("readsOnPhone")) } }) {
+        pad { Row(Modifier.fillMaxWidth().clip(R22).background(NM.Navy).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            H("${f.people.count { it.confirmed }}", 28.sp, Color.White); Spacer(Modifier.width(8.dp)); P(f.t("checkedIn"), 15.sp, NM.OnNavy2, modifier = Modifier.weight(1f)) } }
+        pad { Column(Modifier.fillMaxWidth().soft(R28).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            BigInput(text, f.t("checkinHint"), 20) { text = it; c = null }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                MicButton(ui, Modifier.weight(1f)) { text = it; c = null }
+                RoundBtn(ui, "qr", f.t("scanCard")) { scanCard() }
+                Btn(ui, f.t("add"), "sparkle", BtnStyle.PRIMARY, enabled = text.isNotBlank() && !busy, modifier = Modifier.weight(1f)) { busy = true; scope.launch { c = f.understandCheckin(text); card = false; busy = false } }
+            }
+        } }
+        c?.let { x -> pad { CardBox {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { Field(x.name, { c = x.copy(name = it) }, "Name", Modifier.weight(1f)); Field(x.age?.toString() ?: "", { v -> c = x.copy(age = v.filter(Char::isDigit).toIntOrNull()) }, "Age", Modifier.width(90.dp)) }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FLAGS.forEach { fl -> val on = fl in x.flags
+                    Text(nice(fl), Modifier.clip(RoundedCornerShape(50)).background(if (on) NM.Navy else NM.Card).border(1.5.dp, if (on) NM.Navy else NM.Border, RoundedCornerShape(50))
+                        .clickable { c = x.copy(flags = if (on) x.flags - fl else x.flags + fl) }.padding(horizontal = 14.dp, vertical = 8.dp), color = if (on) Color.White else NM.Ink, fontFamily = Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp) }
+            }
+            if (card) Badge(ui, "keywords", text = f.t("fromCard")) else if (x.by == "device") Badge(ui, "device", text = f.t("readOnPhone")) else Badge(ui, "keywords", text = f.t("keywordsOnly"))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Btn(ui, f.t("close"), "x", modifier = Modifier.weight(1f)) { c = null }
+                Btn(ui, f.t("confirmNext"), "check", BtnStyle.PRIMARY, enabled = x.name.isNotBlank(), modifier = Modifier.weight(1.6f)) { done = f.checkin(x) to x; c = null; text = "" }
+            }
+        } } }
+        done?.let { (id, x) -> pad { CardBox {
+            H(x.name, 18.sp)
+            if (x.flags.any { it in reachFlags }) Note(ui, "check", f.t("addedTell"), NM.Done)
+            if ("needs_meds" in x.flags) Btn(ui, f.t("addedMeds"), "medicine", BtnStyle.LINK) { ui.go("camera", "medicine:$id") }
+        } } }
+        pad { Btn(ui, f.t("paperList"), "camera", full = true) { ui.go("camera", "list") } }
     }
 }
 
@@ -577,7 +634,7 @@ fun Announce(ui: Ui) {
     val a = f.announcements.firstOrNull()
     val reach = f.reach(a)
     val name = { id: String -> f.people.firstOrNull { it.id == id }?.name ?: id }
-    Screen({ Top(ui, f.t("announce"), back = null) }) {
+    Screen({ Top(ui, f.t("announce")) }) {
         pad { Column(Modifier.fillMaxWidth().soft(R28).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.heightIn(min = 70.dp)) { if (text.isEmpty()) P(f.t("typeOrSpeak"), 22.sp, NM.Ink2.copy(alpha = .6f)); BasicTextField(text, { text = it }, Modifier.fillMaxWidth(), textStyle = TextStyle(fontFamily = Atkinson, fontSize = 22.sp, color = NM.Ink)) }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

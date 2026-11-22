@@ -116,6 +116,34 @@ class FeaturesTest {
         assertEquals("Hasan Basry", inf.calls.first { it.task == "name_variants" }.text)
     }
 
+    @Test fun firstHoursWarningWayPickupCheckin() = runBlocking {
+        val inf = FakeInference("available") { when (it.task) {
+            "warning_plain" -> InferenceResult("""{"hazard":"flood","level":"prepare","plain":"River rising."}""", "device")
+            "pickup_request" -> InferenceResult("""{"who":"Ibu saya","mobility":1,"needs":[],"people":1}""", "device")
+            "checkin_parse" -> InferenceResult("""{"name":"Hasan Basri","age":82,"flags":["hard_of_hearing"]}""", "device")
+            else -> InferenceResult("{}", "device") } }
+        val sync = MemorySync()
+        val f = FeatureFactory.create(Adapters("test", inf, sync, FakeConnectivity(true)), shared).also { it.loadDemo() }
+        assertEquals("go_now", f.warn("Warga bantaran diminta evakuasi segera, banjir.").w.level)
+        f.myPos.value = 4.2815 to 98.0565
+        assertEquals("Masjid Jami' al Chairitah", f.destination()!!.h.name)
+        val p = f.understandPickup("Ibu saya tidak bisa jalan, perlu insulin")
+        assertEquals(3, p.mobility); assertEquals(listOf("insulin"), p.needs)
+        assertEquals("only_on_device", inf.calls.first { it.task == "pickup_request" }.mode)
+        val rec = f.sendPickup(p)
+        assertTrue(sync.docs.isEmpty())
+        f.signal.value = "back"; f.flush()
+        assertTrue(f.pickupSent())
+        val staff = FeatureFactory.create(Adapters("test", FakeInference("unavailable"), sync, FakeConnectivity(true)), shared).also { it.loadDemo(); it.signal.value = "back" }
+        staff.shelterId.value = f.myPickup.value!!.second.split("/")[1]
+        staff.syncPickups()
+        assertEquals("P1", staff.fieldList().first { it.second.id == "pk-${rec.id}" }.second.result.tier)
+        val c = f.understandCheckin("Hasan Basri, 82, tidak bisa dengar, pakai insulin")
+        assertEquals(listOf("hard_of_hearing", "needs_meds"), c.flags)
+        val id = f.checkin(c)
+        assertTrue(f.reach(null).list.any { it.id == id })
+    }
+
     @Test fun familySearchLocalMinimalFields() {
         val f = features(FakeInference("unavailable")).also { it.loadDemo() }
         assertEquals("80-89", f.familySearch("Hasan").single().ageBand)

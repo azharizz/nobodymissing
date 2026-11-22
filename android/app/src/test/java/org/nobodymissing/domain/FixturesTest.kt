@@ -226,4 +226,30 @@ class FixturesTest {
             assertEquals(c.name(), c["expected"]!!.jsonArray.map { member(it.jsonObject) }, mergeMembers(i["mine"]!!.jsonArray.map { member(it.jsonObject) }, i["theirs"]!!.jsonArray.map { member(it.jsonObject) }))
         }
     }
+
+    @Test fun firstHoursContracts() {
+        val fx = load("fixtures/hybrid.json"); val d = load("rules/defaults.json")
+        fun wm(k: String) = d[k]!!.jsonObject.mapValues { it.value.jsonArray.map { x -> x.jsonPrimitive.content } }
+        val wr = WarnRules(d.strings("goNowWords"), wm("hazardWords"))
+        for (c in fx["warning"]!!.jsonArray.map { it.jsonObject }) {
+            val i = c["input"]!!.jsonObject; val e = c["expected"]!!.jsonObject
+            val ai = (i["ai"] as? JsonObject)?.let { WarningPlain(it.s("hazard")!!, it.s("level")!!, it.s("plain")!!, it.s("action"), "device") }
+            assertEquals(c.name(), WarningPlain(e.s("hazard")!!, e.s("level")!!, e.s("plain")!!, e.s("action"), e.s("by")!!), plainWarning(i.s("text")!!, ai, "device", wr))
+        }
+        for (c in fx["checkinRules"]!!.jsonArray.map { it.jsonObject }) { val e = c["expected"]!!.jsonObject
+            assertEquals(c.s("input"), Checkin(e.s("name")!!, e.i("age"), e.strings("flags")), parseCheckin(c.s("input")!!, wm("flagWords"))) }
+        for (c in fx["checkinMerge"]!!.jsonArray.map { it.jsonObject }) { val i = c["input"]!!.jsonObject; val a = i["ai"]!!.jsonObject; val e = c["expected"]!!.jsonObject
+            assertEquals(c.name(), Checkin(e.s("name")!!, e.i("age"), e.strings("flags"), e.s("by")!!), mergeCheckin(Checkin(a.s("name")!!, a.i("age"), a.strings("flags")), i.s("text")!!, wm("flagWords"))) }
+        for (c in fx["pickupRules"]!!.jsonArray.map { it.jsonObject }) { val e = c["expected"]!!.jsonObject
+            assertEquals(c.s("input"), Pickup(e.s("who")!!, e.i("mobility")!!, e.strings("needs"), e.i("people")!!), parsePickup(c.s("input")!!, wm("needWords"), wm("mobilityWords"))) }
+        for (c in fx["pickupMerge"]!!.jsonArray.map { it.jsonObject }) { val i = c["input"]!!.jsonObject; val a = i["ai"]!!.jsonObject; val e = c["expected"]!!.jsonObject
+            assertEquals(c.name(), Pickup(e.s("who")!!, e.i("mobility")!!, e.strings("needs"), e.i("people")!!, e.s("by")!!), mergePickup(Pickup(a.s("who")!!, a.i("mobility")!!, a.strings("needs"), a.i("people")!!), i.s("text")!!, wm("needWords"), wm("mobilityWords"))) }
+        for (c in fx["checkinQr"]!!.jsonArray.map { it.jsonObject }) { val i = c["input"]!!.jsonObject; val ck = Checkin(i.s("name")!!, i.i("age"), i.strings("flags"))
+            assertEquals(c["expected"]!!.jsonPrimitive.content, encodeCheckinQr(ck)); assertEquals(ck.flags, decodeCheckinQr(encodeCheckinQr(ck))!!.flags) }
+        for (bad in fx["checkinQrReject"]!!.jsonArray.map { it.jsonPrimitive.content }) assertEquals(bad, null, decodeCheckinQr(bad))
+        for (c in fx["pickupQr"]!!.jsonArray.map { it.jsonObject }) { val i = c["input"]!!.jsonObject
+            val p = PickupRecord(i.s("id")!!, i.d("lat")!!, i.d("lng")!!, i.i("mobility")!!, i.strings("needs"), i.i("people")!!, i["at"]!!.jsonPrimitive.long, i.s("who")!!)
+            assertEquals(c["expected"]!!.jsonPrimitive.content, encodePickupQr(p)); assertEquals(p, decodePickupQr(encodePickupQr(p))) }
+        for (bad in fx["pickupQrReject"]!!.jsonArray.map { it.jsonPrimitive.content }) assertEquals(bad, null, decodePickupQr(bad))
+    }
 }

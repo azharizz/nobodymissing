@@ -1164,6 +1164,13 @@ All 8 MUST features are kept (decision 2026-11-21). Order = build order; the **c
 - Agent decision (2026-11-22): **hybrid family search**: the description ("my grandmother Nurhayati, about 80, from Sukajadi") is understood on the device (`family_query`, sensitive; no model -> `parseLookFor` rules); online, only the name goes to the cloud for Indonesian/Acehnese spellings (`name_variants`; offline -> `nameRules`); matching is deterministic (`searchVariants`, exact first, age ±10) and labelled "possible match", confirm with staff · alternatives: let the model match people (unsafe), exact search only (misses spellings).
 - Agent decision (2026-11-22): Android scans family QR codes with the Google Play services code scanner (live camera UI, no camera permission, module bundled at install) · alternatives: still photo + zxing (too low resolution), CameraX + analyzer (more code).
 
+- Agent decision (2026-11-22): **product focus = the first hours** (user direction): get out, get to a higher place, get registered. Hybrid AI per step:
+  - **Go now** (`warning_plain`, device first): any warning text (SMS, WhatsApp, loudspeaker words) becomes plain words; `goNowWords` in the original can only raise the level to go-now. Online: `warning_latest` (**Grounding with Google Search**, rounded location) fetches the latest official BMKG/BPBD warning with source links; a newer answer never lowers a go-now.
+  - **Show the way** (no AI, offline): GPS + compass arrow to the nearest higher place from the HAND pack; vibrates when off course; honest note "follow roads, avoid shaded low ground" (no routing graph offline).
+  - **I need pickup** (`pickup_request`, sensitive, device only; keywords otherwise; mobility and needs only go up): sent on tap through the outbox to `shelters/{nearest}/pickups/{id}` (rules: anyone may create minimal fields, only members read), plus a QR a passing volunteer scans. Staff see it as a Field Check entry ranked by the same priority rules (PICKUP FIRST).
+  - **Check-in** (`checkin_parse`, sensitive, device only; keyword flags never dropped): one spoken sentence or the evacuee's self-chosen card QR -> confirmed person with flags -> tell-in-person list and medicine photo prompt follow automatically. Staff tab "Check-in" replaces "Announce" (Announce moves to the Now header).
+  · alternatives: keep the in-shelter features first (judged less impactful by the user), cloud-only warnings (useless without signal).
+
 ## 13. Local files (research archive)
 - `SUMMARY.md`: hackathon summary. `rules.txt`, `index.txt`, `details_faqs.txt`, `resources.txt`, `upd_*.txt`, `forum/`: raw hackathon pages.
 - `docs/`: saved Firebase AI Logic docs (hybrid, web get-started, models, production checklist, FriendlyMeals sample, agent skills).

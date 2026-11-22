@@ -38,6 +38,10 @@ fun Evacuee(ui: Ui) {
     val r = ui.route.value.name
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 40.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         when (r) {
+            "go" -> item { EvGo(ui) }
+            "way" -> item { EvWay(ui) }
+            "pickup" -> item { EvPickup(ui) }
+            "checkin" -> item { EvCheckinCard(ui) }
             "help" -> item { EvHelp(ui) }
             "emap" -> item { EvMap(ui) }
             "family" -> item { EvFamily(ui) }
@@ -48,8 +52,8 @@ fun Evacuee(ui: Ui) {
 }
 
 @Composable
-fun EvTop(ui: Ui, title: String, sub: String? = null) = Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-    RoundBtn(ui, "back", ui.f.t("back")) { ui.go("home") }; Spacer(Modifier.width(14.dp))
+fun EvTop(ui: Ui, title: String, sub: String? = null, back: String = if (ui.route.value.name in listOf("way", "pickup")) "go" else "home") = Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    RoundBtn(ui, "back", ui.f.t("back")) { ui.go(back) }; Spacer(Modifier.width(14.dp))
     Column { H(title, 30.sp, NM.Navy); sub?.let { P(it, 17.sp, NM.Ink2, bold = true) } }
 }
 
@@ -68,6 +72,10 @@ fun EvHome(ui: Ui) {
                 Text(l, Modifier.clip(RoundedCornerShape(50)).background(if (f.lang.value == k) NM.Navy else Color.Transparent).clickable { f.lang.value = k }.padding(horizontal = 12.dp, vertical = 9.dp),
                     color = if (f.lang.value == k) Color.White else NM.Ink2, fontFamily = Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp) } }
         }
+        f.warning.value?.takeIf { it.w.level != "advice" }?.let { w -> Row(Modifier.fillMaxWidth().clip(R28).background(NM.Rose).border(3.dp, NM.RoseAcc, R28).clickable { ui.go("go") }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Kit(ui.kit, Mood.ALERT, 56.dp); Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) { H("${f.t("hazard_${w.w.hazard}")} · ${f.t("level_${w.w.level}")}", 22.sp, NM.RoseInk); P(w.w.plain, 16.sp, NM.RoseInk) }
+            Ic(ui.icons, "chevron", 22.dp, NM.RoseInk) } }
         Rise(0) { Column(Modifier.fillMaxWidth().soft(R28, NM.Honey).padding(22.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             CompositionLocalProvider(LocalContentColor provides NM.HoneyInk) {
                 Row(verticalAlignment = Alignment.CenterVertically) { Box(Modifier.size(10.dp).clip(CircleShape).background(NM.HoneyAcc)); Spacer(Modifier.width(8.dp)); Eyebrow(f.t("now")) }
@@ -84,6 +92,7 @@ fun EvHome(ui: Ui) {
                 }
             }
         } }
+        BigBtn(ui, 1, NM.ROSE, "warn", f.t("goSafety"), f.t("goSafetySub")) { ui.go("go") }
         BigBtn(ui, 1, NM.SKY, "map", f.t("map"), f.t("mapSub")) { ui.go("emap") }
         BigBtn(ui, 2, NM.ROSE, "help", f.t("needHelp"), f.t("needHelpSub")) { ui.go("help") }
         BigBtn(ui, 3, NM.SAGE, "family", f.t("myFamily"), f.t("myFamilySub")) { ui.go("family") }

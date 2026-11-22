@@ -1,6 +1,8 @@
 package org.nobodymissing.demo
 
+import org.nobodymissing.domain.parseCheckin
 import org.nobodymissing.domain.parseLookFor
+import org.nobodymissing.domain.parsePickup
 import org.nobodymissing.ports.GroundingPlace
 import org.nobodymissing.ports.InferenceRequest
 import org.nobodymissing.ports.InferenceResult
@@ -21,6 +23,10 @@ object DemoReply {
             "help_triage" -> """{"kind":"${when { Regex("insulin|obat|medic", RegexOption.IGNORE_CASE).containsMatchIn(t) -> "medicine"; Regex("sick|sakit|demam|fever|pain|nyeri", RegexOption.IGNORE_CASE).containsMatchIn(t) -> "sick"; else -> "other" }}","urgent":${Regex("chest|dada|breath|napas", RegexOption.IGNORE_CASE).containsMatchIn(t)},"summary":"${t.take(80).replace("\"", "")}"}"""
             "family_query" -> parseLookFor(t).let { """{"name":"${it.name.replace("\"", "")}","age":${it.age ?: "null"},"place":${it.place?.let { p -> "\"${p.replace("\"", "")}\"" } ?: "null"}}""" }
             "name_variants" -> """{"variants":[${if (t.contains(' ')) "\"${t.replace(" ", "").replace("\"", "")}\"" else if (t.length > 6) "\"${t.take(3)} ${t.drop(3).replace("\"", "")}\"" else ""}]}"""
+            "warning_plain" -> """{"hazard":"${if (Regex("banjir|flood|debit air", RegexOption.IGNORE_CASE).containsMatchIn(t)) "flood" else "other"}","level":"${if (Regex("segera|evakuasi|evacuate", RegexOption.IGNORE_CASE).containsMatchIn(t)) "go_now" else "prepare"}","plain":"The river is rising fast. Leave the riverside now and go to higher ground.","action":"Go to higher ground now"}"""
+            "warning_latest" -> """{"hazard":"flood","level":"go_now","plain":"BPBD says the Tamiang river is still rising. People near the river must leave now.","action":"Go to higher ground","source":"BPBD Aceh Tamiang (demo)","issuedAt":"07:30"}"""
+            "pickup_request" -> parsePickup(t, emptyMap(), mapOf("3" to listOf("tidak bisa jalan", "can't walk", "bedridden"), "2" to listOf("kursi roda", "wheelchair"))).let { """{"who":"${it.who.replace("\"", "")}","mobility":${maxOf(1, it.mobility)},"needs":${if (t.contains("insulin", true)) "[\"insulin\"]" else "[]"},"people":1}""" }
+            "checkin_parse" -> parseCheckin(t, mapOf("hard_of_hearing" to listOf("dengar", "hearing"))).let { """{"name":"${it.name.replace("\"", "")}","age":${it.age ?: "null"},"flags":${if (it.flags.isEmpty()) "[]" else "[\"hard_of_hearing\"]"}}""" }
             "ask_kit" -> {
                 // Demo: pick the notice sharing a word with the question (the real model reads them in any language).
                 val words = t.lowercase().split(Regex("\\W+")).filter { it.length > 3 && it !in setOf("when", "what", "where", "does", "will", "there") }
@@ -29,7 +35,7 @@ object DemoReply {
             }
             else -> "{}"
         }
-        val places = if (r.task == "find_open") listOf(GroundingPlace("Apotek Sehat Keluarga", "https://maps.google.com/?q=Apotek+Sehat+Keluarga", null), GroundingPlace("Puskesmas Kota (demo)", "https://maps.google.com/?q=Puskesmas", null)) else emptyList()
+        val places = if (r.task == "warning_latest") listOf(GroundingPlace("BPBD Aceh Tamiang (demo)", "https://bpbd.acehtamiangkab.go.id/", null)) else if (r.task == "find_open") listOf(GroundingPlace("Apotek Sehat Keluarga", "https://maps.google.com/?q=Apotek+Sehat+Keluarga", null), GroundingPlace("Puskesmas Kota (demo)", "https://maps.google.com/?q=Puskesmas", null)) else emptyList()
         return InferenceResult(raw, source, places)
     }
 }
