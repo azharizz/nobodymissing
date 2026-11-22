@@ -12,10 +12,10 @@ fun decide(task: String, ctx: RouterCtx, policy: Map<String, TaskPolicy>, barPoi
     val dev = ctx.onDeviceAvailable; val online = ctx.online; val priv = ctx.privateMode
     if (p.cloudOnly) return if (priv) d("block") else if (online) d("cloud", "only_in_cloud") else d("queue")
     if (p.sensitive) {
-        if (dev) return d("device", "only_on_device")
-        if (priv) return d("block")
-        if (!ctx.staffApprovedCloud) return d("ask_staff")
-        return if (online) d("cloud", "only_in_cloud") else d("queue")
+        if (priv) return if (dev) d("device", "only_on_device") else d("block")
+        // Staff approval wins over "device available": it comes after the device failed or was too slow.
+        if (ctx.staffApprovedCloud) return if (online) d("cloud", "only_in_cloud") else d("queue")
+        return if (dev) d("device", "only_on_device") else d("ask_staff")
     }
     val deviceWeak = p.deviceAccuracy != null && p.cloudAccuracy != null && p.cloudAccuracy - p.deviceAccuracy > barPoints
     if (deviceWeak) {

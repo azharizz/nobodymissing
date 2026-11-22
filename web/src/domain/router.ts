@@ -13,11 +13,11 @@ export function decide(task: string, ctx: RouterCtx, policy: Record<string, Task
   const { onDeviceAvailable: dev, online, privateMode: priv, staffApprovedCloud: ok } = ctx;
   if (p.cloudOnly) return priv ? d('block') : online ? d('cloud', 'only_in_cloud') : d('queue');
   if (p.sensitive) {
-    // Names, health, photos: device only. Never send silently (guards SDK#10635).
-    if (dev) return d('device', 'only_on_device');
-    if (priv) return d('block');
-    if (!ok) return d('ask_staff');
-    return online ? d('cloud', 'only_in_cloud') : d('queue');
+    // Names, health, photos: device first. Never send silently (guards SDK#10635).
+    if (priv) return dev ? d('device', 'only_on_device') : d('block');
+    // Staff approval wins over "device available": it comes after the device failed or was too slow.
+    if (ok) return online ? d('cloud', 'only_in_cloud') : d('queue');
+    return dev ? d('device', 'only_on_device') : d('ask_staff');
   }
   const deviceWeak = p.deviceAccuracy != null && p.cloudAccuracy != null && p.cloudAccuracy - p.deviceAccuracy > barPoints;
   if (deviceWeak) {

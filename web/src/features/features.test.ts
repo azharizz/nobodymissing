@@ -229,6 +229,9 @@ describe('features (wired by FeatureFactory with test adapters)', () => {
     expect(w).toMatchObject({ hazard: 'flood', level: 'go_now', by: 'device' });           // go-now words beat the model
     expect(inf.calls[0].mode).toBe('prefer_on_device');
     f.first.setPos({ lat: 4.2815, lng: 98.0565 });                                          // real low ground in Kuala Simpang
+    const before = f.store.get();
+    f.first.setPos({ lat: 4.2815, lng: 98.0565 });                                          // GPS repeats itself: no re-render loop
+    expect(f.store.get()).toBe(before);
     expect(f.first.destination()).toMatchObject({ name: "Masjid Jami' al Chairitah", direction: 'N', gps: true });
     const p = await f.first.understandPickup('Ibu saya tidak bisa jalan, perlu insulin');
     expect(p).toMatchObject({ mobility: 3, needs: ['insulin'], by: 'device' });           // mobility only goes up

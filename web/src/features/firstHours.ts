@@ -53,7 +53,12 @@ export function createFirstHours(d: Deps, enqueue: (type: string, payload: unkno
     const sh = h && pack.shelters.find(x => x.id === h.id);
     return h && sh ? { ...h, lat: sh.lat, lng: sh.lng, from: p, gps: !!d.store.get().myPos } : null;
   }
-  const setPos = (p: { lat: number; lng: number } | null) => d.store.set(s => ({ ...s, myPos: p }));
+  /** Same position = no update: each update re-renders Show the way, which re-attaches the GPS watch, which reports again. */
+  const setPos = (p: { lat: number; lng: number } | null) => {
+    const c = d.store.get().myPos;
+    if (c === p || (c && p && c.lat === p.lat && c.lng === p.lng)) return;
+    d.store.set(s => ({ ...s, myPos: p }));
+  };
 
   /** "My mother can't walk, needs insulin": understood on this phone only; keywords if no model. Not sent yet. */
   async function understandPickup(text: string) {
