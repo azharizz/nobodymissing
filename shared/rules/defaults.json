@@ -502,5 +502,25 @@
       "five of us",
       "we are five"
     ]
+  },
+  "cloudSends": {
+    "_notice": "What leaves the shelter when a task runs in the cloud. Device runs send nothing. photo/name = personal; drugs/location/text = not personal.",
+    "roster_read": "photo",
+    "care_card_read": "photo",
+    "field_report": "name",
+    "checkin_parse": "name",
+    "pickup_request": "name",
+    "help_triage": "name",
+    "family_query": "name",
+    "name_variants": "name",
+    "med_check": "drugs",
+    "find_open": "location",
+    "warning_latest": "location",
+    "announcement": "text",
+    "announcement_id": "text",
+    "translate": "text",
+    "ask_kit": "text",
+    "warning_plain": "text",
+    "supply_request": "text"
   }
 }

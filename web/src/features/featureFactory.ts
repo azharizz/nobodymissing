@@ -24,7 +24,8 @@ export type Features = ReturnType<typeof createFeatures>;
 export function createFeatures(a: Adapters, rules: Rules = defaults, prompts: Record<string, string> = pack.tasks, seed?: Seed) {
   const store = createStore(a.storage, a.clock.now(), seed);
   const router = createInferenceRouter(a.inference, rules, () => ({ online: store.get().signal === 'back', privateMode: store.get().privateMode }), prompts,
-    src => store.set(s => { const day = new Date(a.clock.now()).toDateString(), c = s.counts?.day === day ? s.counts : { day, device: 0, cloud: 0 }; return { ...s, counts: { ...c, [src]: c[src] + 1 } }; }));
+    src => store.set(s => { const day = new Date(a.clock.now()).toDateString(), c = s.counts?.day === day ? s.counts : { day, device: 0, cloud: 0 }; return { ...s, counts: { ...c, [src]: c[src] + 1 } }; }),
+    l => { if (l.task !== 'warm') store.set(s => ({ ...s, kitLog: [...(s.kitLog ?? []), { ...l, at: a.clock.now() }].slice(-60) })); });
   const d: Deps = { store, router, rules, sync: a.sync, connectivity: a.connectivity, clock: a.clock };
 
   let announcements: ReturnType<typeof createAnnouncements>;
@@ -53,6 +54,15 @@ export function createFeatures(a: Adapters, rules: Rules = defaults, prompts: Re
     counts: () => {
       const s = store.get(), c = s.counts?.day === new Date(a.clock.now()).toDateString() ? s.counts : { device: 0, cloud: 0 };
       return { device: c.device, cloud: c.cloud, waiting: s.jobs.filter(j => j.state !== 'sent').length };
+    },
+    /** Where Kit ran today, and what left the shelter (by kind; device runs send nothing). */
+    kit: () => {
+      const s = store.get(), day = new Date(a.clock.now()).toDateString();
+      const log = (s.kitLog ?? []).filter(l => new Date(l.at).toDateString() === day);
+      const sends = (rules as unknown as { cloudSends: Record<string, string> }).cloudSends ?? {};
+      const sent = { photo: 0, name: 0, drugs: 0, location: 0, text: 0 } as Record<string, number>;
+      for (const l of log) if (l.source === 'cloud' && sends[l.task] in sent) sent[sends[l.task]]++;
+      return { log: [...log].reverse(), sent, device: log.filter(l => l.source === 'device').length, cloud: log.filter(l => l.source === 'cloud').length };
     },
   };
 

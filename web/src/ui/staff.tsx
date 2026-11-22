@@ -27,7 +27,7 @@ export function Staff({ path }: { path: string[] }) {
       {s.scoutAlert && <ScoutAlert />}
       <div key={screen + (arg ?? '')} style={{ display: 'contents' }}>
         {screen === 'checkin' ? <CheckIn /> : screen === 'map' ? <FieldMap /> : screen === 'announce' ? <Announce /> : screen === 'people' ? <People /> : screen === 'person' ? <CareCard id={arg} />
-          : screen === 'review' ? <Review /> : screen === 'round' ? <Round /> : screen === 'settings' ? <Settings /> : screen === 'print' ? <PrintLists /> : <Now />}
+          : screen === 'review' ? <Review /> : screen === 'round' ? <Round /> : screen === 'settings' ? <Settings /> : screen === 'print' ? <PrintLists /> : screen === 'kit' ? <KitLog /> : <Now />}
       </div>
       <TabBar on={screen} />
     </div>
@@ -51,9 +51,50 @@ function Top({ title, back = 'now', children }: { title: string; back?: string; 
   return <header className="screen-top"><button className="round-btn" aria-label={t.back} onClick={() => go(back)}><Icon name="back" /></button><b>{title}</b>{children}</header>;
 }
 
-function Hybrid() {
-  const t = useT(), c = useF().views.counts();
-  return <div className="hybrid" role="status"><span><Icon name="device" size={15} />{fmt(t.counter, { device: c.device, cloud: c.cloud, waiting: c.waiting })}</span></div>;
+/** Hybrid made visible: how many answers ran on this phone vs the cloud today, and what (if anything) left the shelter. */
+function KitCard() {
+  const t = useT(), f = useF(); useAppState();
+  const k = f.views.kit(), w = f.views.counts().waiting;
+  const left = (Object.entries(k.sent) as [string, number][]).filter(([, n]) => n > 0);
+  const personal = k.sent.photo + k.sent.name;
+  return (
+    <button className="kit-card rise" onClick={() => go('kit')} aria-label={t.whereKitRan}>
+      <span className="kc-h"><b>{t.kitToday}</b><span className="muted">{fmt(t.nWaiting, { n: w })}</span></span>
+      <span className="kc-n">
+        <span className="dev"><b>{k.device}</b><span><Icon name="device" size={15} />{t.onPhoneBig}</span></span>
+        <span className="cld"><b>{k.cloud}</b><span><Icon name="cloud" size={15} />{t.inCloudBig}</span></span>
+      </span>
+      <span className={`kc-left ${personal ? 'warn' : 'ok'}`}><Icon name="lock" size={15} />
+        {left.length === 0 ? t.leftNone : personal === 0 ? `${t.leftNothing} · ${left.map(([k2, n]) => fmt((t as Record<string, string>)[`sent_${k2}`], { n })).join(' · ')}`
+          : left.map(([k2, n]) => fmt((t as Record<string, string>)[`sent_${k2}`], { n })).join(' · ')}</span>
+      <span className="kc-tap">{t.kitTap}<Icon name="chevron" size={16} /></span>
+    </button>
+  );
+}
+
+function KitLog() {
+  const t = useT(), f = useF(); useAppState();
+  const k = f.views.kit(), sends = (f.rules as unknown as { cloudSends: Record<string, string> }).cloudSends ?? {};
+  const T = t as Record<string, string>;
+  const chip = (l: (typeof k.log)[number]) => l.source === 'device' ? ['dev', t.ranOnPhone] : l.source === 'cloud' ? ['cld', t.ranInCloud]
+    : l.status === 'queued' ? ['wait', t.ranWaiting] : l.status === 'ask_staff' ? ['wait', t.ranAsked] : ['off', t.ranBlocked];
+  return (
+    <>
+      <Top title={t.whereKitRan} />
+      <main className="content">
+        <KitCard />
+        {k.log.length === 0 && <Empty mood="idle">{t.noKitYet}</Empty>}
+        {k.log.map((l, i) => { const [cls, label] = chip(l); return (
+          <div key={i} className={`kit-row ${cls}`}>
+            <span className="kr-chip"><Icon name={cls === 'dev' ? 'device' : cls === 'cld' ? 'cloud' : cls === 'wait' ? 'clock' : 'lock'} size={15} />{label}</span>
+            <span className="grow"><b>{T[`task_${l.task}`] ?? l.task}</b>
+              <small>{T[`why_${l.why}`]}{l.source ? ` · ${(l.ms / 1000).toFixed(1)} s` : ''}</small>
+              <small className="kr-sent">{l.source === 'cloud' ? fmt(t.sentWhat, { what: T[`what_${sends[l.task]}`] ?? '' }) : t.sentNothing}</small></span>
+            <span className="muted">{new Date(l.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>); })}
+      </main>
+    </>
+  );
 }
 
 // ---------- Now ----------
@@ -102,11 +143,11 @@ function Now() {
         </div>
       </header>
       <main className="content" style={{ paddingTop: 18 }}>
+        <KitCard />
         <div className="list-h"><b>{t.needsYouNow}</b><button className="chip" onClick={() => go('announce')}><Icon name="announce" size={16} />{t.announce}</button></div>
         {shown.map((x, i) => <div key={i} className="rise" style={{ '--d': i } as CSSProperties}>{x}</div>)}
         {tasks.length > 4 && <button className="btn link" onClick={() => setMore(!more)}>{more ? t.seeLess : fmt(t.seeMore, { n: tasks.length - 4 })}</button>}
         {tasks.length === 0 && (s.people.length ? <Empty mood="idle">{t.allClear}</Empty> : <Empty>{t.emptyShelter}</Empty>)}
-        <Hybrid />
       </main>
     </>
   );

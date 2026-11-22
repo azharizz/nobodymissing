@@ -48,6 +48,8 @@ export type State = {
   myPickup: (import('../domain/firstHours').PickupRecord & { jobId: string }) | null;
   /** Live hybrid counter, saved; it says "Today", so a new day starts at 0. */
   counts: { day: string; device: number; cloud: number };
+  /** Where Kit ran: one line per AI call (task, device/cloud, why, ms). Last 60, today only shown. */
+  kitLog: (import('./inferenceRouter').RunLog & { at: number })[];
   familyGroup: { fam: string; fams: string[]; me: import('../domain/family').Member; members: import('../domain/family').Member[]; via: Record<string, 'qr' | 'online'> } | null;
 };
 
@@ -55,7 +57,7 @@ export type State = {
 export function initialState(): State {
   return {
     shelter: { id: 'shelter-1', name: 'Shelter' }, people: [], cards: [], round: {}, announcements: [], field: [], jobs: [], help: [], batch: [],
-    privateMode: false, signal: 'no_signal', scoutRun: 0, scoutAlert: false, lastSignalAt: null, lang: 'en', volunteerPos: null, open: null, familyGroup: null, warning: null, myPos: null, myPickup: null, counts: { day: '', device: 0, cloud: 0 },
+    privateMode: false, signal: 'no_signal', scoutRun: 0, scoutAlert: false, lastSignalAt: null, lang: 'en', volunteerPos: null, open: null, familyGroup: null, warning: null, myPos: null, myPickup: null, counts: { day: '', device: 0, cloud: 0 }, kitLog: [],
   };
 }
 

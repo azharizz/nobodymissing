@@ -175,7 +175,8 @@ test('first hours: warning in plain words, the higher place, pickup reaches the 
 
 test('paper copy: today\'s lists print roster, medicine round and tell-in-person; live counter shows waiting', async ({ page }) => {
   await page.goto('/#/staff/now');
-  await expect(page.locator('.hybrid')).toContainText(/Today: \d+ on device · \d+ cloud · \d+ waiting/);
+  await expect(page.locator('.kit-card')).toContainText('Kit today');
+  await expect(page.locator('.kit-card')).toContainText('Nothing has left this shelter');
   await page.goto('/#/staff/settings');
   await page.getByRole('button', { name: "Print today's lists" }).click();
   const lists = page.locator('.print-lists');

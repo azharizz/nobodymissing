@@ -481,3 +481,18 @@ body.flash .app { animation: flash 1s 2; } @keyframes flash { 50% { background: 
 .print-lists th { background: #eee; } .print-lists tr { break-inside: avoid; }
 .tick { display: inline-block; width: 18px; height: 18px; border: 2px solid #000; }
 @media print { .screen-top { display: none !important; } .print-lists { padding: 0; } .print-lists .muted { color: #000; } }
+/* Kit today / Where Kit ran: green = this phone, blue = cloud, the colours of every device/cloud badge. */
+.kit-card { display: grid; gap: 10px; width: 100%; text-align: left; background: #fff; border: 0; border-radius: var(--r-lg); padding: 14px 16px; box-shadow: var(--sh-1); font: inherit; color: var(--ink); cursor: pointer; margin-bottom: 14px; }
+.kc-h { display: flex; justify-content: space-between; align-items: baseline; } .kc-h b { font-family: var(--h); font-size: 18px; color: var(--navy); }
+.kc-n { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.kc-n > span { border-radius: 14px; padding: 10px 12px; display: grid; gap: 2px; }
+.kc-n b { font-family: var(--h); font-size: 34px; line-height: 1; } .kc-n span span { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; }
+.kc-n .dev { background: var(--sage); color: var(--sage-ink); } .kc-n .cld { background: var(--sky); color: var(--sky-ink); }
+.kc-left { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; } .kc-left.ok { color: var(--sage-acc); } .kc-left.warn { color: var(--sky-acc); }
+.kc-tap { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--ink-2); }
+.kit-row { display: flex; gap: 12px; align-items: center; background: #fff; border-radius: 16px; padding: 12px 14px; margin-bottom: 10px; box-shadow: var(--sh-1); border-left: 6px solid #ccc; }
+.kit-row.dev { border-left-color: var(--sage-acc); } .kit-row.cld { border-left-color: var(--sky-acc); } .kit-row.wait { border-left-color: #C99A2E; }
+.kit-row .grow { display: grid; gap: 2px; } .kit-row small { color: var(--ink-2); font-size: 13px; } .kit-row .kr-sent { font-weight: 700; color: var(--ink); }
+.kr-chip { display: flex; align-items: center; gap: 5px; border-radius: 99px; padding: 4px 10px; font-size: 13px; font-weight: 800; white-space: nowrap; }
+.kit-row.dev .kr-chip { background: var(--sage); color: var(--sage-ink); } .kit-row.cld .kr-chip { background: var(--sky); color: var(--sky-ink); }
+.kit-row.wait .kr-chip { background: #F6E7C1; color: #5C4310; } .kit-row.off .kr-chip { background: #EEE; color: #333; }

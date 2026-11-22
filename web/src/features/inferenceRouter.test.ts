@@ -104,4 +104,13 @@ describe('InferenceRouter', () => {
     expect(await createInferenceRouter(none, rules as any, () => ({ online: true, privateMode: false })).warm()).toBe(false);
     expect(none.calls.length).toBe(0);
   });
+
+  it('Where Kit ran: logs the real source and the reason, never claims the device did cloud work', async () => {
+    const logs: { task: string; source: string | null; why: string }[] = [];
+    const mk = (inf: FakeInference, online: boolean) => createInferenceRouter(inf, rules as any, () => ({ online, privateMode: false }), undefined, undefined, l => logs.push(l));
+    await mk(new FakeInference('available', () => ({ raw: ROSTER_OK, source: 'device' })), true).run('roster_read', { image: { mimeType: 'image/jpeg', base64: 'AA' } });
+    await mk(new FakeInference('available', () => ({ raw: '{}', source: 'cloud' })), false).run('med_check', { text: 'x' });
+    await mk(new FakeInference('available', () => ({ raw: '{"cards":[]}', source: 'cloud' })), true).run('announcement', { text: 'Lunch at 12' });   // SDK fell back
+    expect(logs.map(l => [l.task, l.source, l.why])).toEqual([['roster_read', 'device', 'private'], ['med_check', null, 'no_signal'], ['announcement', 'cloud', 'cloud_fallback']]);
+  });
 });
