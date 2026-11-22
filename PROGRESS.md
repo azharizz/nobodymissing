@@ -1,3 +1,38 @@
+# PROGRESS: update, Sun Nov 22 2026 (evening: Android saves, routing measured, paper lists)
+
+## Status in one line
+Android now keeps its data when the app is killed; the routing numbers are measured (no more placeholders); both apps print today's lists; the live counter works; axe finds no serious accessibility problems. Web 169 unit + 14 e2e pass; Android 43 JUnit pass, APK builds (still not run on a phone).
+
+## Done
+- **Android saves its state** (`features/Persist.kt`): roster, medicines, round marks, outbox, field list, announcements, help, family group, pickup, warning, language, counter. Saved to `filesDir/state.bin` 300 ms after any change (temp file + rename); loaded on start. A job cut off mid-send goes back to `waiting`. Photos are never saved (same as web).
+- **Routing numbers measured** (eval set B, 24 announcements, Chrome 156 + Nano, real Firebase, Nov 22):
+
+| Path | EN all-correct | ID all-correct | valid JSON | median |
+|---|---|---|---|---|
+| Keywords (no AI) | 50% | 75% | 100% | 0 ms |
+| Device (Nano) | **83%** | **83%** | 100% | 9.1 s / 5.8 s |
+| Cloud lite (`gemini-3.5-flash-lite`) | 67% | 83% (was 42% before the prompt fix) | 100% | 1.9 s |
+| Cloud accurate (`gemini-3.8-flash`) | not measurable | not measurable | 0% | 500 "overloaded" + 429 quota on the free tier |
+
+  `routerPolicy`: `announcement` 83/67, `announcement_id` 83/83 and now uses `cloudLite` (the accurate model was unavailable and the router fell back to lite anyway). Device is no longer "measurably worse", so announcements stay on the phone. The router fixture now carries its own example of a weak device task, so these numbers can change without breaking tests.
+- **Printable daily lists** (web `#/staff/print`, Android Settings → Print): roster, medicine round with tick boxes, tell-in-person list, Kit at the top, black-and-white safe. Android uses the system print dialog (paper or Save as PDF).
+- **Live counter** "Today: N on device · N cloud · N waiting" on both apps; saved and reset each day; Android now updates live.
+- **Accessibility:** new e2e test runs axe (WCAG 2 A/AA) over 9 main screens: no serious or critical violations.
+- **Android cloud calls** now send a typed response schema (same constraint as web). On-device keeps the prompt schema (not verified on AICore yet).
+- **Web first load:** QR libraries load after first paint and are prefetched for offline; main chunk 574 → 421 kB (186 → 131 kB gzip). The rest is React.
+
+## Not done (and why)
+- **Eval set E (10 real photos of paper lists):** needs real photographed sheets and their ground truth; a person must make them.
+- **`gemini-3.8-flash` numbers:** blocked by overload/quota on the free tier; re-run later with `await (await import('/src/eval/runB.ts')).runB('cloud-accurate')`.
+- **Extra Kit poses:** skipped; the 6 moods (idle, device, cloud, alert, sleep, think) cover the screens and printouts.
+- **Batch photos lost on restart:** kept on purpose (privacy).
+
+## PENDING HUMAN (new)
+- **Republish Remote Config `rules`** with the new `routerPolicy`: the published template still has `announcement_id` 70/92 + `cloudAccurate`, and it overrides the bundled defaults task by task.
+- Install the new APK on a phone: check that state survives a swipe-away, and that Print opens the system dialog.
+
+---
+
 # PROGRESS: update, Sun Nov 22 2026 (hybrid AI + new design)
 
 ## Status in one line

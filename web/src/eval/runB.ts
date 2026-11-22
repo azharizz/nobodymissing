@@ -19,11 +19,12 @@ const PATHS: Path[] = [
 ];
 
 export async function runB(paths = PATHS, items: Truth[] = evalB.items) {
+  if (typeof paths === 'string') paths = PATHS.filter(p => (paths as unknown as string).split(',').includes(p.name));
   const inf = new FirebaseAiLogicInference(getApp());
   const rows: Record<string, unknown>[] = [];
   for (const p of paths) for (const t of items) {
     const t0 = performance.now();
-    let cards: Card[] | null = null, valid = true;
+    let cards: Card[] | null = null, valid = true, error: string | undefined;
     if (!p.mode) {
       const k = keywordIcons(t.text, keywords);
       cards = k.icons.length ? [{ icon: k.icons[0], title: '', time: k.times[0] ?? null, place: k.place }] : null;
@@ -33,10 +34,10 @@ export async function runB(paths = PATHS, items: Truth[] = evalB.items) {
         const r = await Promise.race([new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), 40_000)), inf.generate({ task, prompt: (pack.tasks as Record<string, string>)[task], text: t.text, schema: SCHEMAS.announcementCard, mode: p.mode, model: p.model })]);
         const v = parseAndValidate<{ cards: Card[] }>(r.raw, SCHEMAS.announcementCard);
         valid = v.valid; cards = v.value?.cards ?? null;
-      } catch { valid = false; }
+      } catch (e) { valid = false; error = String(e).slice(0, 300); }
     }
-    rows.push({ path: p.name, id: t.id, lang: t.lang, ms: Math.round(performance.now() - t0), valid, ...scoreCards(t, cards) });
-    console.log('[evalB]', p.name, t.id, rows.at(-1));
+    rows.push({ path: p.name, id: t.id, lang: t.lang, ms: Math.round(performance.now() - t0), valid, error, ...scoreCards(t, cards) });
+    console.log('[evalB]', p.name, t.id, JSON.stringify(rows.at(-1)));
     (globalThis as any).__evalProgress = rows.length;
   }
   const summary = paths.flatMap(p => ['en', 'id'].map(lang => {

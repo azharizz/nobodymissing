@@ -95,16 +95,16 @@
       "cloudOnly": false,
       "schema": "announcementCard",
       "model": "cloudLite",
-      "deviceAccuracy": null,
-      "cloudAccuracy": null
+      "deviceAccuracy": 83,
+      "cloudAccuracy": 67
     },
     "announcement_id": {
       "sensitive": false,
       "cloudOnly": false,
       "schema": "announcementCard",
-      "model": "cloudAccurate",
-      "deviceAccuracy": 70,
-      "cloudAccuracy": 92
+      "model": "cloudLite",
+      "deviceAccuracy": 83,
+      "cloudAccuracy": 83
     },
     "translate": {
       "sensitive": false,

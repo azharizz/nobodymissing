@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import rules from '../../../shared/rules/defaults.json';
+import defaults from '../../../shared/rules/defaults.json';
+import routerFx from '../../../shared/fixtures/router.json';
+
+const rules = { ...defaults, routerPolicy: { ...defaults.routerPolicy, ...routerFx.examplePolicy } };
 import { FakeInference } from '../adapters/fakes';
 import { createInferenceRouter } from './inferenceRouter';
 
@@ -52,7 +55,7 @@ describe('InferenceRouter', () => {
 
   it('measured-weak device task offline -> device draft (needs review)', async () => {
     const inf = new FakeInference('available', () => ({ raw: '{"cards":[{"icon":"food","title":"Food"}]}', source: 'device' }));
-    const r = await make(inf, { online: false, privateMode: false }).run('announcement_id', { text: 'Makan jam 12' });
+    const r = await make(inf, { online: false, privateMode: false }).run('weak_device_example', { text: 'Makan jam 12' });
     expect(r.status).toBe('draft');
   });
 

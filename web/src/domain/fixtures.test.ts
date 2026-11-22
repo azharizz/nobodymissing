@@ -73,7 +73,7 @@ describe('queue', () => {
 });
 
 describe('router', () => {
-  for (const c of routerFx.cases) it(c.name, () => expect(decide(c.input.task, c.input.ctx as RouterCtx, rules.routerPolicy as any, rules.accuracyBarPoints)).toEqual(c.expected));
+  for (const c of routerFx.cases) it(c.name, () => expect(decide(c.input.task, c.input.ctx as RouterCtx, { ...rules.routerPolicy, ...routerFx.examplePolicy } as any, rules.accuracyBarPoints)).toEqual(c.expected));
   for (const c of routerFx.guardCases) it(`guard: ${c.name}`, () => expect(isOnDeviceReady(c.input.apiPresent, c.input.availability)).toBe(c.expected));
 });
 

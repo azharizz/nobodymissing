@@ -91,11 +91,13 @@ class FixturesTest {
         }
     }
 
+    /** The router fixture brings its own example of a measurably weak device task, so live numbers can change freely. */
+    private val withExample = load("rules/defaults.json").let { d -> Rules.from(JsonObject(d + ("routerPolicy" to JsonObject(d["routerPolicy"]!!.jsonObject + load("fixtures/router.json")["examplePolicy"]!!.jsonObject)))) }
     @Test fun router() {
         for (c in cases("router.json")) {
             val i = c.input.jsonObject; val x = i["ctx"]!!.jsonObject; val e = c.expected.jsonObject
             val ctx = RouterCtx(x.b("onDeviceAvailable")!!, x.b("online")!!, x.b("privateMode")!!, x.b("staffApprovedCloud")!!)
-            assertEquals(c.name(), Decision(e.s("action")!!, e.s("mode")), decide(i.s("task")!!, ctx, rules.routerPolicy, rules.accuracyBarPoints))
+            assertEquals(c.name(), Decision(e.s("action")!!, e.s("mode")), decide(i.s("task")!!, ctx, withExample.routerPolicy, rules.accuracyBarPoints))
         }
         for (c in cases("router.json", "guardCases")) {
             val i = c.input.jsonObject
