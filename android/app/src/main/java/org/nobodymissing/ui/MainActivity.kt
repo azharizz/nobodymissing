@@ -608,10 +608,17 @@ fun StaffCheckIn(ui: Ui) {
                     Text(nice(fl), Modifier.clip(RoundedCornerShape(50)).background(if (on) NM.Navy else NM.Card).border(1.5.dp, if (on) NM.Navy else NM.Border, RoundedCornerShape(50))
                         .clickable { c = x.copy(flags = if (on) x.flags - fl else x.flags + fl) }.padding(horizontal = 14.dp, vertical = 8.dp), color = if (on) Color.White else NM.Ink, fontFamily = Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp) }
             }
+            val dup = f.alreadyHere(x.name, x.age)
+            if (dup.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(NM.HONEY.bg).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) { Ic(ui.icons, "warning", 18.dp, NM.HoneyInk); Spacer(Modifier.width(8.dp)); P(f.t("maybeHere"), 16.sp, NM.HoneyInk, bold = true) }
+                dup.forEach { p -> Row(verticalAlignment = Alignment.CenterVertically) {
+                    P("${p.name}${p.age?.let { ", $it" } ?: ""}", 16.sp, NM.HoneyInk, bold = true, modifier = Modifier.weight(1f))
+                    Btn(ui, f.t("samePerson"), small = true) { c = null; text = ""; ui.go("person", p.id) } } }
+            }
             if (card) Badge(ui, "keywords", text = f.t("fromCard")) else if (x.by == "device") Badge(ui, "device", text = f.t("readOnPhone")) else Badge(ui, "keywords", text = f.t("keywordsOnly"))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Btn(ui, f.t("close"), "x", modifier = Modifier.weight(1f)) { c = null }
-                Btn(ui, f.t("confirmNext"), "check", BtnStyle.PRIMARY, enabled = x.name.isNotBlank(), modifier = Modifier.weight(1.6f)) { done = f.checkin(x) to x; c = null; text = "" }
+                Btn(ui, f.t(if (dup.isNotEmpty()) "notSame" else "confirmNext"), "check", BtnStyle.PRIMARY, enabled = x.name.isNotBlank(), modifier = Modifier.weight(1.6f)) { done = f.checkin(x) to x; c = null; text = "" }
             }
         } } }
         done?.let { (id, x) -> pad { CardBox {

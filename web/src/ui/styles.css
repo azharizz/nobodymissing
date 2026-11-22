@@ -469,3 +469,7 @@ body.flash .app { animation: flash 1s 2; } @keyframes flash { 50% { background: 
 .kit-chips { display: flex; flex-wrap: wrap; gap: 10px; }
 .kit-chips .chip { min-height: 48px; font-size: 16px; padding: 10px 16px; }
 .warn-hero .orig { font-size: 15px; font-weight: 600; opacity: .85; margin: 0; }
+/* Check-in: possible duplicate, decided by a person. */
+.dup { background: var(--honey); color: var(--honey-ink); border-radius: 16px; padding: 12px 14px; display: grid; gap: 8px; }
+.dup b { display: flex; align-items: center; gap: 8px; font-family: var(--h); }
+.dup-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 700; }

@@ -5,6 +5,7 @@ import { nearestHigher } from '../domain/regionPack';
 import { distanceM } from '../domain/regionPack';
 import { coarseLocation } from '../domain/hybrid';
 import { mergeCheckin, mergePickup, pickupPriority, plainWarning, type Checkin, type Pickup, type PickupRecord } from '../domain/firstHours';
+import { maybeAlreadyHere, offlineVariants } from '../domain/family';
 import { regionPack as pack } from './regionData';
 import { type Deps, online, uid } from './deps';
 import type { FieldEntry } from './state';
@@ -100,5 +101,13 @@ export function createFirstHours(d: Deps, enqueue: (type: string, payload: unkno
     return id;
   }
 
-  return { warn, latest, here, destination, setPos, understandPickup, sendPickup, importPickup, syncPickups, understandCheckin, checkin };
+  /** Before adding: people already here who might be the same person (spelling-aware, age ±10). Staff decide. */
+  function alreadyHere(name: string, age: number | null) {
+    const s = d.store.get(), people = s.people.filter(p => p.confirmedBy);
+    if (!name.trim()) return [];
+    const ids = maybeAlreadyHere(name, age, people.map(p => ({ id: p.id, name: p.nameAsWritten, age: p.age, shelterId: s.shelter.id, status: p.status })), offlineVariants(name, d.rules.nameRules));
+    return people.filter(p => ids.includes(p.id));
+  }
+
+  return { warn, latest, here, destination, setPos, understandPickup, sendPickup, importPickup, syncPickups, understandCheckin, checkin, alreadyHere };
 }

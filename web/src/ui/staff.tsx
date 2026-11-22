@@ -473,6 +473,7 @@ function CheckIn() {
   const [done, setDone] = useState<{ id: string; name: string; flags: string[] } | null>(null);
   const count = s.people.filter(p => p.confirmedBy).length;
   const reachFlags = f.rules.reachFlags as string[];
+  const dup = c ? f.first.alreadyHere(c.name, c.age) : [];
   const confirm = () => { if (!c) return; const id = f.first.checkin(c); setDone({ id, name: c.name, flags: c.flags }); setC(null); setText(''); };
   return (
     <>
@@ -490,8 +491,13 @@ function CheckIn() {
           <div className="field-row"><label className="field">Name<input value={c.name} onChange={e => setC({ ...c, name: e.target.value })} /></label>
             <label className="field">Age<input inputMode="numeric" value={c.age ?? ''} onChange={e => setC({ ...c, age: e.target.value ? Number(e.target.value.replace(/\D/g, '')) : null })} /></label></div>
           <div className="chips">{FLAGS.map(fl => <button key={fl} className={`chip toggle ${c.flags.includes(fl) ? 'on' : ''}`} onClick={() => setC({ ...c, flags: c.flags.includes(fl) ? c.flags.filter(x => x !== fl) : [...c.flags, fl] })}>{nice(fl)}</button>)}</div>
+          {dup.length > 0 && (
+            <div className="dup" role="alert"><b><Icon name="warning" size={18} />{t.maybeHere}</b>
+              {dup.map(p => <div key={p.id} className="dup-row"><span>{p.nameAsWritten}{p.age != null ? `, ${p.age}` : ''}</span>
+                <button className="btn small" onClick={() => { setC(null); setText(''); navigate(`#/staff/person/${p.id}`); }}>{t.samePerson}</button></div>)}
+            </div>)}
           {c.card ? <span className="badge kw"><Icon name="qr" size={15} />{t.fromCard}</span> : <span className={`badge ${c.by === 'device' ? 'local' : 'kw'}`}><Icon name={c.by === 'device' ? 'device' : 'keywords'} size={15} />{c.by === 'device' ? t.readOnPhone : t.keywordsOnly}</span>}
-          <div className="cta"><button className="btn" onClick={() => setC(null)}><Icon name="x" />{t.close}</button><button className="btn primary" disabled={!c.name.trim()} onClick={confirm}><Icon name="check" />{t.confirmNext}</button></div>
+          <div className="cta"><button className="btn" onClick={() => setC(null)}><Icon name="x" />{t.close}</button><button className="btn primary" disabled={!c.name.trim()} onClick={confirm}><Icon name="check" />{dup.length ? t.notSame : t.confirmNext}</button></div>
         </div>}
         {done && <div className="card rise"><b className="h" style={{ fontSize: 18 }}>{done.name}</b>
           <div className="auto">{done.flags.some(x => reachFlags.includes(x)) && <div><Icon name="check" size={18} />{t.addedTell}</div>}

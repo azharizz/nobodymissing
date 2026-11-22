@@ -168,6 +168,7 @@ test('first hours: warning in plain words, the higher place, pickup reaches the 
   await page.getByLabel('Check-in').fill('Hasan Basri, 82, tidak bisa dengar, pakai insulin');
   await page.getByRole('button', { name: 'Add', exact: true }).click();
   await expect(page.locator('.chip.toggle.on')).toHaveCount(2);                       // hard of hearing + needs meds (keywords)
-  await page.getByRole('button', { name: /Confirm · next/ }).click();
+  await expect(page.locator('.dup')).toContainText('Pak Hasan Basri, 82');             // demo already has him: maybe a duplicate
+  await page.getByRole('button', { name: 'Not the same: add' }).click();
   await expect(page.getByText(/Added to "tell in person"/)).toBeVisible();
 });

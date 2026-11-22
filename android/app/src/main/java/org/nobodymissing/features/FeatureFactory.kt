@@ -311,6 +311,14 @@ class Features(val adapters: Adapters, val shared: Shared) {
         val ai = if ((r.status == "ok" || r.status == "draft") && r.source == "device") r.data!!.jsonObject.let { Checkin(it.s("name") ?: "", it.i("age"), it.strings("flags")) } else null
         return mergeCheckin(ai, text, wordMap("flagWords"))
     }
+    /** Before adding: people already here who might be the same person (spelling-aware, age ±10). Staff decide. */
+    fun alreadyHere(name: String, age: Int?): List<UiPerson> {
+        if (name.isBlank()) return emptyList()
+        val here = people.filter { it.confirmed }
+        val nameRules = shared.defaults["nameRules"]!!.jsonObject.mapValues { it.value.jsonArray.map { x -> x.jsonPrimitive.content } }
+        val ids = maybeAlreadyHere(name, age, here.map { PublicRec(it.id, it.name, it.age, shelterId.value, "safe") }, offlineVariants(name, nameRules))
+        return here.filter { it.id in ids }
+    }
     /** Confirmed by a person: joins the roster with its flags (tell-in-person and medicine follow from the flags). */
     fun checkin(c: Checkin): String {
         val id = java.util.UUID.randomUUID().toString()
