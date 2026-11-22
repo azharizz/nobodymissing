@@ -1,5 +1,6 @@
 // The only AI adapter: Firebase AI Logic hybrid inference (Gemini Nano on device, Gemini in the cloud).
 import type { FirebaseApp } from 'firebase/app';
+import { forCloud } from '../domain/validate';
 import { getAI, getGenerativeModel, GoogleAIBackend, InferenceSource, type Part } from 'firebase/ai';
 import type { InferencePort, InferenceRequest } from '../ports';
 
@@ -31,7 +32,7 @@ export class FirebaseAiLogicInference implements InferencePort {
       inCloudParams: maps
         ? { model: r.model, tools: [{ googleMaps: {} }], toolConfig: r.location ? { retrievalConfig: { latLng: { latitude: r.location.lat, longitude: r.location.lng } } } : undefined }
         : search ? { model: r.model, tools: [{ googleSearch: {} }] }
-        : { model: r.model, generationConfig: { responseMimeType: 'application/json', responseJsonSchema: r.schema as Record<string, unknown> } },
+        : { model: r.model, generationConfig: { responseMimeType: 'application/json', responseJsonSchema: forCloud(r.schema) as Record<string, unknown> } },
       onDeviceParams: {
         createOptions: { expectedInputs: r.image ? [{ type: 'text' }, { type: 'image' }] : [{ type: 'text' }] },
         promptOptions: { responseConstraint: r.schema },

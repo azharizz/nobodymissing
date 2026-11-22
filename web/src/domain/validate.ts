@@ -26,6 +26,11 @@ export type Schema = {
 const typeOf = (v: unknown) =>
   v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v === 'number' ? (Number.isInteger(v) ? 'integer' : 'number') : typeof v;
 
+/** The cloud refuses schemas with "too many states" (length/count limits). Send it the shape only; validate() still checks every limit. */
+const LIMITS = new Set(['maxItems', 'minItems', 'maxLength', 'minLength', 'minimum', 'maximum']);
+export const forCloud = (s: unknown): unknown => Array.isArray(s) ? s.map(forCloud)
+  : s && typeof s === 'object' ? Object.fromEntries(Object.entries(s).filter(([k]) => !LIMITS.has(k)).map(([k, v]) => [k, forCloud(v)])) : s;
+
 export function validate(v: unknown, s: Schema, path = '$', errors: string[] = []): string[] {
   if (s.type) {
     const types = Array.isArray(s.type) ? s.type : [s.type];

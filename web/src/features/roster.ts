@@ -21,7 +21,9 @@ export function createRoster(d: Deps, enqueue: (type: string, payload: unknown, 
   async function processBatch() {
     for (const b of d.store.get().batch.filter(x => x.kind === 'roster')) {
       d.store.set(s => ({ ...s, batch: s.batch.filter(x => x.id !== b.id) }));
-      await scan(b.image, b.approved); // re-queues itself if still offline
+      const r = await scan(b.image, b.approved); // re-queues itself if still offline
+      // A failed cloud read must not lose the photo: back into the batch for the next signal or "Process now".
+      if (r.status === 'error' || r.status === 'invalid') d.store.set(s => ({ ...s, batch: [...s.batch, b] }));
     }
   }
 

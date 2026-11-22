@@ -112,6 +112,21 @@ describe('features (wired by FeatureFactory with test adapters)', () => {
     expect(r.hits[0]).toEqual({ name: 'Pak Hasan Basri', ageBand: '80-89', shelterId: 'SD3', status: 'safe' });
   });
 
+  it('batch mode: a failed cloud read keeps the photo in the batch (never lost)', async () => {
+    const { f } = await setup(() => { throw new Error('400 too many states'); }, 'no_api');
+    f.store.set(s => ({ ...s, signal: 'no_signal' }));
+    await f.roster.scan(IMG, true);
+    f.store.set(s => ({ ...s, signal: 'back' }));
+    await f.roster.processBatch();
+    expect(f.store.get().batch).toHaveLength(1);
+  });
+
+  it('cloud gets the schema shape only (no length/count limits); the phone still checks them', async () => {
+    const { forCloud, SCHEMAS, validate } = await import('../domain/validate');
+    expect(JSON.stringify(forCloud(SCHEMAS.roster))).not.toMatch(/maxItems|maxLength|minimum|maximum/);
+    expect(validate({ rows: [{ name: 'x'.repeat(200), confidence: 0.9 }] }, SCHEMAS.roster).length).toBeGreaterThan(0);
+  });
+
   it('batch mode: an approved photo with no signal waits in the batch and is read when processed', async () => {
     const { f } = await setup(() => ({ raw: '{"rows":[{"name":"Cut Nur","age":30,"confidence":0.9}]}', source: 'cloud' }), 'no_api');
     f.store.set(s => ({ ...s, signal: 'no_signal' }));

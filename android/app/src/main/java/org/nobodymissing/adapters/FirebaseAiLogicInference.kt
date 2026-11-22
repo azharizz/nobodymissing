@@ -57,20 +57,19 @@ class FirebaseAiLogicInference : InferencePort {
     }
 }
 
-/** Shared JSON Schema -> SDK JsonSchema. Covers what shared/schemas use; maxLength is left to Validate.kt. */
+/** Shared JSON Schema -> SDK JsonSchema, shape only: the cloud refuses length/count limits ("too many states"); Validate.kt checks them. */
 internal fun typed(s: JsonObject): JsonSchema<*> {
     val types = (s["type"] as? JsonArray)?.map { it.jsonPrimitive.content } ?: listOf(s["type"]!!.jsonPrimitive.content)
     val nullable = "null" in types; val t = types.first { it != "null" }
     val title = s["title"]?.jsonPrimitive?.content
-    val min = s["minimum"]?.jsonPrimitive?.doubleOrNull; val max = s["maximum"]?.jsonPrimitive?.doubleOrNull
     val enum = (s["enum"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.takeIf { p -> p.isString }?.content }
     return when {
         enum != null -> JsonSchema.enumeration(enum, null, nullable, title)
         t == "object" -> { val props = s["properties"]!!.jsonObject; val req = (s["required"] as? JsonArray)?.map { it.jsonPrimitive.content }.orEmpty()
             JsonSchema.obj(props.mapValues { typed(it.value.jsonObject) }, props.keys.filter { it !in req }, null, nullable, title) }
-        t == "array" -> JsonSchema.array(typed(s["items"]!!.jsonObject), null, nullable, title, null, s["maxItems"]?.jsonPrimitive?.intOrNull)
-        t == "integer" -> JsonSchema.integer(null, nullable, title, min, max)
-        t == "number" -> JsonSchema.double(null, nullable, title, min, max)
+        t == "array" -> JsonSchema.array(typed(s["items"]!!.jsonObject), null, nullable, title)
+        t == "integer" -> JsonSchema.integer(null, nullable, title)
+        t == "number" -> JsonSchema.double(null, nullable, title)
         t == "boolean" -> JsonSchema.boolean(null, nullable, title)
         else -> JsonSchema.string(null, nullable, null, title)
     }
