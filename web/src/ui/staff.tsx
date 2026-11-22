@@ -198,7 +198,7 @@ function Review() {
         {last?.kind === 'list' && <figure className={`photo ${busy ? 'scanning' : ''}`} style={{ margin: 0 }}><img src={last.url} alt={t.originalPhoto} /><span className="tagp">{t.originalPhoto}</span></figure>}
         {src === 'device' && <span className="badge local"><Icon name="device" size={15} />{t.readOnPhone}</span>}
         {src === 'cloud' && <span className="badge cloud"><Icon name="cloud" size={15} />{t.readByCloud}</span>}
-        <RouteNotice r={r} onCloud={retry} />
+        <RouteNotice r={rows.length ? null : r} onCloud={retry} />{/* rows read: the old "send to cloud?" question is answered */}
         {rows.map((p, i) => open === p.id ? <div key={p.id} className="card rise"><PersonForm p={p} onDone={() => setOpen(null)} /></div> : (
           <button key={p.id} className={`row-card rise ${p.needsReview ? 'check' : ''}`} style={{ '--d': i } as CSSProperties} onClick={() => setOpen(p.id)}>
             <b>{p.nameAsWritten}{p.age != null ? `, ${p.age}` : ''}{p.needsReview ? '?' : ''}</b>
