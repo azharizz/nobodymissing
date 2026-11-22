@@ -469,7 +469,7 @@ fun FindOpenCard(ui: Ui) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf<String?>(null) }
-    var noLoc by remember { mutableStateOf(false) }
+    var res by remember { mutableStateOf("") }
     val o = f.open.value
     CardBox {
         Row(verticalAlignment = Alignment.CenterVertically) { Ic(ui.icons, "clock", 22.dp); Spacer(Modifier.width(8.dp)); H(f.t("findOpen"), 20.sp, modifier = Modifier.weight(1f)); if (o != null && !o.pending) Badge(ui, "maps") }
@@ -477,10 +477,11 @@ fun FindOpenCard(ui: Ui) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             f.needs().forEach { n -> val on = o?.need == n
                 Text((if (busy == n) "… " else "") + f.t("need_$n"), Modifier.clip(RoundedCornerShape(50)).background(if (on) NM.Navy else NM.Card).border(1.5.dp, if (on) NM.Navy else NM.Border, RoundedCornerShape(50))
-                    .clickable(enabled = busy == null) { busy = n; scope.launch { noLoc = f.findOpen(n) == "no_location"; busy = null } }.padding(horizontal = 14.dp, vertical = 9.dp),
+                    .clickable(enabled = busy == null) { busy = n; scope.launch { res = f.findOpen(n); busy = null } }.padding(horizontal = 14.dp, vertical = 9.dp),
                     color = if (on) Color.White else NM.Ink, fontFamily = Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp) }
         }
-        if (noLoc) Note(ui, "info", f.t("noLocation"))
+        if (res == "no_location") Note(ui, "info", f.t("noLocation"))
+        if (res == "failed") Note(ui, "info", f.t("cloudFailed"))
         if (o?.pending == true) Note(ui, "clock", f.t("openWaiting"))
         if (o != null && !o.pending && o.places.isEmpty()) Note(ui, "info", f.t("noOpenFound"))
         if (o != null && !o.pending) o.places.forEach { pl -> Row(verticalAlignment = Alignment.CenterVertically) {

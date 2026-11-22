@@ -408,5 +408,6 @@
   "colNeeds": "Needs",
   "colMedicine": "Medicine",
   "colTold": "Told",
-  "rosterTitle": "Roster: {n} people"
+  "rosterTitle": "Roster: {n} people",
+  "cloudFailed": "Kit couldn't check online right now. Try again in a minute, or ask a volunteer."
 }

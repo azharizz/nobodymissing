@@ -408,5 +408,6 @@
   "colNeeds": "Kebutuhan",
   "colMedicine": "Obat",
   "colTold": "Sudah diberi tahu",
-  "rosterTitle": "Daftar pengungsi: {n} orang"
+  "rosterTitle": "Daftar pengungsi: {n} orang",
+  "cloudFailed": "Kit belum bisa memeriksa secara online. Coba lagi sebentar lagi, atau tanya relawan."
 }

@@ -359,16 +359,17 @@ function MedCheckCard({ personId }: { personId: string }) {
 function FindOpen() {
   const t = useT(), f = useF(), s = useAppState();
   const [busy, setBusy] = useState('');
-  const [noLoc, setNoLoc] = useState(false);
+  const [res, setRes] = useState('');
   const o = s.open;
-  const run = async (need: string) => { setBusy(need); setNoLoc((await f.hybrid.findOpen(need)) === 'no_location'); setBusy(''); };
+  const run = async (need: string) => { setBusy(need); setRes(await f.hybrid.findOpen(need)); setBusy(''); };
   return (
     <div className="card rise">
       <div className="list-h" style={{ paddingTop: 0 }}><b><Icon name="clock" />{t.findOpen}</b>{o && !o.pending && <Badge source="maps" />}</div>
       <p className="note"><Icon name="lock" size={16} />{t.findOpenWhy}</p>
       <div className="chips">{(f.rules.findOpen.needs as string[]).map(n => (
         <button key={n} className="chip toggle" aria-pressed={o?.need === n} disabled={!!busy} onClick={() => run(n)}>{busy === n && <Icon name="sync" size={14} className="spin" />}{(t as Record<string, string>)[`need_${n}`] ?? nice(n)}</button>))}</div>
-      {noLoc && <p className="note">{t.noLocation}</p>}
+      {res === 'no_location' && <p className="note">{t.noLocation}</p>}
+      {res === 'failed' && <p className="note" role="alert">{t.cloudFailed}</p>}
       {o?.pending && <p className="note"><Icon name="clock" size={16} />{t.openWaiting}</p>}
       {o && !o.pending && o.places.length === 0 && <p className="note">{t.noOpenFound}</p>}
       {o && !o.pending && o.places.map(p => (
