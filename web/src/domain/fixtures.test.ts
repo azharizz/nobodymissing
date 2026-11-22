@@ -144,9 +144,10 @@ describe('help triage + family QR (shared fixtures)', () => {
   it('family merge: newer wins, nobody dropped', () => { for (const c of hybridFx.familyMerge) expect(mergeMembers(c.input.mine as any, c.input.theirs as any), c.name).toEqual(c.expected); });
 });
 
-import { decodeCheckinQr, decodePickupQr, encodeCheckinQr, encodePickupQr, mergeCheckin, mergePickup, parseCheckin, parsePickup, plainWarning } from './firstHours';
+import { decodeCheckinQr, decodePickupQr, encodeCheckinQr, encodePickupQr, isWhereToGo, mergeCheckin, mergePickup, parseCheckin, parsePickup, plainWarning } from './firstHours';
 describe('first hours: warning, pickup, check-in (shared fixtures)', () => {
   it('warning: go-now words always win; no model = keywords', () => { for (const c of hybridFx.warning) expect(plainWarning(c.input.text, c.input.ai as any, 'device', rules), c.name).toEqual(c.expected); });
+  it('where-to-go questions are answered from the flood map', () => { for (const c of hybridFx.whereToGo) expect(isWhereToGo(c.input, rules.whereWords), c.input).toBe(c.expected); });
   it('check-in rules + merge never drops a spoken flag', () => {
     for (const c of hybridFx.checkinRules) expect(parseCheckin(c.input, rules.flagWords), c.input).toEqual(c.expected);
     for (const c of hybridFx.checkinMerge) expect(mergeCheckin(c.input.ai, c.input.text, rules.flagWords), c.name).toEqual(c.expected);

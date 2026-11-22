@@ -14,6 +14,9 @@ fun plainWarning(text: String, ai: WarningPlain?, by: String, r: WarnRules): War
     return WarningPlain(hazard, if (goNow) "go_now" else "prepare", first.take(160), null, "keywords")
 }
 
+/** "Where should I go?" is answered from the offline flood map, never by a model guess. */
+fun isWhereToGo(text: String, whereWords: List<String>) = has(text, whereWords)
+
 data class Checkin(val name: String, val age: Int?, val flags: List<String>, val by: String = "keywords")
 /** Volunteer's sentence at the door -> name, age, flags (keywords). */
 fun parseCheckin(text: String, flagWords: Map<String, List<String>>): Checkin {

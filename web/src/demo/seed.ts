@@ -15,3 +15,9 @@ export function demoState(now: number): Partial<State> {
     })),
   };
 }
+
+/** Demo homes moved onto real low ground (region pack v2). Phones that loaded the demo earlier keep stale spots: fix only demo ids. */
+export function refreshDemoLocations(field: FieldEntry[]): FieldEntry[] {
+  const at = new Map(seed.field.map(f => [f.id, f.location]));
+  return field.map(e => (at.has(e.id) ? { ...e, location: at.get(e.id) as FieldEntry['location'] } : e));
+}

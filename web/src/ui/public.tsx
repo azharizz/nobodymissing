@@ -3,6 +3,7 @@ import { useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { regionPack as pack } from '../features/regionData';
 import { distanceM, nearestHigher } from '../domain/regionPack';
 import type { Announcement } from '../features/state';
+import { isWhereToGo } from '../domain/firstHours';
 import { fmt } from './i18n';
 import { GoNow, Way, PickupPage, CheckinCard } from './firstHours';
 import { Badge, cardIcon, greeting, Icon, Kit, MicButton, navigate, QR, QrScanner, SayButton, ShelterMap, useAppState, useF, useT } from './common';
@@ -218,16 +219,33 @@ function AskKit() {
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
   const [r, setR] = useState<Awaited<ReturnType<typeof f.hybrid.askKit>> | null>(null);
-  const ask = async () => { setBusy(true); setR(null); setR(await f.hybrid.askKit(q)); setBusy(false); };
+  const [way, setWay] = useState<ReturnType<typeof f.first.destination> | 'none' | null>(null);
+  // "Where do I go?" -> the offline flood map answers instantly (rules in code); everything else asks Kit's model.
+  const ask = async () => {
+    setR(null); setWay(null);
+    if (isWhereToGo(q, f.rules.whereWords)) { setWay(f.first.destination() ?? 'none'); return; }
+    setBusy(true); setR(await f.hybrid.askKit(q)); setBusy(false);
+  };
+  const wayText = way && way !== 'none' ? fmt(t.goAnswer, { name: way.name, m: way.distanceM, dir: way.direction, gain: way.handGain, where: way.gps ? t.myLocation : t.theShelter }) : t.noHigher;
   return (
     <>
       <Top title={t.askKit} sub={t.askPrivate} />
       <main className="content">
-        {!r && <div className="hello rise"><Kit mood={busy ? 'think' : 'idle'} size={busy ? 130 : 120} /><p className="bubble">{t.askKitHello}</p></div>}
+        {!r && !way && <div className="hello rise"><Kit mood={busy ? 'think' : 'idle'} size={busy ? 130 : 120} /><p className="bubble">{t.askKitHello}</p></div>}
         <div className="ask-box">
           <textarea rows={2} value={q} placeholder={t.askKitHint} aria-label={t.askKit} onChange={e => setQ(e.target.value)} />
-          <div className="tools"><MicButton onText={setQ} /><button className="btn primary" style={{ flex: 1 }} disabled={!q.trim() || busy} onClick={ask}><Icon name="send" />{t.ask}</button></div>
+          <div className="tools"><MicButton onText={setQ} /><button className="btn primary" style={{ flex: 1 }} disabled={!q.trim() || busy} onClick={ask}><Icon name="send" className={busy ? 'spin' : ''} />{t.ask}</button></div>
         </div>
+        {busy && <p className="note" aria-live="polite"><Icon name="device" size={16} />{t.kitThinking}</p>}
+        {way && (
+          <div className="answer rise" aria-live="polite">
+            <div className="place"><Kit mood="device" size={56} /><span className="badge local"><Icon name="device" size={15} />{t.fromFloodMap}</span></div>
+            <p>{wayText}</p>
+            <SayButton id="ask" text={wayText} />
+            {way !== 'none' && <button className="btn primary" onClick={() => go('way')}><Icon name="nav" />{t.showWay}</button>}
+            <button className="btn danger" onClick={() => go('pickup')}><Icon name="mobility" />{t.needPickup}</button>
+          </div>
+        )}
         {r && (r.answer ? (
           <div className="answer rise" aria-live="polite">
             <div className="place"><Kit mood={r.source === 'cloud' ? 'cloud' : 'device'} size={56} /><Badge source={r.source} /></div>

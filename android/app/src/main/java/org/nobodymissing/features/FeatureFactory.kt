@@ -263,6 +263,8 @@ class Features(val adapters: Adapters, val shared: Shared) {
     }
     fun here(): Pair<Double, Double>? = myPos.value ?: (shared.pack.shelters.firstOrNull { it.id == shelterId.value } ?: shared.pack.shelters.firstOrNull())?.let { it.lat to it.lng }
     /** The higher place for this hazard from the offline flood data. Never "safe", only "higher". */
+    /** "Where should I go?" -> answered from the offline flood map (rules in code), not by the model. */
+    fun isWhere(q: String) = org.nobodymissing.domain.isWhereToGo(q, words("whereWords"))
     fun destination(): Destination? {
         val p = here() ?: return null
         val ev = warning.value?.w?.hazard?.takeIf { it in listOf("flood", "tsunami", "landslide", "earthquake") } ?: rules.currentEvent

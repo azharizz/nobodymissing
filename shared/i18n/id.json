@@ -381,5 +381,8 @@
   "scanPickup": "Pindai QR jemputan",
   "askedAt": "diminta {when}",
   "activeWarning": "Peringatan aktif",
-  "go": "Pergi"
+  "go": "Pergi",
+  "goAnswer": "Pergi ke {name}: {m} m ke {dir}, {gain} m lebih tinggi dari {where}. Bawa obat dan dokumen Anda.",
+  "fromFloodMap": "Dari peta banjir di HP ini (bisa tanpa sinyal)",
+  "kitThinking": "Kit sedang berpikir… dulu di HP ini, lalu online bila perlu."
 }

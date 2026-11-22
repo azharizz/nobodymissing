@@ -712,5 +712,27 @@
     "NMP1|p1|99|98|3|insulin|1|1|x",
     "NMP1|p1|4.2|98.0|9|insulin|1|1|x",
     "NMP1|p1|4.2|98.0|3|laser|1|1|x"
+  ],
+  "whereToGo": [
+    {
+      "input": "Hello, where i should go",
+      "expected": true
+    },
+    {
+      "input": "Saya harus pergi ke mana?",
+      "expected": true
+    },
+    {
+      "input": "Di mana tempat aman?",
+      "expected": true
+    },
+    {
+      "input": "When is lunch?",
+      "expected": false
+    },
+    {
+      "input": "Where is the water distribution?",
+      "expected": false
+    }
   ]
 }

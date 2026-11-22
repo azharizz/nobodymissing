@@ -274,9 +274,11 @@ fun EvAsk(ui: Ui) {
     var busy by remember { mutableStateOf(false) }
     var asked by remember { mutableStateOf(false) }
     var ans by remember { mutableStateOf<AskAnswer?>(null) }
+    var way by remember { mutableStateOf<String?>(null) }
+    var hasWay by remember { mutableStateOf(false) }
     EvTop(ui, f.t("askKit"), f.t("askPrivate"))
     Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        if (!asked) Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (!asked && way == null) Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Kit(ui.kit, if (busy) Mood.THINK else Mood.IDLE, 120.dp)
             H(f.t("askKitHello"), 20.sp, NM.Navy, Modifier.soft(R22).padding(horizontal = 20.dp, vertical = 16.dp))
         }
@@ -284,10 +286,24 @@ fun EvAsk(ui: Ui) {
             Box(Modifier.heightIn(min = 72.dp)) { if (q.isEmpty()) H(f.t("askKitHint"), 24.sp, NM.Ink2.copy(alpha = .5f)); BasicTextField(q, { q = it }, Modifier.fillMaxWidth(), textStyle = TextStyle(fontFamily = Manrope, fontWeight = FontWeight.ExtraBold, fontSize = 24.sp, color = NM.Navy)) }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 MicButton(ui, Modifier.weight(1f)) { q = it }
-                Btn(ui, f.t("ask"), "send", BtnStyle.PRIMARY, enabled = q.isNotBlank() && !busy, modifier = Modifier.weight(1f)) { busy = true; scope.launch { ans = f.askKit(q); asked = true; busy = false } }
+                Btn(ui, f.t("ask"), "send", BtnStyle.PRIMARY, enabled = q.isNotBlank() && !busy, modifier = Modifier.weight(1f)) {
+                    asked = false; way = null
+                    if (f.isWhere(q)) { val d = f.destination(); hasWay = d != null
+                        way = d?.let { f.t("goAnswer", "name" to it.h.name, "m" to it.h.distanceM, "dir" to it.h.direction, "gain" to it.h.handGain, "where" to f.t(if (it.gps) "myLocation" else "theShelter")) } ?: f.t("noHigher")
+                    } else { busy = true; asked = true; scope.launch { ans = f.askKit(q); busy = false } }
+                }
             }
         }
-        if (busy && asked) Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Kit(ui.kit, Mood.THINK, 110.dp) }
+        if (busy && asked) Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) { Kit(ui.kit, Mood.THINK, 110.dp); P(f.t("kitThinking"), 16.sp, NM.Ink2, bold = true) }
+        way?.let { txt -> Rise(0) { Column(Modifier.fillMaxWidth().soft(R28, NM.Lav).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            CompositionLocalProvider(LocalContentColor provides NM.LavInk) {
+                Row(verticalAlignment = Alignment.CenterVertically) { Kit(ui.kit, Mood.DEVICE, 56.dp); Spacer(Modifier.width(10.dp)); Badge(ui, "device", text = f.t("fromFloodMap")) }
+                H(txt, 24.sp)
+                SayButton(ui, "ask", txt, NM.LavInk)
+                if (hasWay) Btn(ui, f.t("showWay"), "nav", BtnStyle.PRIMARY, full = true) { ui.go("way") }
+                Btn(ui, f.t("needPickup"), "mobility", BtnStyle.DANGER, full = true) { ui.go("pickup") }
+            }
+        } } }
         if (asked && !busy) Rise(0) { Column(Modifier.fillMaxWidth().soft(R28, NM.Lav).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             CompositionLocalProvider(LocalContentColor provides NM.LavInk) {
                 val a = ans

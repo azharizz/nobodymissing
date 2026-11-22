@@ -236,6 +236,7 @@ class FixturesTest {
             val ai = (i["ai"] as? JsonObject)?.let { WarningPlain(it.s("hazard")!!, it.s("level")!!, it.s("plain")!!, it.s("action"), "device") }
             assertEquals(c.name(), WarningPlain(e.s("hazard")!!, e.s("level")!!, e.s("plain")!!, e.s("action"), e.s("by")!!), plainWarning(i.s("text")!!, ai, "device", wr))
         }
+        for (c in fx["whereToGo"]!!.jsonArray.map { it.jsonObject }) assertEquals(c.s("input"), c["expected"]!!.jsonPrimitive.content.toBoolean(), isWhereToGo(c.s("input")!!, d.strings("whereWords")))
         for (c in fx["checkinRules"]!!.jsonArray.map { it.jsonObject }) { val e = c["expected"]!!.jsonObject
             assertEquals(c.s("input"), Checkin(e.s("name")!!, e.i("age"), e.strings("flags")), parseCheckin(c.s("input")!!, wm("flagWords"))) }
         for (c in fx["checkinMerge"]!!.jsonArray.map { it.jsonObject }) { val i = c["input"]!!.jsonObject; val a = i["ai"]!!.jsonObject; val e = c["expected"]!!.jsonObject

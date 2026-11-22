@@ -459,5 +459,24 @@
       "old"
     ]
   },
-  "arrivedM": 40
+  "arrivedM": 40,
+  "whereWords": [
+    "where should i go",
+    "where do i go",
+    "where to go",
+    "where i should go",
+    "where can i go",
+    "where is safe",
+    "safe place",
+    "higher place",
+    "higher ground",
+    "ke mana",
+    "kemana",
+    "harus pergi",
+    "tempat aman",
+    "tempat tinggi",
+    "tempat yang aman",
+    "mengungsi ke",
+    "lari ke"
+  ]
 }

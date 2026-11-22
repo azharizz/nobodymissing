@@ -18,6 +18,9 @@ export function plainWarning(text: string, ai: { hazard: string; level: Level; p
   return { hazard, level: goNow ? 'go_now' : 'prepare', plain: first.slice(0, 160), action: null, by: 'keywords' };
 }
 
+/** "Where should I go?" is answered from the offline flood map, never by a model guess. */
+export const isWhereToGo = (text: string, whereWords: string[]) => has(text, whereWords);
+
 export type Checkin = { name: string; age: number | null; flags: string[] };
 /** Volunteer's sentence at the door -> name, age, flags (keywords). */
 export function parseCheckin(text: string, flagWords: Record<string, string[]>): Checkin {

@@ -381,5 +381,8 @@
   "scanPickup": "Scan pickup QR",
   "askedAt": "asked {when}",
   "activeWarning": "Active warning",
-  "go": "Go"
+  "go": "Go",
+  "goAnswer": "Go to {name}: {m} m {dir}, {gain} m higher than {where}. Take your medicine and documents.",
+  "fromFloodMap": "From the flood map on this phone (works offline)",
+  "kitThinking": "Kit is thinking… first on this phone, then online if needed."
 }

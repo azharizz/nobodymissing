@@ -4,7 +4,7 @@ import { createAdapters } from './adapters/adapterFactory';
 import { createFeatures } from './features/featureFactory';
 import type { Env } from './ports';
 import { App } from './ui/App';
-import { demoState } from './demo/seed';
+import { demoState, refreshDemoLocations } from './demo/seed';
 import { FeaturesCtx } from './ui/common';
 import './ui/styles.css';
 
@@ -20,6 +20,7 @@ if (env !== 'demo') {
   remote = await loadRemoteRules(getApp());
 }
 const features = createFeatures(adapters, remote.rules, remote.prompts, env === 'demo' ? demoState : undefined);
+features.store.set(s => ({ ...s, field: refreshDemoLocations(s.field) }));
 if (join && features.store.get().shelter.id !== join) features.store.set(s => ({ ...s, shelter: { id: join, name: `Shelter ${join}` } }));
 
 // Signal Scout loop: real checks on an interval (Remote Config), longer when the battery is low.
