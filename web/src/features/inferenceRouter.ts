@@ -72,5 +72,13 @@ export function createInferenceRouter(inference: InferencePort, rules: RouterRul
     return { status: d.action === 'device_draft' ? 'draft' : 'ok', data: v.value, source: res.source, places: res.places };
   }
 
-  return { run, counts: () => ({ ...counts }) };
+  /** Load Gemini Nano into memory at app start so the first real question isn't slow (~15 s cold).
+   *  Only when the model is already on the phone; on-device only, no user data, result ignored. */
+  async function warm() {
+    if ((await inference.onDeviceStatus()) !== 'available') return false;
+    try { await withTimeout(inference.generate({ task: 'warm', prompt: 'Reply with {}', schema: { type: 'object' }, mode: 'only_on_device', model: rules.models.cloudLite }), rules.timeouts.deviceMs * 2); return true; }
+    catch { return false; }
+  }
+
+  return { run, warm, counts: () => ({ ...counts }) };
 }

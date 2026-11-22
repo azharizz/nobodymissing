@@ -214,6 +214,9 @@ class FixturesTest {
         for (bad in fx["familyQrReject"]!!.jsonArray.map { it.jsonPrimitive.content }) assertEquals(bad, null, decodeFamilyQr(bad))
         val nameRules = load("rules/defaults.json")["nameRules"]!!.jsonObject.mapValues { it.value.jsonArray.map { x -> x.jsonPrimitive.content } }
         for (c in fx["nameVariantsOffline"]!!.jsonArray.map { it.jsonObject }) assertEquals(c.s("input"), c["expected"]!!.jsonArray.map { it.jsonPrimitive.content }, offlineVariants(c.s("input")!!, nameRules))
+        for (c in fx["maybeAlreadyHere"]!!.jsonArray.map { it.jsonObject }) { val i = c["input"]!!.jsonObject
+            val recs = i["records"]!!.jsonArray.map { it.jsonObject.let { r -> PublicRec(r.s("id")!!, r.s("name")!!, r.i("age"), r.s("shelterId")!!, r.s("status")!!) } }
+            assertEquals(c.name(), c["expected"]!!.jsonArray.map { it.jsonPrimitive.content }, maybeAlreadyHere(i.s("name")!!, i.i("age"), recs, i.strings("variants"))) }
         for (c in fx["variantSearch"]!!.jsonArray.map { it.jsonObject }) {
             val i = c["input"]!!.jsonObject
             val recs = i["records"]!!.jsonArray.map { it.jsonObject.let { r -> PublicRec(r.s("id")!!, r.s("name")!!, r.i("age"), r.s("shelterId")!!, r.s("status")!!) } }

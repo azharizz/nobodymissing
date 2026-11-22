@@ -48,7 +48,7 @@ data class FamilyHit(val name: String, val ageBand: String, val shelterId: Strin
 fun searchVariants(name: String, variants: List<String>, age: Int?, records: List<PublicRec>): List<FamilyHit> {
     val pool = records.filter { age == null || it.age == null || kotlin.math.abs(it.age - age) <= 10 }
     val seen = mutableSetOf<String>()
-    fun hit(r: PublicRec, m: String) = if (seen.add("${r.name}|${r.shelterId}")) listOf(FamilyHit(r.name, ageBand(r.age), r.shelterId, r.status, m)) else emptyList()
+    fun hit(r: PublicRec, m: String) = if (seen.add(r.id)) listOf(FamilyHit(r.name, ageBand(r.age), r.shelterId, r.status, m)) else emptyList()
     val exact = pool.filter { familySearch(name, listOf(it)).isNotEmpty() }.flatMap { hit(it, "exact") }
     // Offline safety net: every word of the name matches a word in the record with at most one letter different (words of 4+ letters).
     val q = normalizeName(name).split(" ").filter { it.isNotEmpty() }
@@ -56,6 +56,10 @@ fun searchVariants(name: String, variants: List<String>, age: Int?, records: Lis
     val spelling = pool.filter { r -> !r.hidden && (variants.any { familySearch(it, listOf(r)).isNotEmpty() } || close(r)) }.flatMap { hit(it, "spelling") }
     return exact + spelling
 }
+
+/** Check-in: people already here who might be this person (same spelling-aware match as family search). A person decides. */
+fun maybeAlreadyHere(name: String, age: Int?, records: List<PublicRec>, variants: List<String> = emptyList()) =
+    records.filter { searchVariants(name, variants, age, listOf(it)).isNotEmpty() }.map { it.id }
 
 data class LookFor(val name: String, val age: Int?, val place: String?)
 private val RELATION = Regex("\\b(my|saya|aku|nenek|kakek|ibu|bapak|pak|bu|ayah|mama|papa|anak|adik|kakak|suami|istri|om|tante|paman|bibi|grandmother|grandfather|grandma|grandpa|mother|father|son|daughter|brother|sister|husband|wife|uncle|aunt|named|bernama|namanya)\\b", RegexOption.IGNORE_CASE)

@@ -91,4 +91,14 @@ describe('InferenceRouter', () => {
     expect(r.status).toBe('ok');
     expect(inf.calls.map(c => c.model)).toEqual([rules.models.cloudAccurate, rules.models.cloudLite]);
   });
+
+  it('warm-up: loads the on-device model only when it is already on the phone, never the cloud', async () => {
+    const inf = new FakeInference('available', () => ({ raw: '{}', source: 'device' }));
+    const router = createInferenceRouter(inf, rules as any, () => ({ online: true, privateMode: false }));
+    expect(await router.warm()).toBe(true);
+    expect(inf.calls[0].mode).toBe('only_on_device');
+    const none = new FakeInference('downloadable');
+    expect(await createInferenceRouter(none, rules as any, () => ({ online: true, privateMode: false })).warm()).toBe(false);
+    expect(none.calls.length).toBe(0);
+  });
 });

@@ -9,6 +9,8 @@ import org.nobodymissing.features.FeatureFactory
 import org.nobodymissing.features.Features
 import org.nobodymissing.features.Shared
 
+import kotlinx.coroutines.launch
+
 class NobodyMissingApp : Application() {
     lateinit var features: Features
     override fun onCreate() {
@@ -22,5 +24,7 @@ class NobodyMissingApp : Application() {
         features = FeatureFactory.create(adapters, Shared.from(this, remoteRules))
         // No Firebase config = demo mode: show the synthetic Aceh shelter (a real shelter starts empty).
         if (adapters.env == "test") features.loadDemo()
+        // First question fast: load the on-device model before anyone types.
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch { features.router.warm() }
     }
 }

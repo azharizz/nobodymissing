@@ -91,7 +91,7 @@ class Features(val adapters: Adapters, val shared: Shared) {
     fun confirmPerson(id: String, flags: List<String>? = null) {
         val i = people.indexOfFirst { it.id == id }; if (i < 0) return
         val p = people[i].copy(confirmed = true, needsReview = false, flags = flags ?: people[i].flags).also { people[i] = it }
-        enqueue("family_update", "public", mapOf("name" to p.name, "age" to p.age?.let { it / 10 * 10 }, "shelterId" to shelterId.value, "status" to "safe", "hidden" to false))
+        enqueue("family_update", "public", mapOf("name" to p.name, "age" to p.age?.let { it / 10 * 10 }, "shelterId" to shelterId.value, "status" to "safe", "hidden" to false), "${shelterId.value}_${p.id}")
     }
 
     // F4 care card + F9 Medicine Round
@@ -371,7 +371,8 @@ class Features(val adapters: Adapters, val shared: Shared) {
             val v = router.run("name_variants", text = p.name)
             if (v.status == "ok") { variants = (v.data!!.jsonObject.strings("variants").filter { it.isNotBlank() && !it.equals(p.name, true) } + variants).distinct(); by = "cloud" }
         }
-        val local = people.filter { it.confirmed }.map { PublicRec(it.id, it.name, it.age, shelterId.value, "safe") }
+        // Same id as the public record ("shelter_person"): one person found locally and in the cloud shows once; two people with one name show twice.
+        val local = people.filter { it.confirmed }.map { PublicRec("${shelterId.value}_${it.id}", it.name, it.age, shelterId.value, "safe") }
         val remote = if (signal.value == "back") runCatching { adapters.sync.list("public").filter { it["name"] is String && it["hidden"] != true }
             .map { PublicRec(it["id"].toString(), it["name"].toString(), (it["age"] as? Number)?.toInt(), it["shelterId"].toString(), it["status"].toString()) } }.getOrDefault(emptyList()) else emptyList()
         return SmartFamily(p.name, p.age, p.place, if (ai != null) "device" else "rules", variants, by, searchVariants(p.name, variants, p.age, local + remote))

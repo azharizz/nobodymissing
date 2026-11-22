@@ -565,6 +565,49 @@
           "match": "spelling"
         }
       ]
+    },
+    {
+      "name": "two different people with the same name in one shelter are both shown; the same person twice is shown once",
+      "input": {
+        "name": "Siti Aminah",
+        "variants": [],
+        "age": 75,
+        "records": [
+          {
+            "id": "SD3_p-aminah",
+            "name": "Siti Aminah",
+            "age": 77,
+            "shelterId": "SD3",
+            "status": "safe"
+          },
+          {
+            "id": "SD3_p-new",
+            "name": "Siti Aminah",
+            "age": 74,
+            "shelterId": "SD3",
+            "status": "safe"
+          },
+          {
+            "id": "SD3_p-aminah",
+            "name": "Siti Aminah",
+            "age": 70,
+            "shelterId": "SD3",
+            "status": "safe"
+          }
+        ]
+      },
+      "expected": [
+        {
+          "name": "Siti Aminah",
+          "shelterId": "SD3",
+          "match": "exact"
+        },
+        {
+          "name": "Siti Aminah",
+          "shelterId": "SD3",
+          "match": "exact"
+        }
+      ]
     }
   ],
   "lookForRules": [
@@ -842,6 +885,80 @@
     {
       "input": "Where is the water distribution?",
       "expected": false
+    }
+  ],
+  "maybeAlreadyHere": [
+    {
+      "name": "a misspelling of someone already checked in, close in age",
+      "input": {
+        "name": "Siti Aminnah",
+        "age": 74,
+        "variants": [],
+        "records": [
+          {
+            "id": "p1",
+            "name": "Siti Aminah",
+            "age": 77,
+            "shelterId": "SD3",
+            "status": "safe"
+          },
+          {
+            "id": "p2",
+            "name": "Budi Santoso",
+            "age": 38,
+            "shelterId": "SD3",
+            "status": "safe"
+          },
+          {
+            "id": "p3",
+            "name": "Siti Rahma",
+            "age": 70,
+            "shelterId": "SD3",
+            "status": "safe"
+          }
+        ]
+      },
+      "expected": [
+        "p1"
+      ]
+    },
+    {
+      "name": "same name but 40 years apart is not flagged",
+      "input": {
+        "name": "Siti Aminah",
+        "age": 30,
+        "variants": [],
+        "records": [
+          {
+            "id": "p1",
+            "name": "Siti Aminah",
+            "age": 77,
+            "shelterId": "SD3",
+            "status": "safe"
+          }
+        ]
+      },
+      "expected": []
+    },
+    {
+      "name": "no age said: any age is possible",
+      "input": {
+        "name": "Hasan Basri",
+        "age": null,
+        "variants": [],
+        "records": [
+          {
+            "id": "p9",
+            "name": "Pak Hasan Basri",
+            "age": 82,
+            "shelterId": "SD3",
+            "status": "safe"
+          }
+        ]
+      },
+      "expected": [
+        "p9"
+      ]
     }
   ]
 }

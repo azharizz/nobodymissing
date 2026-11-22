@@ -124,7 +124,7 @@ describe('hybrid AI safety contracts (shared fixtures)', () => {
 });
 
 import { triageHelp } from './hybrid';
-import { decodeFamilyQr, encodeFamilyQr, mergeMembers, offlineVariants, parseLookFor, searchVariants } from './family';
+import { decodeFamilyQr, encodeFamilyQr, maybeAlreadyHere, mergeMembers, offlineVariants, parseLookFor, searchVariants } from './family';
 describe('help triage + family QR (shared fixtures)', () => {
   it('urgency never goes down; no model = keyword rules', () => {
     for (const c of hybridFx.helpTriage) expect(triageHelp(c.input.text, c.input.ai, rules.urgentWords, keywordIcons(c.input.text, keywords).icons), c.name).toEqual(c.expected);
@@ -141,6 +141,7 @@ describe('help triage + family QR (shared fixtures)', () => {
     for (const c of hybridFx.nameVariantsOffline) expect(offlineVariants(c.input, rules.nameRules), c.input).toEqual(c.expected);
     for (const c of hybridFx.variantSearch) expect(searchVariants(c.input.name, c.input.variants, c.input.age, c.input.records as any).map(h => ({ name: h.name, shelterId: h.shelterId, match: h.match })), c.name).toEqual(c.expected);
   });
+  it('check-in: maybe already here', () => { for (const c of hybridFx.maybeAlreadyHere) expect(maybeAlreadyHere(c.input.name, c.input.age, c.input.records as any, c.input.variants), c.name).toEqual(c.expected); });
   it('family merge: newer wins, nobody dropped', () => { for (const c of hybridFx.familyMerge) expect(mergeMembers(c.input.mine as any, c.input.theirs as any), c.name).toEqual(c.expected); });
 });
 

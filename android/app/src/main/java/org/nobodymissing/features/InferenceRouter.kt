@@ -37,6 +37,13 @@ class InferenceRouter(
         return withTimeout(if (mode.endsWith("device")) deviceTimeoutMs else cloudTimeoutMs) { inference.generate(req) }
     }
 
+    /** Load Gemini Nano into memory at app start so the first real question isn't slow.
+     *  Only when the model is already on the phone; on-device only, no user data, result ignored. */
+    suspend fun warm(): Boolean {
+        if (inference.onDeviceStatus() != "available") return false
+        return runCatching { withTimeout(deviceTimeoutMs * 2) { inference.generate(InferenceRequest("warm", "Reply with {}", null, null, kotlinx.serialization.json.buildJsonObject { put("type", kotlinx.serialization.json.JsonPrimitive("object")) }, "only_on_device", models.getValue("cloudLite"))) } }.isSuccess
+    }
+
     suspend fun run(task: String, text: String? = null, image: Bitmap? = null, staffApprovedCloud: Boolean = false, extra: Extra = Extra()): RouteResult {
         val p = rules.routerPolicy[task] ?: return RouteResult("blocked")
         val c = ctx()

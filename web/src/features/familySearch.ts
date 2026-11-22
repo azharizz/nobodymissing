@@ -6,7 +6,8 @@ import { type Deps, online } from './deps';
 export function createFamilySearch(d: Deps) {
   const local = (): PublicRec[] => {
     const s = d.store.get();
-    return s.people.filter(p => p.confirmedBy).map(p => ({ id: p.id, name: p.nameAsWritten, age: p.age, shelterId: s.shelter.id, status: p.status, hidden: p.hidden }));
+    // Same id as the public record (shelter_person): one person found locally and in the cloud shows once.
+    return s.people.filter(p => p.confirmedBy).map(p => ({ id: `${s.shelter.id}_${p.id}`, name: p.nameAsWritten, age: p.age, shelterId: s.shelter.id, status: p.status, hidden: p.hidden }));
   };
   async function cloud(): Promise<PublicRec[]> {
     if (!online(d)) return [];
@@ -17,8 +18,7 @@ export function createFamilySearch(d: Deps) {
   return {
     async search(q: string) {
       const remote = await cloud();
-      const seen = new Set<string>();
-      const hits = familySearch(q, [...local(), ...remote]).filter(h => { const k = `${h.name}|${h.shelterId}`; return !seen.has(k) && !!seen.add(k); });
+      const hits = familySearch(q, [...new Map([...local(), ...remote].map(r => [r.id, r])).values()]); // one per person, not per name
       return { hits, cloud: remote.length > 0 };
     },
     /** Hybrid family search. Device: understand "my grandmother Nurhayati, about 80" privately (name, age, place).

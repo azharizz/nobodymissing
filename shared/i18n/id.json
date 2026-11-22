@@ -396,5 +396,8 @@
   "kitUrgent": "Ini terdengar darurat. Tunjukkan layar ini ke relawan terdekat sekarang, atau tekan di bawah.",
   "someone": "Seseorang (tempat tidak diisi)",
   "pickupSending": "Sedang dikirim ke relawan…",
-  "askedWhen": "minta {when}"
+  "askedWhen": "minta {when}",
+  "maybeHere": "Mungkin sudah di sini",
+  "samePerson": "Orang yang sama: buka",
+  "notSame": "Bukan: tambahkan"
 }

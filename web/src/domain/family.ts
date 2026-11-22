@@ -56,7 +56,7 @@ export function searchVariants(name: string, variants: string[], age: number | n
   const pool = records.filter(near);
   const seen = new Set<string>();
   const hit = (r: PublicRec, match: 'exact' | 'spelling') => {
-    const k = `${r.name}|${r.shelterId}`;
+    const k = r.id; // a person, not a name: two Siti Aminahs in one shelter are two results
     if (seen.has(k)) return [];
     seen.add(k);
     return [{ name: r.name, ageBand: ageBand(r.age), shelterId: r.shelterId, status: r.status, match }];
@@ -68,6 +68,10 @@ export function searchVariants(name: string, variants: string[], age: number | n
   const spelling = pool.filter(r => !r.hidden && (variants.some(v => familySearch(v, [r]).length) || close(r))).flatMap(r => hit(r, 'spelling'));
   return [...exact, ...spelling];
 }
+
+/** Check-in: people already here who might be this person (same spelling-aware match as family search). A person decides. */
+export const maybeAlreadyHere = (name: string, age: number | null, records: PublicRec[], variants: string[] = []) =>
+  records.filter(r => searchVariants(name, variants, age, [r]).length > 0).map(r => r.id);
 
 const RELATION = /\b(my|saya|aku|nenek|kakek|ibu|bapak|pak|bu|ayah|mama|papa|anak|adik|kakak|suami|istri|om|tante|paman|bibi|grandmother|grandfather|grandma|grandpa|mother|father|son|daughter|brother|sister|husband|wife|uncle|aunt|named|bernama|namanya)\b/gi;
 /** No device model: pull name, age and place out of "my grandmother Nurhayati, about 80, from Sukajadi" with plain rules. */

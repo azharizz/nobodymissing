@@ -396,5 +396,8 @@
   "kitUrgent": "This sounds urgent. Show this screen to the nearest volunteer now, or tap below.",
   "someone": "Someone (no spot given)",
   "pickupSending": "Sending to volunteers now…",
-  "askedWhen": "asked {when}"
+  "askedWhen": "asked {when}",
+  "maybeHere": "Maybe already here",
+  "samePerson": "Same person: open",
+  "notSame": "Not the same: add"
 }
