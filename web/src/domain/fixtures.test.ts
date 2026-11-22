@@ -143,3 +143,22 @@ describe('help triage + family QR (shared fixtures)', () => {
   });
   it('family merge: newer wins, nobody dropped', () => { for (const c of hybridFx.familyMerge) expect(mergeMembers(c.input.mine as any, c.input.theirs as any), c.name).toEqual(c.expected); });
 });
+
+import { decodeCheckinQr, decodePickupQr, encodeCheckinQr, encodePickupQr, mergeCheckin, mergePickup, parseCheckin, parsePickup, plainWarning } from './firstHours';
+describe('first hours: warning, pickup, check-in (shared fixtures)', () => {
+  it('warning: go-now words always win; no model = keywords', () => { for (const c of hybridFx.warning) expect(plainWarning(c.input.text, c.input.ai as any, 'device', rules), c.name).toEqual(c.expected); });
+  it('check-in rules + merge never drops a spoken flag', () => {
+    for (const c of hybridFx.checkinRules) expect(parseCheckin(c.input, rules.flagWords), c.input).toEqual(c.expected);
+    for (const c of hybridFx.checkinMerge) expect(mergeCheckin(c.input.ai, c.input.text, rules.flagWords), c.name).toEqual(c.expected);
+  });
+  it('pickup rules + merge only go up', () => {
+    for (const c of hybridFx.pickupRules) expect(parsePickup(c.input, rules.needWords, rules.mobilityWords), c.input).toEqual(c.expected);
+    for (const c of hybridFx.pickupMerge) expect(mergePickup(c.input.ai, c.input.text, rules.needWords, rules.mobilityWords), c.name).toEqual(c.expected);
+  });
+  it('check-in and pickup QR codes', () => {
+    for (const c of hybridFx.checkinQr) { const q = encodeCheckinQr(c.input); expect(q).toBe(c.expected); expect(decodeCheckinQr(q)!.flags).toEqual(c.input.flags); }
+    for (const bad of hybridFx.checkinQrReject) expect(decodeCheckinQr(bad), bad).toBeNull();
+    for (const c of hybridFx.pickupQr) { const q = encodePickupQr(c.input); expect(q).toBe(c.expected); expect(decodePickupQr(q)).toEqual(c.input); }
+    for (const bad of hybridFx.pickupQrReject) expect(decodePickupQr(bad), bad).toBeNull();
+  });
+});

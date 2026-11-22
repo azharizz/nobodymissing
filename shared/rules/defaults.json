@@ -160,6 +160,35 @@
       "schema": "nameVariants",
       "model": "cloudAccurate",
       "_comment": "Only the name goes out (it is already in the public family index). Offline -> deterministic spelling rules."
+    },
+    "warning_plain": {
+      "sensitive": false,
+      "cloudOnly": false,
+      "schema": "warningPlain",
+      "model": "cloudAccurate",
+      "_comment": "Official warning text -> plain words. Device first (no signal during evacuation); go-now words can only raise the level."
+    },
+    "warning_latest": {
+      "sensitive": false,
+      "cloudOnly": true,
+      "schema": "warningPlain",
+      "model": "cloudAccurate",
+      "grounding": "search",
+      "_comment": "Grounding with Google Search for the latest official BMKG/BPBD warning near a rounded location."
+    },
+    "pickup_request": {
+      "sensitive": true,
+      "cloudOnly": false,
+      "schema": "pickup",
+      "model": "cloudLite",
+      "_comment": "Health + mobility words: on this phone only; no model -> keyword rules. Sent only when the person taps Send."
+    },
+    "checkin_parse": {
+      "sensitive": true,
+      "cloudOnly": false,
+      "schema": "checkin",
+      "model": "cloudLite",
+      "_comment": "Volunteer's spoken check-in sentence -> name/age/flags, on this phone only; keyword flags are never dropped."
     }
   },
   "fieldPriority": {
@@ -254,5 +283,181 @@
     "Siti": [
       "St."
     ]
-  }
+  },
+  "goNowWords": [
+    "segera",
+    "evakuasi",
+    "mengungsi",
+    "tinggalkan",
+    "naik ke tempat tinggi",
+    "awas",
+    "bahaya",
+    "evacuate",
+    "go now",
+    "leave now",
+    "move to higher ground",
+    "immediately"
+  ],
+  "hazardWords": {
+    "flood": [
+      "banjir",
+      "air naik",
+      "debit air",
+      "meluap",
+      "luapan",
+      "genangan",
+      "siaga banjir",
+      "flood",
+      "water rising",
+      "river rising"
+    ],
+    "landslide": [
+      "longsor",
+      "landslide"
+    ],
+    "tsunami": [
+      "tsunami"
+    ],
+    "earthquake": [
+      "gempa",
+      "earthquake"
+    ],
+    "fire": [
+      "kebakaran",
+      "fire"
+    ]
+  },
+  "flagWords": {
+    "deaf": [
+      "tuli",
+      "tunarungu",
+      "deaf"
+    ],
+    "hard_of_hearing": [
+      "tidak bisa dengar",
+      "kurang dengar",
+      "susah dengar",
+      "hard of hearing",
+      "can't hear"
+    ],
+    "wheelchair": [
+      "kursi roda",
+      "wheelchair"
+    ],
+    "cant_walk": [
+      "tidak bisa jalan",
+      "lumpuh",
+      "can't walk",
+      "cannot walk",
+      "bedridden",
+      "terbaring"
+    ],
+    "needs_meds": [
+      "insulin",
+      "obat",
+      "cuci darah",
+      "dialisis",
+      "medicine",
+      "dialysis",
+      "oxygen",
+      "oksigen"
+    ],
+    "pregnant": [
+      "hamil",
+      "pregnant"
+    ],
+    "infant": [
+      "bayi",
+      "baby"
+    ],
+    "lives_alone": [
+      "sendiri",
+      "sendirian",
+      "alone"
+    ],
+    "dementia": [
+      "pikun",
+      "demensia",
+      "dementia"
+    ],
+    "foreign_language": [
+      "tidak bisa bahasa",
+      "no indonesian"
+    ]
+  },
+  "needWords": {
+    "insulin": [
+      "insulin"
+    ],
+    "dialysis": [
+      "cuci darah",
+      "dialisis",
+      "dialysis"
+    ],
+    "oxygen": [
+      "oksigen",
+      "oxygen"
+    ],
+    "daily_meds": [
+      "obat",
+      "medicine",
+      "pills"
+    ],
+    "baby": [
+      "bayi",
+      "baby"
+    ],
+    "pregnant": [
+      "hamil",
+      "pregnant"
+    ],
+    "wheelchair": [
+      "kursi roda",
+      "wheelchair"
+    ],
+    "bedridden": [
+      "terbaring",
+      "bedridden",
+      "tidak bisa bangun"
+    ],
+    "deaf": [
+      "tuli",
+      "deaf",
+      "tidak bisa dengar"
+    ],
+    "blind": [
+      "buta",
+      "tunanetra",
+      "blind"
+    ],
+    "dementia": [
+      "pikun",
+      "dementia"
+    ]
+  },
+  "mobilityWords": {
+    "3": [
+      "bedridden",
+      "terbaring",
+      "tidak bisa jalan",
+      "lumpuh",
+      "can't walk",
+      "cannot walk",
+      "tidak bisa bangun"
+    ],
+    "2": [
+      "kursi roda",
+      "wheelchair",
+      "pakai tongkat",
+      "needs help walking",
+      "dibantu jalan"
+    ],
+    "1": [
+      "pelan",
+      "slow",
+      "tua",
+      "old"
+    ]
+  },
+  "arrivedM": 40
 }

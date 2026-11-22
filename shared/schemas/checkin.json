@@ -1,0 +1,41 @@
+{
+  "type": "object",
+  "required": [
+    "name",
+    "flags"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "maxLength": 60
+    },
+    "age": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 120
+    },
+    "flags": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "string",
+        "enum": [
+          "hard_of_hearing",
+          "deaf",
+          "needs_meds",
+          "wheelchair",
+          "cant_walk",
+          "lives_alone",
+          "foreign_language",
+          "infant",
+          "pregnant",
+          "elderly",
+          "dementia"
+        ]
+      }
+    }
+  }
+}

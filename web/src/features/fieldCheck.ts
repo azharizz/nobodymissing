@@ -21,7 +21,7 @@ export function fieldList(d: Deps) {
   return sortFieldList(rows, d.rules.currentEvent as Event, d.rules.fieldPriority).map(r => {
     const e = byId.get(r.id)!;
     const higher = e.location ? nearestHigher(pack, e.location.lat, e.location.lng, d.rules.currentEvent, d.rules.higherMinGainM) : null;
-    return { ...r, name: e.name, status: e.status, needsReview: !!e.needsReview, higher };
+    return { ...r, name: e.name, status: e.status, needsReview: !!e.needsReview, higher, pickup: e.pickup ?? null, location: e.location };
   });
 }
 

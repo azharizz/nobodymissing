@@ -25,6 +25,10 @@ export function demoReply(r: InferenceRequest): InferenceResult {
     help_triage: JSON.stringify({ kind: /insulin|obat|medic/i.test(t) ? 'medicine' : /sick|sakit|demam|fever|pain|nyeri/i.test(t) ? 'sick' : 'other', urgent: /chest|dada|breath|napas/i.test(t), summary: t.slice(0, 80) }),
     family_query: JSON.stringify({ name: t.replace(/^(my |nenek |kakek |ibu |bapak |grandmother |grandfather |saya )+/gi, '').split(/[,.]/)[0].replace(/\b(saya|my)\b/gi, '').trim().slice(0, 60) || t.slice(0, 60), age: Number(/(\d{2})/.exec(t)?.[1]) || null, place: /(?:from|dari) ([A-Za-z ]+)/i.exec(t)?.[1]?.trim() ?? null }),
     name_variants: JSON.stringify({ variants: t.includes(' ') ? [t.replace(' ', '')] : t.length > 6 ? [t.slice(0, 3) + ' ' + t.slice(3)] : [] }),
+    warning_plain: JSON.stringify({ hazard: /banjir|flood/i.test(t) ? 'flood' : 'other', level: /segera|evakuasi|evacuate/i.test(t) ? 'go_now' : 'prepare', plain: 'The river is rising fast. Leave the riverside now and go to higher ground.', action: 'Go to higher ground now' }),
+    warning_latest: JSON.stringify({ hazard: 'flood', level: 'go_now', plain: 'BPBD says the Tamiang river is still rising. People near the river must leave now.', action: 'Go to higher ground', source: 'BPBD Aceh Tamiang (demo)', issuedAt: '07:30' }),
+    pickup_request: JSON.stringify({ who: t.split(/[,.]/)[0].slice(0, 40), mobility: /tidak bisa jalan|can't walk|bedridden/i.test(t) ? 3 : /kursi roda|wheelchair/i.test(t) ? 2 : 1, needs: /insulin/i.test(t) ? ['insulin'] : [], people: 1, note: null }),
+    checkin_parse: JSON.stringify({ name: t.split(/[,\d]/)[0].trim().slice(0, 60), age: Number(/\b(\d{1,3})\b/.exec(t)?.[1]) || null, flags: /dengar|hearing/i.test(t) ? ['hard_of_hearing'] : [] }),
     ask_kit: (() => {
       // Demo: pick the notice sharing a word with the question (the real model reads them in any language).
       const words = t.toLowerCase().split(/\W+/).filter(w => w.length > 3 && !['when', 'what', 'where', 'does', 'will', 'there'].includes(w));
@@ -34,6 +38,6 @@ export function demoReply(r: InferenceRequest): InferenceResult {
   };
   raw.announcement_id = raw.announcement;
   // Demo grounding: the canned places come back as if Google Maps returned them.
-  const places = r.task === 'find_open' ? [{ title: 'Apotek Sehat Keluarga', uri: 'https://maps.google.com/?q=Apotek+Sehat+Keluarga' }, { title: 'Puskesmas Kota (demo)', uri: 'https://maps.google.com/?q=Puskesmas' }] : undefined;
+  const places = r.task === 'warning_latest' ? [{ title: 'BPBD Aceh Tamiang (demo)', uri: 'https://bpbd.acehtamiangkab.go.id/' }] : r.task === 'find_open' ? [{ title: 'Apotek Sehat Keluarga', uri: 'https://maps.google.com/?q=Apotek+Sehat+Keluarga' }, { title: 'Puskesmas Kota (demo)', uri: 'https://maps.google.com/?q=Puskesmas' }] : undefined;
   return { raw: raw[r.task] ?? '{}', source, places };
 }

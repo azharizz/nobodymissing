@@ -13,8 +13,11 @@ import askKit from '../../../shared/schemas/askKit.json';
 import helpTriage from '../../../shared/schemas/helpTriage.json';
 import familyQuery from '../../../shared/schemas/familyQuery.json';
 import nameVariants from '../../../shared/schemas/nameVariants.json';
+import warningPlain from '../../../shared/schemas/warningPlain.json';
+import pickup from '../../../shared/schemas/pickup.json';
+import checkin from '../../../shared/schemas/checkin.json';
 
-export const SCHEMAS = { roster, careCard, announcementCard, fieldReport, request, translation, medCheck, findOpen, askKit, helpTriage, familyQuery, nameVariants } as Record<string, Schema>;
+export const SCHEMAS = { roster, careCard, announcementCard, fieldReport, request, translation, medCheck, findOpen, askKit, helpTriage, familyQuery, nameVariants, warningPlain, pickup, checkin } as Record<string, Schema>;
 export type Schema = {
   type?: string | string[]; properties?: Record<string, Schema>; required?: string[]; items?: Schema;
   enum?: unknown[]; minimum?: number; maximum?: number; maxLength?: number; maxItems?: number;

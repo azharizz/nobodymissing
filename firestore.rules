@@ -15,6 +15,13 @@ service cloud.firestore {
         allow create: if signedIn() && request.auth.uid == uid && request.resource.data.role in ['volunteer', 'medic', 'organizer', 'scout'];
         allow delete: if member(shelterId) && role(shelterId) == 'organizer';
       }
+      // Pickup requests: anyone (an evacuee at home) may ask; only members of this shelter can read them (wildcard rule below).
+      match /pickups/{id} {
+        allow create: if signedIn()
+          && request.resource.data.keys().hasOnly(['id', 'who', 'lat', 'lng', 'mobility', 'needs', 'people', 'at', 'updatedAt'])
+          && request.resource.data.who is string && request.resource.data.who.size() <= 40
+          && request.resource.data.mobility is int && request.resource.data.mobility >= 0 && request.resource.data.mobility <= 3;
+      }
       // Everything else in the shelter is for members, except the members list itself (no self-promotion).
       match /{col}/{id} { allow read, write: if member(shelterId) && col != 'members'; }
       match /{col}/{id}/{rest=**} { allow read, write: if member(shelterId) && col != 'members'; }

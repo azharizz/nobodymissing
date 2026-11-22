@@ -37,7 +37,7 @@ export function createInferenceRouter(inference: InferencePort, rules: RouterRul
   async function callModel(task: string, policy: TaskPolicy, mode: Mode, input: Input, model: string): Promise<InferenceResult> {
     let prompt = prompts[task] ?? '';
     for (const [k, v] of Object.entries(input.vars ?? {})) prompt = prompt.replace(`{${k}}`, v);
-    const grounding = policy.grounding === 'maps' ? 'maps' as const : undefined;
+    const grounding = policy.grounding === 'maps' || policy.grounding === 'search' ? (policy.grounding as 'maps' | 'search') : undefined;
     const req = { task, prompt, text: input.text, image: input.image, schema: SCHEMAS[policy.schema], mode, model, grounding, location: input.location };
     const isDevice = mode === 'only_on_device' || mode === 'prefer_on_device';
     return withTimeout(inference.generate(req), isDevice ? rules.timeouts.deviceMs : rules.timeouts.cloudMs);

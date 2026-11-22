@@ -31,7 +31,7 @@ export type FieldEntry = {
   id: string; name: string; location: { lat: number; lng: number } | null; lastContactAt: number | null;
   person: Omit<PriorityInput, 'hazard' | 'hoursSinceContact' | 'override'> & { hazard?: PriorityInput['hazard'] };
   override: { tier: Tier; reason: string; at: number } | null; status: 'unchecked' | 'safe_home' | 'needs_evacuation' | 'moved_to_shelter';
-  needsReview?: boolean;
+  needsReview?: boolean; pickup?: { needs: string[]; people: number; at: number };
 };
 export type Job = { id: string; type: string; payload: unknown; path: string | null; createdAt: number; state: JobState; retries: number };
 export type Help = { id: string; kind: string; spot: string; at: number; done: boolean; text?: string; summary?: string; urgent?: boolean; by?: 'device' | 'keywords' };
@@ -43,6 +43,9 @@ export type State = {
   privateMode: boolean; signal: SignalState; scoutRun: number; scoutAlert: boolean; lastSignalAt: number | null;
   lang: 'en' | 'id'; volunteerPos: { lat: number; lng: number } | null;
   open: { need: string; places: OpenPlace[]; at: number; pending: boolean } | null;
+  warning: (import('../domain/firstHours').Warning & { text: string; at: number; sources: { title?: string; uri?: string }[] }) | null;
+  myPos: { lat: number; lng: number } | null;
+  myPickup: (import('../domain/firstHours').PickupRecord & { jobId: string }) | null;
   familyGroup: { fam: string; fams: string[]; me: import('../domain/family').Member; members: import('../domain/family').Member[]; via: Record<string, 'qr' | 'online'> } | null;
 };
 
@@ -50,7 +53,7 @@ export type State = {
 export function initialState(): State {
   return {
     shelter: { id: 'shelter-1', name: 'Shelter' }, people: [], cards: [], round: {}, announcements: [], field: [], jobs: [], help: [], batch: [],
-    privateMode: false, signal: 'no_signal', scoutRun: 0, scoutAlert: false, lastSignalAt: null, lang: 'en', volunteerPos: null, open: null, familyGroup: null,
+    privateMode: false, signal: 'no_signal', scoutRun: 0, scoutAlert: false, lastSignalAt: null, lang: 'en', volunteerPos: null, open: null, familyGroup: null, warning: null, myPos: null, myPickup: null,
   };
 }
 

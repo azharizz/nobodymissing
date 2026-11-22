@@ -128,3 +128,31 @@ test('family search: describe the person; spelling variants find them', async ({
   await expect(page.getByText(/Looking for: Hasan Basri/)).toBeVisible();
   await expect(page.locator('.family-hit', { hasText: 'Pak Hasan Basri' })).toContainText('Same name');
 });
+
+test('first hours: warning in plain words, the higher place, pickup reaches the staff map, check-in at the door', async ({ page }) => {
+  await page.goto('/#/public');
+  await page.getByRole('button', { name: /Go to safety/ }).click();
+  await page.getByRole('button', { name: /Use example warning/ }).click();
+  await page.getByRole('button', { name: /Make it plain/ }).click();
+  await expect(page.locator('.warn-hero')).toContainText('Flood warning');
+  await expect(page.locator('.warn-hero.rose')).toBeVisible();                       // evakuasi segera -> go now
+  await expect(page.locator('.dest')).toContainText('Masjid Jami');
+  await page.getByRole('button', { name: /Show the way/ }).click();
+  await expect(page.locator('.navbar')).toContainText(/Walk \d+ m/);
+  await page.goto('/#/public/pickup');
+  await page.getByLabel('I need pickup').fill('Ibu saya tidak bisa jalan, perlu insulin');
+  await page.getByRole('button', { name: 'Ask', exact: true }).click();
+  await expect(page.locator('.answer')).toContainText("Can't walk");
+  await expect(page.locator('.answer')).toContainText('Insulin');
+  await page.getByRole('button', { name: /Send pickup request/ }).click();
+  await expect(page.getByText(/Kit sends it the moment any signal appears/)).toBeVisible();
+  await expect(page.locator('.qr-show img')).toBeVisible();
+  await page.goto('/#/public');
+  await expect(page.locator('.alert-banner')).toContainText('Go now');
+  await page.goto('/#/staff/checkin');
+  await page.getByLabel('Check-in').fill('Hasan Basri, 82, tidak bisa dengar, pakai insulin');
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(page.locator('.chip.toggle.on')).toHaveCount(2);                       // hard of hearing + needs meds (keywords)
+  await page.getByRole('button', { name: /Confirm · next/ }).click();
+  await expect(page.getByText(/Added to "tell in person"/)).toBeVisible();
+});

@@ -207,4 +207,46 @@ describe('features (wired by FeatureFactory with test adapters)', () => {
     expect(inf.calls.find(c => c.task === 'family_query')!.mode).toBe('only_on_device');
     expect(inf.calls.find(c => c.task === 'name_variants')!.text).toBe('Nurhayati'); // only the name leaves
   });
+
+  it('first hours: warning on the phone, the higher place offline, pickup waits for signal, staff see it ranked', async () => {
+    const { f, inf, sync } = await setup(r => ({ raw: r.task === 'warning_plain' ? '{"hazard":"flood","level":"prepare","plain":"River rising."}' : r.task === 'pickup_request' ? '{"who":"Ibu saya","mobility":1,"needs":[],"people":1}' : '{}', source: 'device' }));
+    const w = await f.first.warn('Warga bantaran diminta evakuasi segera, banjir.');
+    expect(w).toMatchObject({ hazard: 'flood', level: 'go_now', by: 'device' });           // go-now words beat the model
+    expect(inf.calls[0].mode).toBe('prefer_on_device');
+    f.first.setPos({ lat: 4.2815, lng: 98.0565 });                                          // real low ground in Kuala Simpang
+    expect(f.first.destination()).toMatchObject({ name: "Masjid Jami' al Chairitah", direction: 'N', gps: true });
+    const p = await f.first.understandPickup('Ibu saya tidak bisa jalan, perlu insulin');
+    expect(p).toMatchObject({ mobility: 3, needs: ['insulin'], by: 'device' });           // mobility only goes up
+    expect(inf.calls.find(c => c.task === 'pickup_request')!.mode).toBe('only_on_device');
+    const rec = f.first.sendPickup(p);
+    expect(sync.docs.size).toBe(0);                                                         // no signal yet
+    f.store.set(s => ({ ...s, signal: 'back' })); await f.queue.flush();
+    const path = [...sync.docs.keys()].find(k => k.includes('/pickups/'))!;
+    expect(path).toMatch(/^shelters\/[^/]+\/pickups\//);
+    // Staff phone of that shelter
+    const staff = await setup();
+    (staff.f.store as any).set((s: any) => ({ ...s, signal: 'back', shelter: { id: path.split('/')[1], name: 'x' } }));
+    expect(staff.f.first.importPickup(rec)).toBe(true);
+    expect(staff.f.first.importPickup(rec)).toBe(false);                                   // no duplicates
+    const row = staff.f.views.field().find(r => r.id === `pk-${rec.id}`)!;
+    expect(row.tier).toBe('P1');
+  });
+
+  it('first hours: latest official warning uses Google Search grounding (cloud, rounded location)', async () => {
+    const { f, inf } = await setup(() => ({ raw: '{"hazard":"flood","level":"go_now","plain":"Leave now.","source":"BPBD"}', source: 'cloud', places: [{ title: 'bpbd.go.id', uri: 'https://bpbd.go.id/x' }] }));
+    expect(await f.first.latest()).toBe('offline');
+    f.store.set(s => ({ ...s, signal: 'back', myPos: { lat: 4.281234, lng: 98.056789 } }));
+    expect(await f.first.latest()).toBe('done');
+    expect(inf.calls[0]).toMatchObject({ grounding: 'search', location: { lat: 4.28, lng: 98.06 }, mode: 'only_in_cloud' });
+    expect(f.store.get().warning).toMatchObject({ level: 'go_now', by: 'cloud', sources: [{ uri: 'https://bpbd.go.id/x' }] });
+  });
+
+  it('check-in at the door: spoken sentence on the device, keyword flags never dropped, joins reach list', async () => {
+    const { f, inf } = await setup(() => ({ raw: '{"name":"Hasan Basri","age":82,"flags":["hard_of_hearing"]}', source: 'device' }));
+    const c = await f.first.understandCheckin('Hasan Basri, 82, tidak bisa dengar, pakai insulin');
+    expect(c).toMatchObject({ name: 'Hasan Basri', age: 82, flags: ['hard_of_hearing', 'needs_meds'], by: 'device' });
+    expect(inf.calls[0].mode).toBe('only_on_device');
+    const id = f.first.checkin(c);
+    expect(f.views.reach().list.find(r => r.id === id)).toBeTruthy();
+  });
 });

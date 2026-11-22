@@ -17,6 +17,13 @@ const stranger = () => env.authenticatedContext('someone').firestore();
 const anon = () => env.unauthenticatedContext().firestore();
 
 describe('firestore.rules', () => {
+  it('pickups: anyone may ask, only shelter members can read', async () => {
+    const ok = { id: 'p1', who: 'Ibu Nur', lat: 4.28, lng: 98.05, mobility: 3, needs: ['insulin'], people: 1, at: 1 };
+    await assertSucceeds(setDoc(doc(stranger(), 'shelters/SD3/pickups/p1'), ok));
+    await assertFails(getDoc(doc(stranger(), 'shelters/SD3/pickups/p1')));
+    await assertSucceeds(getDoc(doc(staff(), 'shelters/SD3/pickups/p1')));
+    await assertFails(setDoc(doc(stranger(), 'shelters/SD3/pickups/p2'), { ...ok, phone: '0812' }));
+  });
   it('family group: minimal fields under a random family id only', async () => {
     await assertSucceeds(setDoc(doc(stranger(), 'families/f-8c1e2b7a9d4f4a51b2c3/members/m1'), { name: 'Cut', shelter: 'SD3', status: 'safe', at: 1 }));
     await assertSucceeds(getDoc(doc(stranger(), 'families/f-8c1e2b7a9d4f4a51b2c3/members/m1')));

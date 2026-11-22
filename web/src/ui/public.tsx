@@ -4,6 +4,7 @@ import { regionPack as pack } from '../features/regionData';
 import { distanceM, nearestHigher } from '../domain/regionPack';
 import type { Announcement } from '../features/state';
 import { fmt } from './i18n';
+import { GoNow, Way, PickupPage, CheckinCard } from './firstHours';
 import { Badge, cardIcon, greeting, Icon, Kit, MicButton, navigate, QR, QrScanner, SayButton, ShelterMap, useAppState, useF, useT } from './common';
 
 const go = (p: string) => navigate(`#/public/${p}`);
@@ -30,7 +31,7 @@ export function Public({ tab }: { tab: string }) {
   return (
     <div className="app public">
       <div key={tab} style={{ display: 'contents' }}>
-        {tab === 'help' ? <HelpPage /> : tab === 'map' ? <MapPage /> : tab === 'family' ? <Family /> : tab === 'ask' ? <AskKit /> : <Home />}
+        {tab === 'go' ? <GoNow /> : tab === 'way' ? <Way /> : tab === 'pickup' ? <PickupPage /> : tab === 'checkin' ? <CheckinCard /> : tab === 'help' ? <HelpPage /> : tab === 'map' ? <MapPage /> : tab === 'family' ? <Family /> : tab === 'ask' ? <AskKit /> : <Home />}
       </div>
     </div>
   );
@@ -45,6 +46,7 @@ function Home() {
     <>
       <header className="ev-head"><Kit mood={latest ? 'idle' : 'sleep'} size={74} /><div className="greet"><small>{s.shelter.name}</small><b>{greeting(t)}</b></div><LangSwitch /></header>
       <main className="content">
+        {s.warning && s.warning.level !== 'advice' && <button className="alert-banner rise" onClick={() => go('go')}><Kit mood="alert" size={56} /><span className="grow"><b>{(t as Record<string, string>)[`hazard_${s.warning.hazard}`]} · {(t as Record<string, string>)[`level_${s.warning.level}`]}</b>{s.warning.plain}</span><Icon name="chevron" /></button>}
         {latest ? (
           <article className="news rise" aria-live="polite">
             <span className="eyebrow"><span className="live" />{t.now}</span>
@@ -57,6 +59,7 @@ function Home() {
         {rest.length > 0 && <div className="news-more">{rest.slice(0, 2).map(a => { const x = headline(a); return (
           <div key={a.id} className="row-card"><span className="sq honey" style={{ width: 44, height: 44, borderRadius: 14, display: 'grid', placeItems: 'center', background: 'var(--honey)', color: 'var(--honey-acc)' }}><Icon name={x.icon} /></span>
             <span className="grow"><b>{x.title}</b> <span>{[x.time, x.place].filter(Boolean).join(' · ')}</span></span></div>); })}</div>}
+        <BigBtn i={1} tone="rose" icon="warn" title={t.goSafety} sub={t.goSafetySub} onClick={() => go('go')} />
         <BigBtn i={1} tone="sky" icon="map" title={t.map} sub={t.mapSub} onClick={() => go('map')} />
         <BigBtn i={2} tone="rose" icon="help" title={t.needHelp} sub={t.needHelpSub} onClick={() => go('help')} />
         <BigBtn i={3} tone="sage" icon="family" title={t.myFamily} sub={t.myFamilySub} onClick={() => go('family')} />

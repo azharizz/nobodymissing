@@ -12,6 +12,7 @@ import { createFamilyGroup } from './familyGroup';
 import { createFieldCheck, fieldList } from './fieldCheck';
 import { createInferenceRouter } from './inferenceRouter';
 import { createHybrid } from './hybrid';
+import { createFirstHours } from './firstHours';
 import { createQueue } from './queue';
 import { createRoster } from './roster';
 import { createScout } from './scout';
@@ -35,7 +36,8 @@ export function createFeatures(a: Adapters, rules: Rules = defaults, prompts: Re
   const medicine = createMedicine(d, queue.enqueue);
   const field = createFieldCheck(d, queue.enqueue);
   const familyGroup = createFamilyGroup(d);
-  const scout = createScout(d, async () => { await queue.flush(); await familyGroup.sync(); }, roster.processBatch);
+  const first = createFirstHours(d, queue.enqueue, roster);
+  const scout = createScout(d, async () => { await queue.flush(); await familyGroup.sync(); await first.syncPickups(); }, roster.processBatch);
   const family = createFamilySearch(d);
 
   const views = {
@@ -60,5 +62,5 @@ export function createFeatures(a: Adapters, rules: Rules = defaults, prompts: Re
     helpDone: (id: string) => store.set(s => ({ ...s, help: s.help.map(h => (h.id === id ? { ...h, done: true } : h)) })),
   };
 
-  return { env: a.env, prepareDevice: a.prepareDevice, store, router, rules, queue, roster, careCard, medicine, announcements, field, scout, family, familyGroup, hybrid, views, settings };
+  return { env: a.env, prepareDevice: a.prepareDevice, store, router, rules, queue, roster, careCard, medicine, announcements, field, scout, family, familyGroup, first, hybrid, views, settings };
 }

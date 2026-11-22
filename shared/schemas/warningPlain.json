@@ -1,0 +1,54 @@
+{
+  "type": "object",
+  "required": [
+    "hazard",
+    "level",
+    "plain"
+  ],
+  "properties": {
+    "hazard": {
+      "type": "string",
+      "enum": [
+        "flood",
+        "landslide",
+        "tsunami",
+        "earthquake",
+        "fire",
+        "other"
+      ]
+    },
+    "level": {
+      "type": "string",
+      "enum": [
+        "advice",
+        "prepare",
+        "go_now"
+      ]
+    },
+    "plain": {
+      "type": "string",
+      "maxLength": 160
+    },
+    "action": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 90
+    },
+    "source": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 80
+    },
+    "issuedAt": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 40
+    }
+  }
+}

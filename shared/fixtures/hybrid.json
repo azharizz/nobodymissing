@@ -506,5 +506,211 @@
         "place": null
       }
     }
+  ],
+  "warning": [
+    {
+      "name": "AI says prepare but the warning says evakuasi segera: go now wins",
+      "input": {
+        "text": "BPBD Aceh Tamiang: debit air Sungai Tamiang naik, warga bantaran diminta evakuasi segera.",
+        "ai": {
+          "hazard": "flood",
+          "level": "prepare",
+          "plain": "River water is rising.",
+          "action": "Get ready"
+        }
+      },
+      "expected": {
+        "hazard": "flood",
+        "level": "go_now",
+        "plain": "River water is rising.",
+        "action": "Get ready",
+        "by": "device"
+      }
+    },
+    {
+      "name": "no model: hazard and level from words, original first sentence",
+      "input": {
+        "text": "Awas banjir! Air naik di Kuala Simpang. Segera naik ke tempat tinggi.",
+        "ai": null
+      },
+      "expected": {
+        "hazard": "flood",
+        "level": "go_now",
+        "plain": "Awas banjir!",
+        "action": null,
+        "by": "keywords"
+      }
+    },
+    {
+      "name": "no model, no keywords: prepare, other",
+      "input": {
+        "text": "Harap tetap waspada malam ini.",
+        "ai": null
+      },
+      "expected": {
+        "hazard": "other",
+        "level": "prepare",
+        "plain": "Harap tetap waspada malam ini.",
+        "action": null,
+        "by": "keywords"
+      }
+    }
+  ],
+  "checkinRules": [
+    {
+      "input": "Hasan Basri, 82, tidak bisa dengar, pakai insulin",
+      "expected": {
+        "name": "Hasan Basri",
+        "age": 82,
+        "flags": [
+          "hard_of_hearing",
+          "needs_meds"
+        ]
+      }
+    },
+    {
+      "input": "Rina Marlina 45 tuli",
+      "expected": {
+        "name": "Rina Marlina",
+        "age": 45,
+        "flags": [
+          "deaf"
+        ]
+      }
+    },
+    {
+      "input": "Cut Nurlaila, hamil, bawa bayi",
+      "expected": {
+        "name": "Cut Nurlaila",
+        "age": null,
+        "flags": [
+          "pregnant",
+          "infant"
+        ]
+      }
+    }
+  ],
+  "checkinMerge": [
+    {
+      "name": "AI forgot a flag the words clearly say: kept",
+      "input": {
+        "ai": {
+          "name": "Hasan Basri",
+          "age": 82,
+          "flags": [
+            "hard_of_hearing"
+          ]
+        },
+        "text": "Hasan Basri, 82, tidak bisa dengar, pakai insulin"
+      },
+      "expected": {
+        "name": "Hasan Basri",
+        "age": 82,
+        "flags": [
+          "hard_of_hearing",
+          "needs_meds"
+        ],
+        "by": "device"
+      }
+    }
+  ],
+  "pickupRules": [
+    {
+      "input": "Ibu saya tidak bisa jalan, perlu insulin",
+      "expected": {
+        "who": "Ibu saya tidak bisa jalan",
+        "mobility": 3,
+        "needs": [
+          "insulin"
+        ],
+        "people": 1
+      }
+    },
+    {
+      "input": "Ayah saya pakai kursi roda, perlu oksigen",
+      "expected": {
+        "who": "Ayah saya pakai kursi roda",
+        "mobility": 2,
+        "needs": [
+          "oxygen",
+          "wheelchair"
+        ],
+        "people": 1
+      }
+    }
+  ],
+  "pickupMerge": [
+    {
+      "name": "mobility and needs only go up",
+      "input": {
+        "ai": {
+          "who": "my mother",
+          "mobility": 1,
+          "needs": [
+            "daily_meds"
+          ],
+          "people": 1
+        },
+        "text": "Ibu saya tidak bisa jalan, perlu insulin"
+      },
+      "expected": {
+        "who": "my mother",
+        "mobility": 3,
+        "needs": [
+          "daily_meds",
+          "insulin"
+        ],
+        "people": 1,
+        "by": "device"
+      }
+    }
+  ],
+  "checkinQr": [
+    {
+      "input": {
+        "name": "Rina Marlina",
+        "age": 45,
+        "flags": [
+          "deaf"
+        ]
+      },
+      "expected": "NMC1|Rina Marlina|45|deaf"
+    },
+    {
+      "input": {
+        "name": "Nur|Hayati",
+        "age": null,
+        "flags": []
+      },
+      "expected": "NMC1|NurHayati||"
+    }
+  ],
+  "checkinQrReject": [
+    "NMC1||45|deaf",
+    "NMC1|Rina|200|deaf",
+    "NMC1|Rina|45|superpower",
+    "hello"
+  ],
+  "pickupQr": [
+    {
+      "input": {
+        "id": "p1",
+        "lat": 4.2815,
+        "lng": 98.0565,
+        "mobility": 3,
+        "needs": [
+          "insulin"
+        ],
+        "people": 1,
+        "at": 1000,
+        "who": "Ibu Nur"
+      },
+      "expected": "NMP1|p1|4.2815|98.0565|3|insulin|1|1000|Ibu Nur"
+    }
+  ],
+  "pickupQrReject": [
+    "NMP1|p1|99|98|3|insulin|1|1|x",
+    "NMP1|p1|4.2|98.0|9|insulin|1|1|x",
+    "NMP1|p1|4.2|98.0|3|laser|1|1|x"
   ]
 }

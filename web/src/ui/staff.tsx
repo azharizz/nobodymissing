@@ -5,8 +5,9 @@ import type { RouteResult } from '../features/inferenceRouter';
 import type { ImageInput } from '../ports';
 import type { Person } from '../features/state';
 import { fmt } from './i18n';
-import { Badge, canvasImage, Empty, greeting, Icon, Kit, MicButton, navigate, PhotoPick, QR, RouteNotice, ShelterMap, useAppState, useSpeaker, useF, useT, type T } from './common';
+import { Badge, canvasImage, Empty, greeting, Icon, Kit, MicButton, navigate, PhotoPick, QR, QrScanner, RouteNotice, ShelterMap, useAppState, useSpeaker, useF, useT, type T } from './common';
 import { headline } from './public';
+import { decodeCheckinQr, decodePickupQr } from '../domain/firstHours';
 
 const go = (p: string) => navigate(`#/staff/${p}`);
 const nice = (s: string) => s.replace(/_/g, ' ');
@@ -25,7 +26,7 @@ export function Staff({ path }: { path: string[] }) {
     <div className="app staff">
       {s.scoutAlert && <ScoutAlert />}
       <div key={screen + (arg ?? '')} style={{ display: 'contents' }}>
-        {screen === 'map' ? <FieldMap /> : screen === 'announce' ? <Announce /> : screen === 'people' ? <People /> : screen === 'person' ? <CareCard id={arg} />
+        {screen === 'checkin' ? <CheckIn /> : screen === 'map' ? <FieldMap /> : screen === 'announce' ? <Announce /> : screen === 'people' ? <People /> : screen === 'person' ? <CareCard id={arg} />
           : screen === 'review' ? <Review /> : screen === 'round' ? <Round /> : screen === 'settings' ? <Settings /> : <Now />}
       </div>
       <TabBar on={screen} />
@@ -40,7 +41,7 @@ function TabBar({ on }: { on: string }) {
     <nav className="tabbar" aria-label="Staff">
       {tab('now', 'home', t.tabNow)}{tab('map', 'map', t.map)}
       <button className="cam" aria-label={t.tabCamera} onClick={() => go('camera')}><Icon name="camera" size={30} /></button>
-      {tab('announce', 'announce', t.announce)}{tab('people', 'people', t.people)}
+      {tab('checkin', 'door', t.checkIn)}{tab('people', 'people', t.people)}
     </nav>
   );
 }
@@ -101,7 +102,7 @@ function Now() {
         </div>
       </header>
       <main className="content" style={{ paddingTop: 18 }}>
-        <div className="list-h"><b>{t.needsYouNow}</b><span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>
+        <div className="list-h"><b>{t.needsYouNow}</b><button className="chip" onClick={() => go('announce')}><Icon name="announce" size={16} />{t.announce}</button></div>
         {shown.map((x, i) => <div key={i} className="rise" style={{ '--d': i } as CSSProperties}>{x}</div>)}
         {tasks.length > 4 && <button className="btn link" onClick={() => setMore(!more)}>{more ? t.seeLess : fmt(t.seeMore, { n: tasks.length - 4 })}</button>}
         {tasks.length === 0 && (s.people.length ? <Empty mood="idle">{t.allClear}</Empty> : <Empty>{t.emptyShelter}</Empty>)}
@@ -419,7 +420,8 @@ function FieldMap() {
   const t = useT(), s = useAppState(), f = useF();
   const rows = f.views.field();
   const sel0 = location.hash.split('/')[3]?.split('?')[0];
-  const [sel, setSel] = useState<string | null>(sel0 ?? rows.find(r => r.status === 'unchecked')?.id ?? null);
+  const [sel, setSel] = useState<string | null>(sel0 ?? (rows.find(r => r.status === 'unchecked' && r.pickup) ?? rows.find(r => r.status === 'unchecked'))?.id ?? null);
+  const [scan, setScan] = useState(false);
   const sh = pack.shelters.find(x => x.id === s.shelter.id) ?? pack.shelters[0];
   const loc = (id: string) => s.field.find(e => e.id === id)?.location;
   const color = { P1: '#C4402B', P2: '#8A5A00', P3: '#5A6170' } as Record<string, string>;
@@ -427,7 +429,7 @@ function FieldMap() {
   const markers = [
     ...(hp ? [{ id: 'higher', lat: hp.lat, lng: hp.lng, icon: 'higher', color: '#2F7A52', label: t.higherPlace }] : []),
     { id: 'shelter', lat: sh.lat, lng: sh.lng, icon: 'home', color: '#1C2F4A', label: s.shelter.name },
-    ...rows.flatMap(r => { const l = loc(r.id); return l ? [{ id: r.id, ...l, icon: r.status === 'unchecked' ? (r.tier === 'P1' ? 'mobility' : 'pin') : 'check', color: r.status === 'unchecked' ? color[r.tier] : '#2F7A52', label: r.name, halo: r.tier === 'P1' && r.status === 'unchecked', sel: sel === r.id, onClick: () => setSel(r.id) }] : []; }),
+    ...rows.flatMap(r => { const l = loc(r.id); return l ? [{ id: r.id, ...l, icon: r.status === 'unchecked' ? (r.tier === 'P1' ? 'mobility' : 'pin') : 'check', color: r.status === 'unchecked' ? color[r.tier] : '#2F7A52', label: r.name.length > 16 ? r.name.slice(0, 15) + '…' : r.name, halo: r.tier === 'P1' && r.status === 'unchecked', sel: sel === r.id, onClick: () => setSel(r.id) }] : []; }),
   ];
   const row = rows.find(r => r.id === sel);
   const p1 = rows.filter(r => r.tier === 'P1' && r.status === 'unchecked').length;
@@ -435,19 +437,21 @@ function FieldMap() {
   return (
     <>
       <ShelterMap aspect={1} className="full" markers={markers}
-        chips={<><span className="chip"><i style={{ background: '#C4402B' }} />{t.visitFirst} · {p1}</span><span className="chip"><i style={{ background: '#B9D1E8' }} />{t.floodRisk}</span></>} />
+        chips={<><span className="chip"><i style={{ background: '#C4402B' }} />{t.visitFirst} · {p1}</span><button className="chip" onClick={() => setScan(!scan)}><Icon name="qr" size={16} />{t.scanPickup}</button></>} />
+      {scan && <div className="content" style={{ paddingBottom: 0 }}><QrScanner onText={x => { const p = decodePickupQr(x); if (p) { f.first.importPickup(p); setSel(`pk-${p.id}`); setScan(false); } return !!p; }} /></div>}
       <div className="sheet" style={{ paddingBottom: 120 }}>
         <span className="grab" />
         {row ? <>
           <div className="place"><span className="avatar rose">{initial(row.name)}</span>
-            <div className="tx"><span className={`prio ${row.tier.toLowerCase()}`}>{row.tier === 'P1' ? t.visitFirst.toUpperCase() : row.tier}</span>
+            <div className="tx"><span className={`prio ${row.tier.toLowerCase()}`}>{row.pickup ? t.pickupFirst : row.tier === 'P1' ? t.visitFirst.toUpperCase() : row.tier}</span>
               <b className="h" style={{ fontSize: 22, marginTop: 4 }}>{row.name}{row.person.age ? `, ${row.person.age}` : ''}</b>
               <span>{[row.distanceM != null ? `${row.distanceM} m` : null, fmt(t.lastChecked, { when: hours(row.id) })].filter(Boolean).join(' · ')}</span></div>
             {row.needsReview && <Badge draft />}</div>
-          <div className="risk">{row.why.map(w => <span key={w} className="pill urgent">{w}</span>)}</div>
+          <div className="risk">{row.pickup?.needs.map(n => <span key={n} className="pill urgent">{(t as Record<string, string>)[`need_${n}`] ?? n}</span>)}{row.why.map(w => <span key={w} className="pill urgent">{w}</span>)}</div>
           {row.higher && <div className="higher"><Icon name="higher" />{fmt(t.higherFor, { name: row.higher.name, m: row.higher.distanceM, dir: row.higher.direction })}</div>}
           <div className="cta" style={{ gridTemplateColumns: '1fr 1fr' }}>
-            <button className="btn" onClick={() => { f.field.visited(row.id, 'safe_home'); setSel(rows.find(r => r.id !== row.id && r.status === 'unchecked')?.id ?? null); }}><Icon name="check" />{t.safeAtHome}</button>
+            {row.pickup ? <button className="btn primary" onClick={() => f.field.visited(row.id, 'moved_to_shelter')}><Icon name="check" />{t.pickedUp}</button> :
+            <button className="btn" onClick={() => { f.field.visited(row.id, 'safe_home'); setSel(rows.find(r => r.id !== row.id && r.status === 'unchecked')?.id ?? null); }}><Icon name="check" />{t.safeAtHome}</button>}
             <button className="btn danger" onClick={() => f.field.visited(row.id, 'needs_evacuation')}><Icon name="evacuate" />{t.needsEvacuation}</button>
           </div>
           <button className="btn primary" onClick={() => navigate('#/staff/camera?mode=report')}><Icon name="mic" />{t.report}</button>
@@ -455,6 +459,45 @@ function FieldMap() {
         </> : <Empty mood="idle">{t.allChecked}</Empty>}
         <FindOpen />
       </div>
+    </>
+  );
+}
+
+// ---------- Check-in at the door: one spoken sentence (or their card) per person, understood on this phone ----------
+function CheckIn() {
+  const t = useT(), s = useAppState(), f = useF();
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [scan, setScan] = useState(false);
+  const [c, setC] = useState<(Awaited<ReturnType<typeof f.first.understandCheckin>> & { card?: boolean }) | null>(null);
+  const [done, setDone] = useState<{ id: string; name: string; flags: string[] } | null>(null);
+  const count = s.people.filter(p => p.confirmedBy).length;
+  const reachFlags = f.rules.reachFlags as string[];
+  const confirm = () => { if (!c) return; const id = f.first.checkin(c); setDone({ id, name: c.name, flags: c.flags }); setC(null); setText(''); };
+  return (
+    <>
+      <header className="screen-top"><b>{t.checkIn}</b><span className="badge local"><Icon name="device" size={15} />{t.readsOnPhone}</span></header>
+      <main className="content">
+        <div className="count"><div><b>{count}</b><span> {t.checkedIn}</span></div><span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>
+        <div className="compose">
+          <textarea rows={2} value={text} placeholder={t.checkinHint} aria-label={t.checkIn} onChange={e => { setText(e.target.value); setC(null); }} />
+          <div className="tools"><MicButton onText={x => { setText(x); setC(null); }} />
+            <button className="round-btn ghost" aria-label={t.scanCard} onClick={() => setScan(!scan)}><Icon name="qr" /></button>
+            <button className="btn primary" style={{ flex: 1 }} disabled={!text.trim() || busy} onClick={async () => { setBusy(true); setC(await f.first.understandCheckin(text)); setBusy(false); }}><Icon name="sparkle" className={busy ? 'spin' : ''} />{t.add}</button></div>
+        </div>
+        {scan && <QrScanner onText={x => { const card = decodeCheckinQr(x); if (card) { setC({ ...card, by: 'keywords', card: true }); setScan(false); } return !!card; }} />}
+        {c && <div className="card rise">
+          <div className="field-row"><label className="field">Name<input value={c.name} onChange={e => setC({ ...c, name: e.target.value })} /></label>
+            <label className="field">Age<input inputMode="numeric" value={c.age ?? ''} onChange={e => setC({ ...c, age: e.target.value ? Number(e.target.value.replace(/\D/g, '')) : null })} /></label></div>
+          <div className="chips">{FLAGS.map(fl => <button key={fl} className={`chip toggle ${c.flags.includes(fl) ? 'on' : ''}`} onClick={() => setC({ ...c, flags: c.flags.includes(fl) ? c.flags.filter(x => x !== fl) : [...c.flags, fl] })}>{nice(fl)}</button>)}</div>
+          {c.card ? <span className="badge kw"><Icon name="qr" size={15} />{t.fromCard}</span> : <span className={`badge ${c.by === 'device' ? 'local' : 'kw'}`}><Icon name={c.by === 'device' ? 'device' : 'keywords'} size={15} />{c.by === 'device' ? t.readOnPhone : t.keywordsOnly}</span>}
+          <div className="cta"><button className="btn" onClick={() => setC(null)}><Icon name="x" />{t.close}</button><button className="btn primary" disabled={!c.name.trim()} onClick={confirm}><Icon name="check" />{t.confirmNext}</button></div>
+        </div>}
+        {done && <div className="card rise"><b className="h" style={{ fontSize: 18 }}>{done.name}</b>
+          <div className="auto">{done.flags.some(x => reachFlags.includes(x)) && <div><Icon name="check" size={18} />{t.addedTell}</div>}
+            {done.flags.includes('needs_meds') && <button className="btn link" onClick={() => navigate(`#/staff/camera?mode=medicine&person=${done.id}`)}><Icon name="medicine" size={18} />{t.addedMeds}</button>}</div></div>}
+        <button className="btn" onClick={() => navigate('#/staff/camera?mode=list')}><Icon name="camera" />{t.paperList}</button>
+      </main>
     </>
   );
 }
@@ -471,7 +514,7 @@ function Announce() {
   const h = a && headline(a);
   return (
     <>
-      <header className="screen-top"><b>{t.announce}</b><a className="chip" href="#/big"><Icon name="announce" size={16} />Big Screen</a></header>
+      <header className="screen-top"><button className="round-btn" aria-label={t.back} onClick={() => go('now')}><Icon name="back" /></button><b>{t.announce}</b><a className="chip" href="#/big"><Icon name="announce" size={16} />Big Screen</a></header>
       <main className="content">
         <div className="compose">
           <textarea rows={2} value={text} placeholder={t.typeOrSpeak} aria-label={t.typeOrSpeak} onChange={e => setText(e.target.value)} />
