@@ -17,7 +17,7 @@ export function createHybrid(d: Deps, enqueue: (type: string, payload: unknown, 
   const setCheck = (personId: string, check: MedCheck) =>
     d.store.set(s => ({ ...s, cards: s.cards.map(c => (c.personId === personId ? { ...c, check } : c)) }));
 
-  async function checkMeds(personId: string, fromQueue = false): Promise<'done' | 'queued' | 'failed'> {
+  async function checkMeds(personId: string, fromQueue = false): Promise<'done' | 'queued' | 'failed' | 'blocked'> {
     const card = d.store.get().cards.find(c => c.personId === personId);
     if (!card?.meds.length) return 'failed';
     const input = medCheckInput(card.meds);
@@ -31,7 +31,7 @@ export function createHybrid(d: Deps, enqueue: (type: string, payload: unknown, 
       if (!fromQueue) enqueue('med_check', { personId }, null);
       return 'queued';
     }
-    return 'failed';
+    return r.status === 'blocked' ? 'blocked' : 'failed';
   }
 
   /** The device decides where it is; only a rounded point (about 1 km) goes to the cloud. */

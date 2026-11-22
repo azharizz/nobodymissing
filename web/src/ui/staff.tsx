@@ -324,13 +324,16 @@ function MedCheckCard({ personId }: { personId: string }) {
   const t = useT(), f = useF(), s = useAppState();
   const [busy, setBusy] = useState(false);
   const c = s.cards.find(x => x.personId === personId)?.check;
-  const run = async () => { setBusy(true); await f.hybrid.checkMeds(personId); setBusy(false); };
+  const [res, setRes] = useState('');
+  const run = async () => { setBusy(true); setRes(await f.hybrid.checkMeds(personId)); setBusy(false); };
   const status = (name: string) => c?.cross.find(x => x.name === name);
   return (
     <div className="card rise">
       <div className="list-h" style={{ paddingTop: 0 }}><b><Icon name="sparkle" />{t.checkTitle}</b>{c && !c.pending && <Badge source="cloud" />}</div>
       {!c && <p className="note"><Icon name="lock" size={16} />{t.checkWhy}</p>}
       {c?.pending && <p className="note"><Icon name="clock" size={16} />{t.checkWaiting}</p>}
+      {res === 'blocked' && <p className="note" role="alert"><Icon name="lock" size={16} />{t.blocked}</p>}
+      {res === 'failed' && <p className="note" role="alert">{t.cloudFailed}</p>}
       {c && !c.pending && <>
         {c.items.map(it => { const x = status(it.name); return (
           <div key={it.name} className="check-item">

@@ -430,6 +430,7 @@ fun MedCheckCard(ui: Ui, personId: String) {
     val f = ui.f
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
+    var checkRes by remember { mutableStateOf("") }
     val c = f.medChecks[personId]
     CardBox {
         Row(verticalAlignment = Alignment.CenterVertically) { Ic(ui.icons, "sparkle", 22.dp); Spacer(Modifier.width(8.dp)); H(f.t("checkTitle"), 20.sp, modifier = Modifier.weight(1f)); if (c != null && !c.pending) Badge(ui, "cloud") }
@@ -457,7 +458,8 @@ fun MedCheckCard(ui: Ui, personId: String) {
             c.interactions.forEach { x -> Row(verticalAlignment = Alignment.CenterVertically) { Pill(x.severity, if (x.severity == "high") NM.Rose else NM.AmberSoft, if (x.severity == "high") NM.RoseInk else NM.AmberInk); Spacer(Modifier.width(8.dp)); P("${x.a} + ${x.b}${x.note?.let { ": $it" } ?: ""}", 15.sp) } }
             Note(ui, "doctor", f.t("forPharmacist"))
         }
-        Btn(ui, f.t("checkCloud"), "cloud", enabled = !busy, full = true) { busy = true; scope.launch { f.checkMeds(personId); busy = false } }
+        Btn(ui, f.t("checkCloud"), "cloud", enabled = !busy, full = true) { busy = true; scope.launch { checkRes = f.checkMeds(personId); busy = false } }
+        if (checkRes == "blocked") Note(ui, "lock", f.t("blocked")) else if (checkRes == "failed") Note(ui, "info", f.t("cloudFailed"))
     }
 }
 

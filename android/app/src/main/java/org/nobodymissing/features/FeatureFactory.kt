@@ -184,7 +184,7 @@ class Features(val adapters: Adapters, val shared: Shared) {
             return "done"
         }
         if (r.status == "queued") { medChecks[personId] = MedCheckUi(emptyList(), emptyList(), emptyList(), true); pendingChecks += personId; return "queued" }
-        return "failed"
+        return if (r.status == "blocked") "blocked" else "failed"
     }
 
     /** 2 · Find it open: Grounding with Google Maps near a rounded shelter location; only places Google Maps returned. */
