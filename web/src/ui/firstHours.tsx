@@ -34,7 +34,7 @@ export function GoNow() {
             <span className="eyebrow"><span className="live" />{tr(t, `hazard_${w.hazard}`)}</span></div>
           <h2>{w.plain}</h2>
           <p>{w.action ?? tr(t, `level_${w.level}`)} {t.takeMeds}</p>
-          <span className={`badge ${w.by === 'device' ? 'local' : w.by === 'cloud' ? 'cloud' : 'kw'}`}><Icon name={w.by === 'cloud' ? 'cloud' : w.by === 'device' ? 'device' : 'keywords'} size={15} />{w.by === 'device' ? t.plainOnPhone : w.by === 'cloud' ? t.officialCloud : t.plainByRules}</span>
+          <span className={`badge ${w.by === 'device' ? 'local' : w.by === 'cloud' ? 'cloud' : 'kw'}`}><Icon name={w.by === 'cloud' ? 'cloud' : w.by === 'device' ? 'device' : 'keywords'} size={15} />{w.by === 'device' ? t.plainOnPhone : w.by === 'cloud' ? (w.sources?.length ? t.officialCloud : t.plainInCloud) : t.plainByRules}</span>
           {w.by !== 'cloud' && w.text && <p className="orig">{t.original}: “{w.text}”</p>}
           {w.sources.map(x => <a key={x.uri} className="src" href={x.uri} target="_blank" rel="noreferrer">{x.title ?? x.uri}</a>)}
         </header>

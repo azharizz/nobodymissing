@@ -79,7 +79,7 @@ fun EvGo(ui: Ui) {
                 Row(verticalAlignment = Alignment.CenterVertically) { RoundBtn(ui, "back", f.t("back")) { ui.go("home") }; Spacer(Modifier.width(12.dp)); Kit(ui.kit, if (w.w.level == "go_now") Mood.ALERT else Mood.IDLE, 58.dp); Spacer(Modifier.width(10.dp)); Eyebrow(f.t("hazard_${w.w.hazard}")) }
                 H(w.w.plain, 30.sp)
                 P("${w.w.action ?: f.t("level_${w.w.level}")} ${f.t("takeMeds")}", 20.sp, bold = true)
-                Badge(ui, if (w.w.by == "keywords") "keywords" else w.w.by, text = f.t(when (w.w.by) { "device" -> "plainOnPhone"; "cloud" -> "officialCloud"; else -> "plainByRules" }))
+                Badge(ui, if (w.w.by == "keywords") "keywords" else w.w.by, text = f.t(when (w.w.by) { "device" -> "plainOnPhone"; "cloud" -> if (w.sources.isNotEmpty()) "officialCloud" else "plainInCloud"; else -> "plainByRules" }))
                 if (w.w.by != "cloud" && w.text.isNotBlank()) P("${f.t("original")}: “${w.text}”", 15.sp)
                 w.sources.forEach { s -> P(s.title ?: s.uri ?: "", 14.sp) }
             }
