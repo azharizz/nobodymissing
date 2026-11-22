@@ -236,14 +236,16 @@ export function ShelterMap({ markers, you, chips, aspect = 4 / 5, className = ''
   return (
     <div className={`map ${className}`} style={{ aspectRatio: String(aspect) }}>
       <svg className="base" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden>
-        <defs><pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#5E95CF" opacity=".18" /><rect width="3" height="8" fill="#2C5A8C" opacity=".35" /></pattern></defs>
+        <defs><filter id="soft" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="3" /></filter></defs>
         <rect width={W} height={H} fill="#EEEDE6" />
-        {tiles.map(tl => <image key={tl.url} href={tl.url} x={tl.x} y={tl.y} width={TILE} height={TILE} style={{ filter: 'saturate(.55) contrast(.95)' }} />)}
-        {g.hand.map((row, r) => row.map((hand, c) => {
-          if (hand > 5) return null;
+        {tiles.map(tl => <image key={tl.url} href={tl.url} x={tl.x} y={tl.y} width={TILE} height={TILE} style={{ filter: 'saturate(.6)' }} />)}
+        {/* Flood risk from real HAND (height above nearest drainage): the lower, the darker. Blurred so it reads as terrain, not squares. */}
+        <g filter="url(#soft)">{g.hand.map((row, r) => row.map((hand, c) => {
+          if (hand >= 5) return null;
           const [x0, y1] = xy(g.origin[1] + r * g.step, g.origin[0] + c * g.step), [x1, y0] = xy(g.origin[1] + (r + 1) * g.step, g.origin[0] + (c + 1) * g.step);
-          return <rect key={`${r}-${c}`} x={x0} y={y0} width={x1 - x0} height={y1 - y0} fill={hand < 2 ? 'rgba(44,90,140,.28)' : 'url(#hatch)'} />;
-        }))}
+          if (x1 < 0 || y1 < 0 || x0 > W || y0 > H) return null;
+          return <rect key={`${r}-${c}`} x={x0 - .5} y={y0 - .5} width={x1 - x0 + 1} height={y1 - y0 + 1} fill="#2C5A8C" opacity={hand < 1 ? .4 : hand < 2 ? .28 : .13} />;
+        }))}</g>
       </svg>
       {chips && <div className="chips">{chips}</div>}
       {you && <span className="you" style={pct(you)} aria-label={t.you} />}

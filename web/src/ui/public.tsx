@@ -140,20 +140,30 @@ function MapPage() {
 function Family() {
   const t = useT(), f = useF(), s = useAppState();
   const [q, setQ] = useState('');
-  const [res, setRes] = useState<Awaited<ReturnType<typeof f.family.search>> | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [res, setRes] = useState<Awaited<ReturnType<typeof f.family.smart>> | null>(null);
+  const go = async () => { if (!q.trim()) return; setBusy(true); setRes(await f.family.smart(q)); setBusy(false); };
   return (
     <>
       <Top title={t.myFamily} sub={t.everyShelter} />
       <main className="content">
-        <form className="search big" onSubmit={async e => { e.preventDefault(); if (q.trim()) setRes(await f.family.search(q)); }}>
-          <Icon name="search" size={28} /><input value={q} placeholder={t.search} aria-label={t.search} onChange={e => setQ(e.target.value)} />
-          <button className="btn primary small" type="submit">{t.search}</button>
-        </form>
+        <div className="ask-box">
+          <textarea rows={2} value={q} placeholder={t.lookForHint} aria-label={t.lookFor} onChange={e => setQ(e.target.value)} />
+          <div className="tools"><MicButton onText={setQ} /><button className="btn primary" style={{ flex: 1 }} disabled={!q.trim() || busy} onClick={go}><Icon name="search" className={busy ? 'spin' : ''} />{t.search}</button></div>
+        </div>
+        {res && <div className="card rise" style={{ gap: 8 }}>
+          <p><b className="h" style={{ fontSize: 18 }}>{t.lookingFor}: {res.name}</b>{res.age != null && <span className="muted"> · {fmt(t.aged, { n: res.age })}</span>}{res.place && <span className="muted"> · {fmt(t.fromPlace, { p: res.place })}</span>}</p>
+          {res.parsedBy === 'device' ? <span className="badge local"><Icon name="device" size={15} />{t.understoodOnPhone}</span> : <span className="badge kw"><Icon name="keywords" size={15} />{t.keywordsOnly}</span>}
+          {res.variants.length > 0 && <p className="muted">{t.spellings}: {res.variants.join(', ')} <span className={`badge ${res.variantsBy === 'cloud' ? 'cloud' : 'kw'}`} style={{ marginTop: 6 }}><Icon name={res.variantsBy === 'cloud' ? 'cloud' : 'device'} size={15} />{res.variantsBy === 'cloud' ? t.spellingsCloud : t.spellingsOffline}</span></p>}
+        </div>}
         {res && res.hits.length === 0 && <p className="h" style={{ fontSize: 22 }}>{t.notFound}</p>}
         {res?.hits.map((h, i) => (
           <div key={i} className="family-hit rise" style={{ '--d': i } as CSSProperties}><span className="avatar" style={{ width: 66, height: 66, fontSize: 28 }}>{h.name.replace(/^(Pak|Ibu|Bu|Bapak|Nenek|Kakek)\s+/i, '').slice(0, 1)}</span>
-            <div className="grow"><b>{h.name}</b><span>{h.ageBand} · {h.shelterId}</span><div style={{ marginTop: 8 }}><span className={`pill ${h.status === 'safe' ? 'safe' : 'warn'}`}><Icon name="check" size={16} />{h.status === 'safe' ? t.safe : h.status}</span></div></div></div>
+            <div className="grow"><b>{h.name}</b><span>{h.ageBand} · {h.shelterId}</span>
+              <div className="pills" style={{ marginTop: 8 }}><span className={`pill ${h.status === 'safe' ? 'safe' : 'warn'}`}><Icon name="check" size={16} />{h.status === 'safe' ? t.safe : h.status}</span>
+                <span className={`pill ${h.match === 'exact' ? '' : 'warn'}`}>{h.match === 'exact' ? t.matchExact : t.matchSpelling}</span></div></div></div>
         ))}
+        {res && res.hits.length > 0 && <p className="note"><Icon name="info" size={16} />{t.confirmWithStaff}</p>}
         {(!res || !res.cloud) && s.signal !== 'back' && <p className="note"><Icon name="device" size={16} />{t.offlineFamily}</p>}
         <FamilyGroup />
       </main>
@@ -170,7 +180,7 @@ function FamilyGroup() {
   const [scanning, setScanning] = useState(false);
   const [paste, setPaste] = useState('');
   const [msg, setMsg] = useState('');
-  const got = (text: string) => { const m = f.familyGroup.scan(text); setMsg(m ? fmt(t.linked, { name: m.name }) : t.badQr); if (m) { setScanning(false); setPaste(''); } return !!m; };
+  const got = (text: string) => { const m = f.familyGroup.scan(text); setMsg(m ? `${fmt(t.linked, { name: m.map(x => x.name).join(', ') })} ${t.scanBack}` : t.badQr); if (m) { setScanning(false); setPaste(''); setShow(true); } return !!m; };
   const ago = (at: number) => { const m = Math.round((Date.now() - at) / 60000); return m < 1 ? t.justNow : m < 60 ? fmt(t.minAgo, { n: m }) : fmt(t.hAgo, { n: Math.round(m / 60) }); };
   const row = (m: { id: string; name: string; shelter: string; status: string; at: number }, me = false) => (
     <div key={m.id} className="family-hit" style={{ padding: 14 }}><span className="avatar" style={me ? { background: 'var(--honey)', color: 'var(--honey-ink)' } : undefined}>{m.name.slice(0, 1).toUpperCase()}</span>
@@ -188,7 +198,7 @@ function FamilyGroup() {
         <button className="btn" disabled={!name.trim()} onClick={() => { if (!g || g.me.name !== name.trim()) f.familyGroup.setMe(name, g?.me.status ?? 'safe'); setShow(!show); setScanning(false); }}><Icon name="qr" />{t.showMyQr}</button>
         <button className="btn primary" disabled={!name.trim()} onClick={() => { if (!g) f.familyGroup.setMe(name, 'safe'); setScanning(!scanning); setShow(false); }}><Icon name="camera" />{t.scanFamilyQr}</button>
       </div>
-      {show && g && <div className="qr-show rise"><QR text={f.familyGroup.myQr()!} size={240} label={t.showMyQr} /><span className="muted">{g.me.name} · {g.me.shelter}</span></div>}
+      {show && g && <div className="qr-show rise"><QR text={f.familyGroup.myQr()!} size={260} label={t.showMyQr} /><span className="muted">{g.me.name} · {g.me.shelter}</span><span className="muted" style={{ textAlign: 'center' }}>{t.groupInQr}</span></div>}
       {scanning && <QrScanner onText={got} />}
       {scanning && <div className="tools"><input className="paste" value={paste} placeholder={t.pasteCode} aria-label={t.pasteCode} onChange={e => setPaste(e.target.value)} /><button className="btn small" disabled={!paste.trim()} onClick={() => got(paste)}>{t.import}</button></div>}
       {msg && <p className="note" role="status" style={{ color: 'var(--sage-ink)' }}><Icon name="info" size={16} />{msg}</p>}

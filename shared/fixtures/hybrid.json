@@ -257,39 +257,51 @@
   ],
   "familyQr": [
     {
-      "name": "round trip",
+      "name": "group round trip (first = the person showing it)",
       "input": {
         "fam": "f-8c1e2b7a9d4f4a51b2c3",
-        "me": {
-          "id": "m1",
-          "name": "Cut Nurlaila",
-          "shelter": "SD3",
-          "status": "safe",
-          "at": 1000
-        }
+        "members": [
+          {
+            "id": "m1",
+            "name": "Cut Nurlaila",
+            "shelter": "SD3",
+            "status": "safe",
+            "at": 1000
+          },
+          {
+            "id": "m2",
+            "name": "Teuku Hasballah",
+            "shelter": "MSJ1",
+            "status": "need_help",
+            "at": 900
+          }
+        ]
       },
-      "expected": "NMF1:f-8c1e2b7a9d4f4a51b2c3:m1:SD3:safe:1000:Cut Nurlaila"
+      "expected": "NMF2:f-8c1e2b7a9d4f4a51b2c3|m1,SD3,safe,1000,Cut Nurlaila|m2,MSJ1,need_help,900,Teuku Hasballah"
     },
     {
-      "name": "names with colons survive",
+      "name": "separators in names are dropped",
       "input": {
         "fam": "f-8c1e2b7a9d4f4a51b2c3",
-        "me": {
-          "id": "m2",
-          "name": "Teuku: Hasballah",
-          "shelter": "MSJ1",
-          "status": "need_help",
-          "at": 2000
-        }
+        "members": [
+          {
+            "id": "m3",
+            "name": "Nur, Hayati|x",
+            "shelter": "SD3",
+            "status": "safe",
+            "at": 5
+          }
+        ]
       },
-      "expected": "NMF1:f-8c1e2b7a9d4f4a51b2c3:m2:MSJ1:need_help:2000:Teuku: Hasballah"
+      "expected": "NMF2:f-8c1e2b7a9d4f4a51b2c3|m3,SD3,safe,5,Nur Hayatix"
     }
   ],
   "familyQrReject": [
     "hello",
-    "NMF1:short:m1:SD3:safe:1:x",
-    "NMF1:f-8c1e2b7a9d4f4a51b2c3:m1:SD3:dead:1:x",
-    "NMF2:f-8c1e2b7a9d4f4a51b2c3:m1:SD3:safe:1:x"
+    "NMF2:short|m1,SD3,safe,1,x",
+    "NMF2:f-8c1e2b7a9d4f4a51b2c3|m1,SD3,dead,1,x",
+    "NMF1:f-8c1e2b7a9d4f4a51b2c3:m1:SD3:safe:1:x",
+    "NMF2:f-8c1e2b7a9d4f4a51b2c3"
   ],
   "familyMerge": [
     {
@@ -351,6 +363,110 @@
           "at": 3
         }
       ]
+    }
+  ],
+  "nameVariantsOffline": [
+    {
+      "input": "M. Rizki",
+      "expected": [
+        "Muhammad Rizki",
+        "Muhamad Rizki",
+        "Mohammad Rizki",
+        "Muh. Rizki",
+        "M.Rizki"
+      ]
+    },
+    {
+      "input": "Nurhayati",
+      "expected": []
+    },
+    {
+      "input": "Teuku Hasballah",
+      "expected": [
+        "T. Hasballah",
+        "TeukuHasballah"
+      ]
+    }
+  ],
+  "variantSearch": [
+    {
+      "name": "exact first, then spelling matches; age filters far-off people",
+      "input": {
+        "name": "Nurhayati",
+        "variants": [
+          "Nur Hayati",
+          "Nurhayatie"
+        ],
+        "age": 80,
+        "records": [
+          {
+            "id": "a",
+            "name": "Nur Hayati",
+            "age": 82,
+            "shelterId": "MSJ1",
+            "status": "safe"
+          },
+          {
+            "id": "b",
+            "name": "Nurhayati",
+            "age": 34,
+            "shelterId": "SD3",
+            "status": "safe"
+          },
+          {
+            "id": "c",
+            "name": "Nurhayati",
+            "age": 79,
+            "shelterId": "SD1",
+            "status": "safe"
+          },
+          {
+            "id": "d",
+            "name": "Budi",
+            "age": 80,
+            "shelterId": "SD3",
+            "status": "safe"
+          }
+        ]
+      },
+      "expected": [
+        {
+          "name": "Nurhayati",
+          "shelterId": "SD1",
+          "match": "exact"
+        },
+        {
+          "name": "Nur Hayati",
+          "shelterId": "MSJ1",
+          "match": "spelling"
+        }
+      ]
+    }
+  ],
+  "lookForRules": [
+    {
+      "input": "My grandmother Nurhayati, about 80, from Sukajadi",
+      "expected": {
+        "name": "Nurhayati",
+        "age": 80,
+        "place": "Sukajadi"
+      }
+    },
+    {
+      "input": "nenek saya Nurhayati sekitar 80an dari Sukajadi",
+      "expected": {
+        "name": "Nurhayati",
+        "age": 80,
+        "place": "Sukajadi"
+      }
+    },
+    {
+      "input": "Teuku Hasballah",
+      "expected": {
+        "name": "Teuku Hasballah",
+        "age": null,
+        "place": null
+      }
     }
   ]
 }

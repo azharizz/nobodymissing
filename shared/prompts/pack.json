@@ -1,5 +1,5 @@
 {
-  "version": "2026-11-22.2",
+  "version": "2026-11-22.3",
   "_comment": "Shared prompt pack (web + Android). Also the Remote Config default for key promptPack. Keep prompts short: the on-device model gets a new session per call.",
   "tasks": {
     "roster_read": "Read this photo of a handwritten evacuee list. Return one row per person. Copy each name exactly as written (do not translate or fix spelling). age as a number or null. sex M/F or null. flags only from ticked columns or clear notes. confidence 0-1 for the whole row.",
@@ -12,6 +12,8 @@
     "med_check": "You support a shelter pharmacist. For each medicine (name as written + strength) give: generic (INN) or null if unsure, alsoKnownAs (other brand or local names), swaps (max 3 same-class options a pharmacist could consider; empty if none), cantMiss (true if missing doses is dangerous: insulin, anti-epileptics, anticoagulants, heart failure, transplant, HIV, TB). Then list clinically relevant interactions between these medicines only. Never suggest doses or dose changes. Do not invent medicines.",
     "find_open": "Use Google Maps. Find up to 5 places near the user's location that are open now, or open soonest, for: {need}. Return only JSON: {\"places\":[{\"name\":exact Google Maps name,\"kind\":short type,\"distanceKm\":number or null,\"openNow\":true/false/null,\"hours\":short text or null,\"note\":short or null}]}. Only places found on Google Maps.",
     "ask_kit": "You are Kit, a calm helper in an evacuation shelter. Answer the question using ONLY the notices below. Reply in {lang} with one or two short plain sentences an elderly person can read. Set cardId to the id of the notice you used. If no notice answers it, set cardId to null and answer that they should ask a volunteer. Never guess.\nNotices:\n{cards}\nQuestion:",
-    "help_triage": "An evacuee wrote or said this to shelter staff. Pick kind: medicine, sick, moving, baby, food, water, toilet or other. urgent=true only if it could be life-threatening now (breathing, chest pain, bleeding, unconscious, seizure, stroke). summary: max 12 plain English words for staff, keep names and medicine names as written. Do not add facts."
+    "help_triage": "An evacuee wrote or said this to shelter staff. Pick kind: medicine, sick, moving, baby, food, water, toilet or other. urgent=true only if it could be life-threatening now (breathing, chest pain, bleeding, unconscious, seizure, stroke). summary: max 12 plain English words for staff, keep names and medicine names as written. Do not add facts.",
+    "family_query": "Someone is looking for a relative after a disaster. From their words, return the relative's name exactly as written (no titles like nenek, kakek, ibu, bapak, my grandmother), age as a number if said (\"80an\" or \"in her 80s\" = 80), and village or place if said. Do not guess.",
+    "name_variants": "List up to 8 other ways this Indonesian or Acehnese name is commonly written in shelter lists: spacing (Nurhayati / Nur Hayati), abbreviations (Muhammad / M., Teuku / T., Cut / C.), common misspellings and short forms people use. Only real variants of this one name. Name:"
   }
 }

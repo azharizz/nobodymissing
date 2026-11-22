@@ -11,8 +11,10 @@ import medCheck from '../../../shared/schemas/medCheck.json';
 import findOpen from '../../../shared/schemas/findOpen.json';
 import askKit from '../../../shared/schemas/askKit.json';
 import helpTriage from '../../../shared/schemas/helpTriage.json';
+import familyQuery from '../../../shared/schemas/familyQuery.json';
+import nameVariants from '../../../shared/schemas/nameVariants.json';
 
-export const SCHEMAS = { roster, careCard, announcementCard, fieldReport, request, translation, medCheck, findOpen, askKit, helpTriage } as Record<string, Schema>;
+export const SCHEMAS = { roster, careCard, announcementCard, fieldReport, request, translation, medCheck, findOpen, askKit, helpTriage, familyQuery, nameVariants } as Record<string, Schema>;
 export type Schema = {
   type?: string | string[]; properties?: Record<string, Schema>; required?: string[]; items?: Schema;
   enum?: unknown[]; minimum?: number; maximum?: number; maxLength?: number; maxItems?: number;

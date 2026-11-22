@@ -16,7 +16,8 @@ export class MemorySync implements SyncPort {
   fail = false;
   async put(path: string, data: object) { if (this.fail) throw new Error('offline'); this.docs.set(path, data); }
   async list(collection: string) {
-    return [...this.docs].filter(([k]) => k.startsWith(collection + '/')).map(([, v]) => v as Record<string, unknown>);
+    // Like Firestore: direct children only, each with its document id.
+    return [...this.docs].filter(([k]) => k.startsWith(collection + '/') && !k.slice(collection.length + 1).includes('/')).map(([k, v]) => ({ ...(v as Record<string, unknown>), id: k.split('/').pop() }));
   }
 }
 

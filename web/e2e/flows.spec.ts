@@ -110,12 +110,21 @@ test('family group: link by QR code, see each other with status', async ({ page 
   await page.getByRole('button', { name: /Show my QR/ }).click();
   await expect(page.locator('.qr-show img')).toBeVisible();
   await page.getByRole('button', { name: /Scan family QR/ }).click();
-  await page.getByLabel('Or paste the code').fill(`NMF1:f-8c1e2b7a9d4f4a51b2c3:m9:MSJ1:need_help:${Date.now()}:Teuku Hasballah`);
+  await page.getByLabel('Or paste the code').fill(`NMF2:f-8c1e2b7a9d4f4a51b2c3|m9,MSJ1,need_help,${Date.now()},Teuku Hasballah|m8,SD1,safe,${Date.now()},M. Rizki`);
   await page.getByRole('button', { name: 'Import' }).click();
-  await expect(page.getByText('Linked with Teuku Hasballah')).toBeVisible();
+  await expect(page.getByText(/Linked with Teuku Hasballah, M. Rizki/)).toBeVisible();
   await expect(page.locator('.family-hit', { hasText: 'Teuku Hasballah' })).toContainText('Needs help');
   await page.getByRole('button', { name: /Scan family QR/ }).click(); // scanning closes after a successful link
   await page.getByLabel('Or paste the code').fill('not a family code');
   await page.getByRole('button', { name: 'Import' }).click();
   await expect(page.getByText(/not a family QR/)).toBeVisible();
+});
+
+test('family search: describe the person; spelling variants find them', async ({ page }) => {
+  await page.goto('/#/staff/people');
+  await page.goto('/#/public/family');
+  await page.getByLabel('Name, or describe who you are looking for').fill('My grandfather Hasan Basri, about 80');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await expect(page.getByText(/Looking for: Hasan Basri/)).toBeVisible();
+  await expect(page.locator('.family-hit', { hasText: 'Pak Hasan Basri' })).toContainText('Same name');
 });

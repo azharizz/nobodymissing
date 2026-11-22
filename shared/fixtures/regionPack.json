@@ -3,29 +3,29 @@
   "handCases": [
     {
       "input": {
-        "lat": 4.2335,
-        "lng": 98.0005
+        "lat": 4.2815,
+        "lng": 98.0565
       },
-      "expected": 2.6
+      "expected": 0.5
     },
     {
       "input": {
-        "lat": 4.255,
-        "lng": 98.025
+        "lat": 4.2685,
+        "lng": 98.0585
       },
-      "expected": 15.0
+      "expected": 8.4
     },
     {
       "input": {
-        "lat": 4.242,
-        "lng": 98.012
+        "lat": 4.2925,
+        "lng": 98.0645
       },
-      "expected": 8.5
+      "expected": 0
     },
     {
       "input": {
-        "lat": 5.0,
-        "lng": 98.0
+        "lat": 5,
+        "lng": 98
       },
       "expected": null
     }
@@ -33,16 +33,30 @@
   "higherCases": [
     {
       "input": {
-        "lat": 4.2335,
-        "lng": 98.0005,
+        "lat": 4.2815,
+        "lng": 98.0565,
         "event": "flood"
       },
       "expected": {
-        "id": "SD1",
-        "name": "SD 1 school (2nd floor)",
-        "distanceM": 2523,
-        "direction": "NE",
-        "handGain": 5.9
+        "id": "osm-w1455477048",
+        "name": "Masjid Jami' al Chairitah",
+        "distanceM": 477,
+        "direction": "N",
+        "handGain": 4.5
+      }
+    },
+    {
+      "input": {
+        "lat": 4.28393,
+        "lng": 98.0613,
+        "event": "flood"
+      },
+      "expected": {
+        "id": "osm-w1455477048",
+        "name": "Masjid Jami' al Chairitah",
+        "distanceM": 446,
+        "direction": "NW",
+        "handGain": 2.5
       }
     }
   ]

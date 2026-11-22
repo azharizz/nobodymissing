@@ -146,6 +146,20 @@
       "schema": "helpTriage",
       "model": "cloudLite",
       "_comment": "An evacuee's own words about their health: on this phone only. No device model -> keyword rules (no AI), never the cloud."
+    },
+    "family_query": {
+      "sensitive": true,
+      "cloudOnly": false,
+      "schema": "familyQuery",
+      "model": "cloudLite",
+      "_comment": "Words about a missing relative stay on this phone; no device model -> the words are used as the name."
+    },
+    "name_variants": {
+      "sensitive": false,
+      "cloudOnly": true,
+      "schema": "nameVariants",
+      "model": "cloudAccurate",
+      "_comment": "Only the name goes out (it is already in the public family index). Offline -> deterministic spelling rules."
     }
   },
   "fieldPriority": {
@@ -215,5 +229,30 @@
     "tiles": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     "attribution": "© OpenStreetMap contributors",
     "maxZoom": 17
+  },
+  "nameRules": {
+    "M.": [
+      "Muhammad",
+      "Muhamad",
+      "Mohammad",
+      "Muh."
+    ],
+    "T.": [
+      "Teuku"
+    ],
+    "Cut": [
+      "C."
+    ],
+    "Nyak": [],
+    "Hj.": [
+      "Hajjah",
+      "Haji"
+    ],
+    "Abd.": [
+      "Abdul"
+    ],
+    "Siti": [
+      "St."
+    ]
   }
 }

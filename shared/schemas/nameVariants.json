@@ -1,0 +1,16 @@
+{
+  "type": "object",
+  "required": [
+    "variants"
+  ],
+  "properties": {
+    "variants": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "string",
+        "maxLength": 60
+      }
+    }
+  }
+}

@@ -182,19 +182,29 @@ describe('features (wired by FeatureFactory with test adapters)', () => {
     expect(off.inf.calls.length).toBe(0);
   });
 
-  it('family group: scan links offline, then syncs through families/{id} when online', async () => {
-    const a = await setup(), b = await setup();
-    b.a.sync = a.a.sync; // same cloud
-    a.f.familyGroup.setMe('Cut Nurlaila', 'safe');
-    b.f.familyGroup.setMe('Teuku Hasballah', 'need_help');
-    expect(b.f.familyGroup.scan(a.f.familyGroup.myQr()!)?.name).toBe('Cut Nurlaila');
-    expect(a.f.familyGroup.scan(b.f.familyGroup.myQr()!)?.name).toBe('Teuku Hasballah');
-    expect(a.f.store.get().familyGroup!.fam).toBe(b.f.store.get().familyGroup!.fam);
-    expect(a.f.familyGroup.scan('hello')).toBeNull();
-    a.f.store.set(s => ({ ...s, signal: 'back' }));
-    await a.f.queue.flush();
-    const docs = [...(a.a.sync as MemorySync).docs.keys()].filter(k => k.startsWith('families/'));
-    expect(docs.length).toBeGreaterThan(0);
-    expect(JSON.stringify([...(a.a.sync as MemorySync).docs.values()])).not.toMatch(/flags|needs_meds/);
+  it('family group: QR carries the group offline; online, gossip joins groups that met through different relatives', async () => {
+    const cloud = new MemorySync();
+    const mk = async () => { const ad = await createAdapters('test'); ad.sync = cloud; return createFeatures(ad, undefined, undefined, demoState); };
+    const a = await mk(), b = await mk(), c = await mk();
+    a.familyGroup.setMe('Cut Nurlaila', 'safe'); b.familyGroup.setMe('Teuku Hasballah', 'need_help'); c.familyGroup.setMe('M. Rizki', 'safe');
+    expect(b.familyGroup.scan(c.familyGroup.myQr()!)!.map(m => m.name)).toEqual(['M. Rizki']);   // b meets c
+    expect(a.familyGroup.scan(b.familyGroup.myQr()!)!.map(m => m.name)).toEqual(['Teuku Hasballah', 'M. Rizki']); // a meets b, learns c too, offline
+    expect(a.familyGroup.scan('hello')).toBeNull();
+    for (const x of [a, b, c]) x.store.set(s => ({ ...s, signal: 'back' }));
+    await b.familyGroup.sync(); await a.familyGroup.sync(); await b.familyGroup.sync(); await c.familyGroup.sync(); // gossip rounds (every Scout check when signal is back)
+    expect(c.store.get().familyGroup!.members.map(m => m.name).sort()).toEqual(['Cut Nurlaila', 'Teuku Hasballah']); // c never met a
+    expect(JSON.stringify([...cloud.docs.values()])).not.toMatch(/flags|needs_meds/);
+  });
+
+  it('family search: device understands the description, cloud adds spellings (name only), match is deterministic', async () => {
+    const { f, inf } = await setup(r => r.task === 'family_query'
+      ? { raw: '{"name":"Nurhayati","age":80,"place":"Sukajadi"}', source: 'device' }
+      : { raw: '{"variants":["Nur Hayati"]}', source: 'cloud' });
+    f.store.set(s => ({ ...s, signal: 'back', people: [...s.people, { ...s.people[0], id: 'x', nameAsWritten: 'Nur Hayati', age: 82 }] }));
+    const r = await f.family.smart('nenek saya Nurhayati, sekitar 80, dari Sukajadi');
+    expect(r).toMatchObject({ name: 'Nurhayati', age: 80, parsedBy: 'device', variantsBy: 'cloud' });
+    expect(r.hits.map(h => [h.name, h.match])).toEqual([['Nur Hayati', 'spelling']]);
+    expect(inf.calls.find(c => c.task === 'family_query')!.mode).toBe('only_on_device');
+    expect(inf.calls.find(c => c.task === 'name_variants')!.text).toBe('Nurhayati'); // only the name leaves
   });
 });

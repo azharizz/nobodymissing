@@ -1,0 +1,1 @@
+{ "name": "region-pack", "private": true, "type": "module", "dependencies": { "geotiff": "2.1.3" } }

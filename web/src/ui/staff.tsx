@@ -423,7 +423,9 @@ function FieldMap() {
   const sh = pack.shelters.find(x => x.id === s.shelter.id) ?? pack.shelters[0];
   const loc = (id: string) => s.field.find(e => e.id === id)?.location;
   const color = { P1: '#C4402B', P2: '#8A5A00', P3: '#5A6170' } as Record<string, string>;
+  const row0 = rows.find(r => r.id === sel), hp = row0?.higher && pack.shelters.find(x => x.id === row0.higher!.id);
   const markers = [
+    ...(hp ? [{ id: 'higher', lat: hp.lat, lng: hp.lng, icon: 'higher', color: '#2F7A52', label: t.higherPlace }] : []),
     { id: 'shelter', lat: sh.lat, lng: sh.lng, icon: 'home', color: '#1C2F4A', label: s.shelter.name },
     ...rows.flatMap(r => { const l = loc(r.id); return l ? [{ id: r.id, ...l, icon: r.status === 'unchecked' ? (r.tier === 'P1' ? 'mobility' : 'pin') : 'check', color: r.status === 'unchecked' ? color[r.tier] : '#2F7A52', label: r.name, halo: r.tier === 'P1' && r.status === 'unchecked', sel: sel === r.id, onClick: () => setSel(r.id) }] : []; }),
   ];

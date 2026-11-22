@@ -34,7 +34,7 @@ export function createFeatures(a: Adapters, rules: Rules = defaults, prompts: Re
   const careCard = createCareCard(d);
   const medicine = createMedicine(d, queue.enqueue);
   const field = createFieldCheck(d, queue.enqueue);
-  const familyGroup = createFamilyGroup(d, queue.enqueue);
+  const familyGroup = createFamilyGroup(d);
   const scout = createScout(d, async () => { await queue.flush(); await familyGroup.sync(); }, roster.processBatch);
   const family = createFamilySearch(d);
 

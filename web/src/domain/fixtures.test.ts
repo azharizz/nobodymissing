@@ -124,14 +124,22 @@ describe('hybrid AI safety contracts (shared fixtures)', () => {
 });
 
 import { triageHelp } from './hybrid';
-import { decodeFamilyQr, encodeFamilyQr, mergeMembers } from './family';
+import { decodeFamilyQr, encodeFamilyQr, mergeMembers, offlineVariants, parseLookFor, searchVariants } from './family';
 describe('help triage + family QR (shared fixtures)', () => {
   it('urgency never goes down; no model = keyword rules', () => {
     for (const c of hybridFx.helpTriage) expect(triageHelp(c.input.text, c.input.ai, rules.urgentWords, keywordIcons(c.input.text, keywords).icons), c.name).toEqual(c.expected);
   });
   it('family QR round trip and rejects', () => {
-    for (const c of hybridFx.familyQr) { const q = encodeFamilyQr(c.input.fam, c.input.me as any); expect(q).toBe(c.expected); expect(decodeFamilyQr(q)).toEqual({ fam: c.input.fam, member: c.input.me }); }
+    for (const c of hybridFx.familyQr) {
+      const q = encodeFamilyQr(c.input.fam, c.input.members as any); expect(q, c.name).toBe(c.expected);
+      expect(decodeFamilyQr(q)!.members.map(m => m.id)).toEqual(c.input.members.map(m => m.id));
+    }
     for (const bad of hybridFx.familyQrReject) expect(decodeFamilyQr(bad), bad).toBeNull();
+  });
+  it('look-for rules without a device model', () => { for (const c of hybridFx.lookForRules) expect(parseLookFor(c.input), c.input).toEqual(c.expected); });
+  it('offline name spellings + spelling-aware search', () => {
+    for (const c of hybridFx.nameVariantsOffline) expect(offlineVariants(c.input, rules.nameRules), c.input).toEqual(c.expected);
+    for (const c of hybridFx.variantSearch) expect(searchVariants(c.input.name, c.input.variants, c.input.age, c.input.records as any).map(h => ({ name: h.name, shelterId: h.shelterId, match: h.match })), c.name).toEqual(c.expected);
   });
   it('family merge: newer wins, nobody dropped', () => { for (const c of hybridFx.familyMerge) expect(mergeMembers(c.input.mine as any, c.input.theirs as any), c.name).toEqual(c.expected); });
 });
