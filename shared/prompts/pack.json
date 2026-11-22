@@ -1,8 +1,8 @@
 {
-  "version": "2026-11-22.6",
+  "version": "2026-11-22.7",
   "_comment": "Shared prompt pack (web + Android). Also the Remote Config default for key promptPack. Keep prompts short: the on-device model gets a new session per call.",
   "tasks": {
-    "roster_read": "Read this photo of a handwritten evacuee list. Return one row per person. Copy each name exactly as written (do not translate or fix spelling). age as a number or null. sex M/F or null. flags only from ticked columns or clear notes. confidence 0-1 for the whole row.",
+    "roster_read": "Read this photo of a handwritten evacuee list. One row per person with only: name (copied exactly as written, do not translate or fix spelling), age (number or null), flags (only from ticked columns or clear notes), confidence (0-1 for the whole row). Leave out sex and notes.",
     "care_card_read": "Read this medicine bag, label or prescription page. List each medicine. Copy nameAsWritten and strength exactly as printed (keep units like mg, mcg). doseAsWritten exactly as written. Never guess a dose. confidence 0-1 per medicine.",
     "field_report": "Turn this volunteer note into a report. One entry per person mentioned. mobility: 0 walks, 1 slow, 2 needs help or wheelchair, 3 cannot walk or bedridden. Copy water level exactly as the volunteer said it. Do not judge danger.",
     "announcement": "Turn this shelter announcement into 1-4 short picture cards for deaf and elderly people. Plain words. title max 4 words. time as HH:MM 24h if said. Copy the place exactly as written, never translate it. Do not add facts that are not in the text.",

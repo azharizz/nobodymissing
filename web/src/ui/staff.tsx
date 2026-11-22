@@ -76,12 +76,13 @@ function KitCard() {
 /** Measured, not claimed: device vs cloud vs keywords on held-out test sets (shared/eval/results.json). */
 function EvalCard() {
   const t = useT();
+  const colName = (c: string) => ({ en: t.colEn, id: t.colId, names: t.colNames, ages: t.colAges, needs: t.colNeeds } as Record<string, string>)[c] ?? c;
   return (<>{evals.sets.map(set => (
     <div key={set.id} className="card eval-card">
       <h3><Icon name="check" />{t.measuredTitle}</h3>
       <b>{set.title}</b><span className="muted">{fmt(t.measuredNote, { n: set.n, date: set.date })} · {set.where}</span>
-      <table><thead><tr><th>{t.colWhere}</th><th>{t.colEn}</th><th>{t.colId}</th><th>{t.colTime}</th></tr></thead>
-        <tbody>{set.rows.map(r => <tr key={r.path} className={r.path}><td>{r.label}</td><td><b>{r.en}%</b></td><td><b>{r.id}%</b></td><td>{r.medianMs ? `${(r.medianMs / 1000).toFixed(1)} s` : '—'}</td></tr>)}</tbody></table>
+      <table><thead><tr><th>{t.colWhere}</th>{set.columns.map(c => <th key={c}>{colName(c)}</th>)}<th>{t.colTime}</th></tr></thead>
+        <tbody>{set.rows.map(r => <tr key={r.path} className={r.path}><td>{r.label}</td>{set.columns.map(c => <td key={c}><b>{(r as Record<string, unknown>)[c] as number}%</b></td>)}<td>{r.medianMs ? `${(r.medianMs / 1000).toFixed(1)} s` : '—'}</td></tr>)}</tbody></table>
       <p className="note">{set.decision}</p>
     </div>))}</>);
 }

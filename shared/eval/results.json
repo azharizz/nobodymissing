@@ -8,11 +8,64 @@
       "date": "2026-11-22",
       "where": "Chrome 157, Gemini Nano on a laptop; Gemini 3.5 Flash-Lite in the cloud",
       "rows": [
-        { "path": "device", "label": "On this phone (Gemini Nano)", "en": 83, "id": 83, "medianMs": 7400 },
-        { "path": "cloud", "label": "Cloud (Gemini 3.5 Flash-Lite)", "en": 67, "id": 83, "medianMs": 1900 },
-        { "path": "keywords", "label": "Keywords only (no AI)", "en": 50, "id": 75, "medianMs": 0 }
+        {
+          "path": "device",
+          "label": "On this phone (Gemini Nano)",
+          "en": 83,
+          "id": 83,
+          "medianMs": 7400
+        },
+        {
+          "path": "cloud",
+          "label": "Cloud (Gemini 3.5 Flash-Lite)",
+          "en": 67,
+          "id": 83,
+          "medianMs": 1900
+        },
+        {
+          "path": "keywords",
+          "label": "Keywords only (no AI)",
+          "en": 50,
+          "id": 75,
+          "medianMs": 0
+        }
       ],
-      "decision": "The phone is as good as the cloud here, so announcements stay on the phone (free, private, no signal needed)."
+      "decision": "The phone is as good as the cloud here, so announcements stay on the phone (free, private, no signal needed).",
+      "columns": [
+        "en",
+        "id"
+      ]
+    },
+    {
+      "id": "P",
+      "title": "Handwritten evacuee lists (photos)",
+      "n": 63,
+      "date": "2026-11-22",
+      "where": "12 synthetic sheets, 4 handwriting styles (tools/eval/make-sheets.mjs); Chrome 157 Gemini Nano vs Gemini 3.5 Flash-Lite",
+      "columns": [
+        "names",
+        "ages",
+        "needs"
+      ],
+      "rows": [
+        {
+          "path": "device",
+          "label": "On this phone (Gemini Nano)",
+          "names": 97,
+          "ages": 76,
+          "needs": 56,
+          "medianMs": 9300
+        },
+        {
+          "path": "cloud",
+          "label": "Cloud (Gemini 3.5 Flash-Lite)",
+          "names": 100,
+          "ages": 97,
+          "needs": 98,
+          "medianMs": 3200
+        }
+      ],
+      "decision": "Photos of people stay on the phone by default: names are read almost perfectly. Ages and needs are weaker there, so every row is checked by staff, who can approve a cloud read when signal is back."
     }
   ]
 }

@@ -470,5 +470,7 @@
   "colWhere": "Dijalankan di",
   "colEn": "Inggris",
   "colId": "Indonesia",
-  "colTime": "Waktu"
+  "colTime": "Waktu",
+  "colNames": "Nama",
+  "colAges": "Umur"
 }

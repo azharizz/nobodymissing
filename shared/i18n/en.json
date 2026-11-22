@@ -470,5 +470,7 @@
   "colWhere": "Where it ran",
   "colEn": "English",
   "colId": "Indonesian",
-  "colTime": "Time"
+  "colTime": "Time",
+  "colNames": "Names",
+  "colAges": "Ages"
 }

@@ -83,13 +83,14 @@ fun EvalCard(ui: Ui) {
             Row(verticalAlignment = Alignment.CenterVertically) { Ic(ui.icons, "check", 20.dp); Spacer(Modifier.width(8.dp)); H(f.t("measuredTitle"), 18.sp) }
             P(set["title"]!!.jsonPrimitive.content, 15.sp, bold = true)
             P(f.t("measuredNote", "n" to set["n"]!!.jsonPrimitive.content, "date" to set["date"]!!.jsonPrimitive.content) + " · " + set["where"]!!.jsonPrimitive.content, 13.sp, NM.Ink2)
-            Row { listOf("colWhere" to 2f, "colEn" to 1f, "colId" to 1f, "colTime" to 1f).forEach { (k, w) -> P(f.t(k), 12.sp, NM.Ink2, modifier = Modifier.weight(w)) } }
+            val cols = set["columns"]?.jsonArray?.map { it.jsonPrimitive.content } ?: listOf("en", "id")
+            val colKey = mapOf("en" to "colEn", "id" to "colId", "names" to "colNames", "ages" to "colAges", "needs" to "colNeeds")
+            Row { P(f.t("colWhere"), 12.sp, NM.Ink2, modifier = Modifier.weight(2f)); cols.forEach { P(f.t(colKey[it] ?: it), 12.sp, NM.Ink2, modifier = Modifier.weight(1f)) }; P(f.t("colTime"), 12.sp, NM.Ink2, modifier = Modifier.weight(1f)) }
             set["rows"]!!.jsonArray.map { it.jsonObject }.forEach { r ->
                 val path = r["path"]!!.jsonPrimitive.content; val ms = r["medianMs"]!!.jsonPrimitive.content.toDouble()
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     P(r["label"]!!.jsonPrimitive.content, 14.sp, when (path) { "device" -> NM.SageAcc; "cloud" -> NM.SkyAcc; else -> NM.Ink }, bold = path != "keywords", modifier = Modifier.weight(2f))
-                    P("${r["en"]!!.jsonPrimitive.content}%", 14.sp, bold = true, modifier = Modifier.weight(1f))
-                    P("${r["id"]!!.jsonPrimitive.content}%", 14.sp, bold = true, modifier = Modifier.weight(1f))
+                    cols.forEach { c -> P("${r[c]?.jsonPrimitive?.content ?: "—"}%", 14.sp, bold = true, modifier = Modifier.weight(1f)) }
                     P(if (ms > 0) "%.1f s".format(ms / 1000) else "—", 14.sp, modifier = Modifier.weight(1f))
                 }
             }
