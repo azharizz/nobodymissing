@@ -9,7 +9,7 @@ data class Drug(val generic: String, val brands: List<String>, val strengths: Li
         fun listFrom(o: JsonObject) = o["drugs"]!!.jsonArray.map { it.jsonObject.let { d -> Drug(d.s("generic")!!, d.strings("brands"), d.strings("strengths"), d.s("form")!!) } }
     }
 }
-data class DrugMatch(val status: String, val generic: String?, val candidates: List<String>, val lookAlikes: List<String>, val strengthKnown: Boolean?, val needsConfirm: Boolean)
+data class DrugMatch(val status: String, val generic: String?, val candidates: List<String>, val lookAlikes: List<String>, val strengthKnown: Boolean?, val needsConfirm: Boolean) : java.io.Serializable
 
 private val STRENGTH_RE = Regex("""(\d+(?:\.\d+)?)\s*(mg|mcg|g|ml|units/ml|iu)\b""", RegexOption.IGNORE_CASE)
 fun normStrength(s: String) = s.lowercase().replace(Regex("\\s+"), "").replace(Regex("[^a-z0-9./]"), "")

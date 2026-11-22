@@ -1,7 +1,7 @@
 package org.nobodymissing.domain
 
 // Outbox job queue state machine + sync priority (6.10).
-data class JobStatus(val state: String, val retries: Int)
+data class JobStatus(val state: String, val retries: Int) : java.io.Serializable
 data class QueuedJob(val id: String, val type: String, val createdAt: Long)
 data class Progress(val sent: Int, val total: Int, val waiting: Int)
 

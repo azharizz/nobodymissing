@@ -182,6 +182,22 @@ class ParityTest {
         assertEquals("Hasan", scout.jobs.single().payload["name"])
         assertEquals(0, scout.importChunks(worker.exportChunks(40)))  // idempotent: same job id is skipped
     }
+    @Test fun stateSurvivesAppKill() = runBlocking {
+        val f = features()
+        f.loadDemo(); f.lang.value = "id"
+        f.checkin(org.nobodymissing.domain.Checkin("Siti Aminah", 77, listOf("needs_meds")))
+        f.jobs[0].status = org.nobodymissing.domain.JobStatus("sending", 1)   // killed mid-send
+        val file = File.createTempFile("state", ".bin").apply { deleteOnExit() }
+        assertTrue(f.saveTo(file).isSuccess)
+        val g = features()
+        assertTrue(g.loadFrom(file))
+        assertEquals(f.people.toList(), g.people.toList())
+        assertEquals(f.meds.toList(), g.meds.toList())
+        assertEquals(f.field.toList(), g.field.toList())
+        assertEquals("id", g.lang.value)
+        assertEquals("waiting", g.jobs[0].status.state)                       // sent again, not lost
+        assertFalse(features().loadFrom(File(file.path + ".missing")))
+    }
 }
 
 class RemoteRulesTest {
@@ -193,4 +209,5 @@ class RemoteRulesTest {
     @Test fun brokenRemoteConfigFallsBackToDefaults() {
         assertEquals(65, Shared({ File("../../shared/$it").readText() }, "not json").rules.elderlyAge)
     }
+
 }

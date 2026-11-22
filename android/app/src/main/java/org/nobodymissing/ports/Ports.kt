@@ -7,7 +7,7 @@ import kotlinx.serialization.json.JsonObject
 /** grounding "maps" = Grounding with Google Maps (cloud only) near lat/lng, already rounded by the caller. */
 data class InferenceRequest(val task: String, val prompt: String, val text: String?, val image: Bitmap?, val schema: JsonObject, val mode: String, val model: String,
                             val grounding: String? = null, val lat: Double? = null, val lng: Double? = null)
-data class GroundingPlace(val title: String?, val uri: String?, val placeId: String?)
+data class GroundingPlace(val title: String?, val uri: String?, val placeId: String?) : java.io.Serializable
 data class InferenceResult(val raw: String, val source: String, val places: List<GroundingPlace> = emptyList())
 
 /** Firebase AI Logic only (D11). onDeviceStatus: available | downloadable | downloading | unavailable. */

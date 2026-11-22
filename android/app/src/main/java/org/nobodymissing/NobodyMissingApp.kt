@@ -8,6 +8,8 @@ import org.nobodymissing.adapters.AdapterFactory
 import org.nobodymissing.features.FeatureFactory
 import org.nobodymissing.features.Features
 import org.nobodymissing.features.Shared
+import org.nobodymissing.features.autoSave
+import org.nobodymissing.features.loadFrom
 
 import kotlinx.coroutines.launch
 
@@ -22,8 +24,10 @@ class NobodyMissingApp : Application() {
             getString("rules").takeIf { it.isNotBlank() }
         }
         features = FeatureFactory.create(adapters, Shared.from(this, remoteRules))
-        // No Firebase config = demo mode: show the synthetic Aceh shelter (a real shelter starts empty).
-        if (adapters.env == "test") features.loadDemo()
+        // Saved state first (the phone may have killed the app); else demo mode shows the synthetic Aceh shelter (a real shelter starts empty).
+        val saved = java.io.File(filesDir, "state.bin")
+        if (!features.loadFrom(saved) && adapters.env == "test") features.loadDemo()
+        features.autoSave(saved)
         // First question fast: load the on-device model before anyone types.
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch { features.router.warm() }
     }

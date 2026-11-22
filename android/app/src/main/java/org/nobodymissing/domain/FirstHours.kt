@@ -3,7 +3,7 @@ package org.nobodymissing.domain
 // The first hours: warning -> the way -> pickup -> check-in. Same rules as web domain/firstHours.ts (shared/fixtures/hybrid.json).
 private fun has(text: String, words: List<String>): Boolean { val t = " ${text.lowercase()} "; return words.any { t.contains(it.lowercase()) } }
 
-data class WarningPlain(val hazard: String, val level: String, val plain: String, val action: String?, val by: String)
+data class WarningPlain(val hazard: String, val level: String, val plain: String, val action: String?, val by: String) : java.io.Serializable
 data class WarnRules(val goNowWords: List<String>, val hazardWords: Map<String, List<String>>)
 /** Official warning -> plain words. "evakuasi segera" in the original always means go now, whatever the model says. */
 fun plainWarning(text: String, ai: WarningPlain?, by: String, r: WarnRules): WarningPlain {
@@ -56,7 +56,7 @@ fun decodeCheckinQr(text: String): Checkin? {
     return Checkin(m.groupValues[1].trim(), age, flags)
 }
 
-data class PickupRecord(val id: String, val lat: Double, val lng: Double, val mobility: Int, val needs: List<String>, val people: Int, val at: Long, val who: String)
+data class PickupRecord(val id: String, val lat: Double, val lng: Double, val mobility: Int, val needs: List<String>, val people: Int, val at: Long, val who: String) : java.io.Serializable
 /** Pickup QR: carried to any volunteer by hand when there is no signal at all. */
 fun encodePickupQr(p: PickupRecord): String {
     fun n(d: Double) = if (d == Math.floor(d)) d.toLong().toString() else d.toString()

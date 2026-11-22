@@ -3,7 +3,7 @@ package org.nobodymissing.domain
 import java.security.SecureRandom
 
 // Family group by QR (no accounts) + spelling-aware family search. Same rules as web domain/family.ts (shared/fixtures/hybrid.json).
-data class Member(val id: String, val name: String, val shelter: String, val status: String, val at: Long)
+data class Member(val id: String, val name: String, val shelter: String, val status: String, val at: Long) : java.io.Serializable
 
 private val FAM = Regex("^f-[0-9a-f]{20}$")
 private val ROW = Regex("^([^,]{1,40}),([^,]{1,40}),(safe|need_help),(\\d{1,15}),(.{1,60})$")

@@ -32,15 +32,15 @@ class Shared(private val read: (String) -> String, remoteRules: String? = null) 
     companion object { fun from(c: Context, remoteRules: String? = null) = Shared({ c.assets.open(it).bufferedReader().readText() }, remoteRules) }
 }
 
-data class UiPerson(val id: String, val name: String, val age: Int?, val flags: List<String>, val confirmed: Boolean, val needsReview: Boolean, val source: String)
-data class UiMed(val personId: String, val nameAsWritten: String, val match: DrugMatch, val strength: String?, val dose: String?, val timesPerDay: Int?, val qtyLeft: Int?, val generic: String?, val confirmedBy: String?)
-data class UiCard(val icon: String, val title: String, val time: String?, val place: String?)
-data class UiAnnouncement(val id: String, val text: String, val icons: List<String>, val cards: List<UiCard>, val source: String, val draft: Boolean, val shown: Boolean = false, val told: Set<String> = emptySet())
-data class UiField(val id: String, val name: String, val lat: Double?, val lng: Double?, val hoursSinceContact: Double?, val person: PriorityInput, val needsReview: Boolean = false, val status: String = "unchecked", val pickup: PickupRecord? = null)
-data class ActiveWarning(val w: WarningPlain, val text: String, val at: Long, val sources: List<org.nobodymissing.ports.GroundingPlace>)
+data class UiPerson(val id: String, val name: String, val age: Int?, val flags: List<String>, val confirmed: Boolean, val needsReview: Boolean, val source: String) : java.io.Serializable
+data class UiMed(val personId: String, val nameAsWritten: String, val match: DrugMatch, val strength: String?, val dose: String?, val timesPerDay: Int?, val qtyLeft: Int?, val generic: String?, val confirmedBy: String?) : java.io.Serializable
+data class UiCard(val icon: String, val title: String, val time: String?, val place: String?) : java.io.Serializable
+data class UiAnnouncement(val id: String, val text: String, val icons: List<String>, val cards: List<UiCard>, val source: String, val draft: Boolean, val shown: Boolean = false, val told: Set<String> = emptySet()) : java.io.Serializable
+data class UiField(val id: String, val name: String, val lat: Double?, val lng: Double?, val hoursSinceContact: Double?, val person: PriorityInput, val needsReview: Boolean = false, val status: String = "unchecked", val pickup: PickupRecord? = null) : java.io.Serializable
+data class ActiveWarning(val w: WarningPlain, val text: String, val at: Long, val sources: List<org.nobodymissing.ports.GroundingPlace>) : java.io.Serializable
 data class Destination(val h: HigherPlace, val lat: Double, val lng: Double, val from: Pair<Double, Double>, val gps: Boolean)
-data class UiHelp(val id: String, val kind: String, val spot: String, val text: String?, val done: Boolean = false, val summary: String? = null, val urgent: Boolean = false, val by: String? = null)
-data class FamilyGroup(val fam: String, val fams: List<String>, val me: Member, val members: List<Member>, val via: Map<String, String>)
+data class UiHelp(val id: String, val kind: String, val spot: String, val text: String?, val done: Boolean = false, val summary: String? = null, val urgent: Boolean = false, val by: String? = null) : java.io.Serializable
+data class FamilyGroup(val fam: String, val fams: List<String>, val me: Member, val members: List<Member>, val via: Map<String, String>) : java.io.Serializable
 data class SmartFamily(val name: String, val age: Int?, val place: String?, val parsedBy: String, val variants: List<String>, val variantsBy: String, val hits: List<FamilyHit>)
 data class MedCheckItem(val name: String, val generic: String?, val alsoKnownAs: List<String>, val swaps: List<String>, val cantMiss: Boolean, val note: String?)
 data class Interaction(val a: String, val b: String, val severity: String, val note: String?)
@@ -49,7 +49,7 @@ data class OpenPlace(val name: String, val kind: String?, val distanceKm: Double
 data class OpenUi(val need: String, val places: List<OpenPlace>, val pending: Boolean)
 const val JOB_TIMEOUT_MS = 30_000L
 data class AskAnswer(val intent: String, val answer: String?, val card: UiAnnouncement?, val source: String, val urgent: Boolean = false)
-data class UiJob(val id: String, val type: String, val path: String, val payload: Map<String, Any?>, val createdAt: Long, var status: JobStatus = JobStatus("waiting", 0))
+data class UiJob(val id: String, val type: String, val path: String, val payload: Map<String, Any?>, val createdAt: Long, var status: JobStatus = JobStatus("waiting", 0)) : java.io.Serializable
 
 /** FeatureFactory: wires every feature to its ports. Features never construct adapters. */
 class Features(val adapters: Adapters, val shared: Shared) {

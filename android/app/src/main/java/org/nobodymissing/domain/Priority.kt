@@ -3,13 +3,13 @@ package org.nobodymissing.domain
 import kotlinx.serialization.json.*
 
 // Field Check priority (PRODUCT.md 6.11c). Same logic as web/src/domain/priority.ts.
-data class Hazard(val floodClass: Int? = null, val hand: Double? = null, val landslideHigh: Boolean = false, val tsunamiZone: Boolean = false, val unknown: Boolean = false, val pinNearby: Boolean = false)
-data class TierOverride(val tier: String, val reason: String)
+data class Hazard(val floodClass: Int? = null, val hand: Double? = null, val landslideHigh: Boolean = false, val tsunamiZone: Boolean = false, val unknown: Boolean = false, val pinNearby: Boolean = false) : java.io.Serializable
+data class TierOverride(val tier: String, val reason: String) : java.io.Serializable
 data class PriorityInput(
     val age: Int? = null, val mobility: Int = 0, val cantMiss: Boolean = false, val supplyDays: Int? = null, val dailyMeds: Boolean = false,
     val hearing: Boolean = false, val dementia: Boolean = false, val alone: Boolean = false, val hoursSinceContact: Double? = null,
     val hazard: Hazard = Hazard(), val override: TierOverride? = null,
-) {
+) : java.io.Serializable {
     companion object {
         fun from(o: JsonObject): PriorityInput {
             val h = o["hazard"]!!.jsonObject
