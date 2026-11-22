@@ -8,6 +8,7 @@ import { fmt } from './i18n';
 import { Badge, canvasImage, Empty, greeting, Icon, Kit, MicButton, navigate, PhotoPick, QR, QrScanner, RouteNotice, ShelterMap, useAppState, useSpeaker, useF, useT, type T } from './common';
 import { headline } from './public';
 import { decodeCheckinQr, decodePickupQr } from '../domain/firstHours';
+import evals from '../../../shared/eval/results.json';
 
 const go = (p: string) => navigate(`#/staff/${p}`);
 const nice = (s: string) => s.replace(/_/g, ' ');
@@ -72,6 +73,19 @@ function KitCard() {
   );
 }
 
+/** Measured, not claimed: device vs cloud vs keywords on held-out test sets (shared/eval/results.json). */
+function EvalCard() {
+  const t = useT();
+  return (<>{evals.sets.map(set => (
+    <div key={set.id} className="card eval-card">
+      <h3><Icon name="check" />{t.measuredTitle}</h3>
+      <b>{set.title}</b><span className="muted">{fmt(t.measuredNote, { n: set.n, date: set.date })} · {set.where}</span>
+      <table><thead><tr><th>{t.colWhere}</th><th>{t.colEn}</th><th>{t.colId}</th><th>{t.colTime}</th></tr></thead>
+        <tbody>{set.rows.map(r => <tr key={r.path} className={r.path}><td>{r.label}</td><td><b>{r.en}%</b></td><td><b>{r.id}%</b></td><td>{r.medianMs ? `${(r.medianMs / 1000).toFixed(1)} s` : '—'}</td></tr>)}</tbody></table>
+      <p className="note">{set.decision}</p>
+    </div>))}</>);
+}
+
 function KitLog() {
   const t = useT(), f = useF(); useAppState();
   const k = f.views.kit(), sends = (f.rules as unknown as { cloudSends: Record<string, string> }).cloudSends ?? {};
@@ -84,6 +98,7 @@ function KitLog() {
       <main className="content">
         <KitCard />
         {k.log.length === 0 && <Empty mood="idle">{t.noKitYet}</Empty>}
+        {k.log.length > 0 && <EvalCard />}
         {k.log.map((l, i) => { const [cls, label] = chip(l); return (
           <div key={i} className={`kit-row ${cls}`}>
             <span className="kr-chip"><Icon name={cls === 'dev' ? 'device' : cls === 'cld' ? 'cloud' : cls === 'wait' ? 'clock' : 'lock'} size={15} />{label}</span>
@@ -661,6 +676,7 @@ function Settings() {
           <div className="cta" style={{ gridTemplateColumns: '1fr 1fr' }}><button className="btn small" onClick={() => f.scout.check()}><Icon name="signal" />{t.checkNow}</button>
             <button className="btn small" onClick={() => f.queue.flush()}><Icon name="sync" />{t.syncNow}</button></div>
           <ul className="jobs">{s.jobs.slice(-8).map(j => <li key={j.id}><span className={`dot ${j.state}`} />{nice(j.type)}<span className="muted">{j.state}{j.retries ? ` · retry ${j.retries}` : ''}</span></li>)}</ul></div>
+        <EvalCard />
         <div className="card"><h3><Icon name="print" />{t.printLists}</h3><p className="muted">{t.printWhy}</p>
           <button className="btn primary" onClick={() => go('print')}><Icon name="print" />{t.printLists}</button></div>
         <div className="card"><h3><Icon name="qr" />{t.courier}</h3>

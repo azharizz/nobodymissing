@@ -464,5 +464,11 @@
   "task_translate": "Terjemahkan",
   "task_ask_kit": "Tanya Kit",
   "task_warning_plain": "Peringatan dengan kata sederhana",
-  "task_supply_request": "Permintaan pasokan"
+  "task_supply_request": "Permintaan pasokan",
+  "measuredTitle": "Terukur: seberapa baik Kit",
+  "measuredNote": "{n} item uji · {date}",
+  "colWhere": "Dijalankan di",
+  "colEn": "Inggris",
+  "colId": "Indonesia",
+  "colTime": "Waktu"
 }

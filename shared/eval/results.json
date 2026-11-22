@@ -1,0 +1,18 @@
+{
+  "_notice": "Measured, not claimed. Written by the eval runners (web/src/eval). 'all' = icon, time and place all correct. Shown in Settings on web and Android.",
+  "sets": [
+    {
+      "id": "B",
+      "title": "Announcements to picture cards",
+      "n": 24,
+      "date": "2026-11-22",
+      "where": "Chrome 157, Gemini Nano on a laptop; Gemini 3.5 Flash-Lite in the cloud",
+      "rows": [
+        { "path": "device", "label": "On this phone (Gemini Nano)", "en": 83, "id": 83, "medianMs": 7400 },
+        { "path": "cloud", "label": "Cloud (Gemini 3.5 Flash-Lite)", "en": 67, "id": 83, "medianMs": 1900 },
+        { "path": "keywords", "label": "Keywords only (no AI)", "en": 50, "id": 75, "medianMs": 0 }
+      ],
+      "decision": "The phone is as good as the cloud here, so announcements stay on the phone (free, private, no signal needed)."
+    }
+  ]
+}

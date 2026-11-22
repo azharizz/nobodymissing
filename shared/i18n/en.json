@@ -464,5 +464,11 @@
   "task_translate": "Translate",
   "task_ask_kit": "Ask Kit",
   "task_warning_plain": "Warning in plain words",
-  "task_supply_request": "Supply request"
+  "task_supply_request": "Supply request",
+  "measuredTitle": "Measured: how well Kit does",
+  "measuredNote": "{n} test items · {date}",
+  "colWhere": "Where it ran",
+  "colEn": "English",
+  "colId": "Indonesian",
+  "colTime": "Time"
 }

@@ -11,7 +11,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.nobodymissing.features.RunLog
 
 /** Hybrid made visible (same as web): green = this phone, blue = cloud, and what left the shelter. */
@@ -43,7 +45,7 @@ fun KitLog(ui: Ui) {
     val f = ui.f; val k = f.kitToday(); val sends = f.shared.defaults["cloudSends"]?.jsonObject.orEmpty()
     Screen({ Top(ui, f.t("whereKitRan")) }) {
         pad { KitCard(ui) }
-        if (k.log.isEmpty()) pad { Empty(ui, f.t("noKitYet"), Mood.IDLE) }
+        if (k.log.isEmpty()) pad { Empty(ui, f.t("noKitYet"), Mood.IDLE) } else pad { EvalCard(ui) }
         k.log.forEach { l -> pad { KitRow(ui, l, (sends[l.task] as? JsonPrimitive)?.content) } }
     }
 }
@@ -68,5 +70,30 @@ private fun KitRow(ui: Ui, l: RunLog, sends: String?) {
         P(f.t("task_${l.task}"), 16.sp, bold = true)
         P(f.t("why_${l.why}") + if (l.source != null) " · %.1f s".format(l.ms / 1000.0) else "", 14.sp, NM.Ink2)
         P(if (l.source == "cloud") f.t("sentWhat", "what" to f.t("what_${sends ?: "text"}")) else f.t("sentNothing"), 14.sp, bold = true)
+    }
+}
+
+/** Measured, not claimed: shared/eval/results.json, same numbers as web. */
+@Composable
+fun EvalCard(ui: Ui) {
+    val f = ui.f
+    val sets = runCatching { f.shared.json("eval/results.json")["sets"]!!.jsonArray.map { it.jsonObject } }.getOrDefault(emptyList())
+    sets.forEach { set ->
+        CardBox(Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.CenterVertically) { Ic(ui.icons, "check", 20.dp); Spacer(Modifier.width(8.dp)); H(f.t("measuredTitle"), 18.sp) }
+            P(set["title"]!!.jsonPrimitive.content, 15.sp, bold = true)
+            P(f.t("measuredNote", "n" to set["n"]!!.jsonPrimitive.content, "date" to set["date"]!!.jsonPrimitive.content) + " · " + set["where"]!!.jsonPrimitive.content, 13.sp, NM.Ink2)
+            Row { listOf("colWhere" to 2f, "colEn" to 1f, "colId" to 1f, "colTime" to 1f).forEach { (k, w) -> P(f.t(k), 12.sp, NM.Ink2, modifier = Modifier.weight(w)) } }
+            set["rows"]!!.jsonArray.map { it.jsonObject }.forEach { r ->
+                val path = r["path"]!!.jsonPrimitive.content; val ms = r["medianMs"]!!.jsonPrimitive.content.toDouble()
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    P(r["label"]!!.jsonPrimitive.content, 14.sp, when (path) { "device" -> NM.SageAcc; "cloud" -> NM.SkyAcc; else -> NM.Ink }, bold = path != "keywords", modifier = Modifier.weight(2f))
+                    P("${r["en"]!!.jsonPrimitive.content}%", 14.sp, bold = true, modifier = Modifier.weight(1f))
+                    P("${r["id"]!!.jsonPrimitive.content}%", 14.sp, bold = true, modifier = Modifier.weight(1f))
+                    P(if (ms > 0) "%.1f s".format(ms / 1000) else "—", 14.sp, modifier = Modifier.weight(1f))
+                }
+            }
+            P(set["decision"]!!.jsonPrimitive.content, 14.sp, NM.Ink2)
+        }
     }
 }

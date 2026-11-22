@@ -496,3 +496,6 @@ body.flash .app { animation: flash 1s 2; } @keyframes flash { 50% { background: 
 .kr-chip { display: flex; align-items: center; gap: 5px; border-radius: 99px; padding: 4px 10px; font-size: 13px; font-weight: 800; white-space: nowrap; }
 .kit-row.dev .kr-chip { background: var(--sage); color: var(--sage-ink); } .kit-row.cld .kr-chip { background: var(--sky); color: var(--sky-ink); }
 .kit-row.wait .kr-chip { background: #F6E7C1; color: #5C4310; } .kit-row.off .kr-chip { background: #EEE; color: #333; }
+.eval-card { display: grid; gap: 6px; } .eval-card table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 4px; }
+.eval-card th { text-align: left; font-size: 12px; color: var(--ink-2); padding: 4px 6px; } .eval-card td { padding: 8px 6px; border-top: 1px solid var(--line, #eee); }
+.eval-card tr.device td:first-child { color: var(--sage-acc); font-weight: 800; } .eval-card tr.cloud td:first-child { color: var(--sky-acc); font-weight: 800; }

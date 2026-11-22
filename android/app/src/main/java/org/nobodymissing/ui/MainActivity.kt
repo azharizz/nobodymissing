@@ -732,6 +732,7 @@ fun Settings(ui: Ui) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) { Image(qr(HOSTED + path, 240).asImageBitmap(), f.t(k), Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp))); P(f.t(k), 13.sp, bold = true) }
                 }
             } } }
+        pad { EvalCard(ui) }
         pad { CardBox { title("print", f.t("printLists")); P(f.t("printWhy"), 15.sp, NM.Ink2)
             Btn(ui, f.t("print"), "print", BtnStyle.PRIMARY, full = true) { printHtml(ctx, f.dailyListsHtml(), f.t("printLists")) } } }
         pad { Btn(ui, f.t("loadDemo"), "demo", full = true) { f.loadDemo() } }
