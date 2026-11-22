@@ -15,6 +15,7 @@ const PATHS: Path[] = [
   { name: 'keywords', mode: null, model: '' },
   { name: 'device', mode: 'only_on_device', model: 'gemini-3.5-flash-lite' }, // model name unused on device, required by the SDK
   { name: 'cloud-lite', mode: 'only_in_cloud', model: 'gemini-3.5-flash-lite' },
+  { name: 'cloud-accurate', mode: 'only_in_cloud', model: 'gemini-3.8-flash' },
 ];
 
 export async function runB(paths = PATHS, items: Truth[] = evalB.items) {

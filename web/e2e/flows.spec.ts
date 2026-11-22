@@ -172,3 +172,27 @@ test('first hours: warning in plain words, the higher place, pickup reaches the 
   await page.getByRole('button', { name: 'Not the same: add' }).click();
   await expect(page.getByText(/Added to "tell in person"/)).toBeVisible();
 });
+
+test('paper copy: today\'s lists print roster, medicine round and tell-in-person; live counter shows waiting', async ({ page }) => {
+  await page.goto('/#/staff/now');
+  await expect(page.locator('.hybrid')).toContainText(/Today: \d+ on device · \d+ cloud · \d+ waiting/);
+  await page.goto('/#/staff/settings');
+  await page.getByRole('button', { name: "Print today's lists" }).click();
+  const lists = page.locator('.print-lists');
+  await expect(lists.locator('table')).toHaveCount(3);
+  await expect(lists).toContainText('Pak Hasan Basri');
+  await expect(lists.locator('svg').first()).toBeVisible();                       // Kit on paper
+});
+
+test('accessibility: no serious or critical axe violations on the main screens', async ({ page }) => {
+  const { default: AxeBuilder } = await import('@axe-core/playwright');
+  await page.emulateMedia({ reducedMotion: 'reduce' });                         // measure final colours, not mid fade-in
+  const bad: string[] = [];
+  for (const path of ['/#/staff/now', '/#/staff/people', '/#/staff/round', '/#/staff/announce', '/#/staff/checkin', '/#/staff/settings', '/#/staff/print', '/#/public', '/#/big']) {
+    await page.goto(path); await page.waitForTimeout(400);
+    const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+    for (const v of r.violations.filter(v => v.impact === 'serious' || v.impact === 'critical'))
+      bad.push(`${path} ${v.id}: ${v.nodes.slice(0, 3).map(n => n.target.join(' ')).join(' | ')}`);
+  }
+  expect(bad, bad.join('\n')).toEqual([]);
+});

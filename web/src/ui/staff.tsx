@@ -27,7 +27,7 @@ export function Staff({ path }: { path: string[] }) {
       {s.scoutAlert && <ScoutAlert />}
       <div key={screen + (arg ?? '')} style={{ display: 'contents' }}>
         {screen === 'checkin' ? <CheckIn /> : screen === 'map' ? <FieldMap /> : screen === 'announce' ? <Announce /> : screen === 'people' ? <People /> : screen === 'person' ? <CareCard id={arg} />
-          : screen === 'review' ? <Review /> : screen === 'round' ? <Round /> : screen === 'settings' ? <Settings /> : <Now />}
+          : screen === 'review' ? <Review /> : screen === 'round' ? <Round /> : screen === 'settings' ? <Settings /> : screen === 'print' ? <PrintLists /> : <Now />}
       </div>
       <TabBar on={screen} />
     </div>
@@ -53,7 +53,7 @@ function Top({ title, back = 'now', children }: { title: string; back?: string; 
 
 function Hybrid() {
   const t = useT(), c = useF().views.counts();
-  return <div className="hybrid"><span><Icon name="device" size={15} />{fmt(t.onThisPhone, { n: c.device })}</span><span><Icon name="cloud" size={15} />{fmt(t.cloudN, { n: c.cloud })}</span></div>;
+  return <div className="hybrid" role="status"><span><Icon name="device" size={15} />{fmt(t.counter, { device: c.device, cloud: c.cloud, waiting: c.waiting })}</span></div>;
 }
 
 // ---------- Now ----------
@@ -551,6 +551,34 @@ function Announce() {
   );
 }
 
+// ---------- Paper fallback (§6): roster, medicine round, tell-in-person. Black-and-white safe; the app is never the only copy. ----------
+function PrintLists() {
+  const t = useT(), s = useAppState(), f = useF();
+  const here = s.people.filter(p => p.confirmedBy), sch = f.views.schedule();
+  const ann = [...s.announcements].reverse().find(a => a.shown) ?? s.announcements[0], reach = f.views.reach(ann?.id);
+  const name = (id: string) => s.people.find(p => p.id === id)?.nameAsWritten ?? id;
+  const box = <span className="tick" aria-hidden />;
+  return (
+    <>
+      <Top title={t.printLists} back="settings"><button className="btn primary small" onClick={() => print()}><Icon name="print" />{t.print}</button></Top>
+      <main className="content print-lists">
+        <h1><Kit mood="idle" size={56} />{t.printLists}</h1>
+        <p className="muted">{fmt(t.printKeep, { time: new Date().toLocaleString() })}</p>
+        <h2>{fmt(t.rosterTitle, { n: here.length })}</h2>
+        <table><thead><tr><th>{t.colName}</th><th>{t.colAge}</th><th>{t.colNeeds}</th></tr></thead>
+          <tbody>{here.map(p => <tr key={p.id}><td><b>{p.nameAsWritten}</b></td><td>{p.age ?? ''}</td><td>{p.flags.map(nice).join(', ')}</td></tr>)}</tbody></table>
+        <h2>{t.medicineRound}</h2>
+        {sch.alerts.length > 0 && <p><b>{t.cantMiss}:</b> {sch.alerts.map(a => `${name(a.personId)} · ${a.generic}`).join(' · ')}</p>}
+        <table><thead><tr><th></th><th>{t.colName}</th><th>{t.colMedicine}</th><th>{t.given}</th></tr></thead>
+          <tbody>{Object.entries(sch.slots).flatMap(([slot, list]) => list.map(e => <tr key={slot + e.personId + e.generic}><td><b>{slot}</b></td><td>{name(e.personId)}</td><td>{e.generic} · {e.doseAsWritten}</td><td>{box}</td></tr>))}</tbody></table>
+        <h2>{fmt(t.tellInPerson, { n: reach.remaining })}</h2>
+        <table><thead><tr><th>{t.colName}</th><th>{t.colNeeds}</th><th>{t.colTold}</th></tr></thead>
+          <tbody>{reach.list.map(r => <tr key={r.id}><td><b>{name(r.id)}</b></td><td>{r.reasons.map(nice).join(', ')}</td><td>{r.told ? '✓' : box}</td></tr>)}</tbody></table>
+      </main>
+    </>
+  );
+}
+
 // ---------- Signal Scout alert: the one loud moment ----------
 function ScoutAlert() {
   const t = useT(), f = useF(), p = f.queue.progress();
@@ -588,6 +616,8 @@ function Settings() {
           <div className="cta" style={{ gridTemplateColumns: '1fr 1fr' }}><button className="btn small" onClick={() => f.scout.check()}><Icon name="signal" />{t.checkNow}</button>
             <button className="btn small" onClick={() => f.queue.flush()}><Icon name="sync" />{t.syncNow}</button></div>
           <ul className="jobs">{s.jobs.slice(-8).map(j => <li key={j.id}><span className={`dot ${j.state}`} />{nice(j.type)}<span className="muted">{j.state}{j.retries ? ` · retry ${j.retries}` : ''}</span></li>)}</ul></div>
+        <div className="card"><h3><Icon name="print" />{t.printLists}</h3><p className="muted">{t.printWhy}</p>
+          <button className="btn primary" onClick={() => go('print')}><Icon name="print" />{t.printLists}</button></div>
         <div className="card"><h3><Icon name="qr" />{t.courier}</h3>
           <button className="btn small" onClick={() => setChunks(f.queue.exportChunks())}><Icon name="qr" />{t.exportQueue}</button>
           <div className="qr-row">{chunks?.map((c, i) => <figure key={i}><QR text={c} label={`${t.courier} ${i + 1}/${chunks.length}`} /><figcaption>{i + 1}/{chunks.length}</figcaption></figure>)}</div>

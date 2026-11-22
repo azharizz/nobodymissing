@@ -23,7 +23,8 @@ export type Features = ReturnType<typeof createFeatures>;
 
 export function createFeatures(a: Adapters, rules: Rules = defaults, prompts: Record<string, string> = pack.tasks, seed?: Seed) {
   const store = createStore(a.storage, a.clock.now(), seed);
-  const router = createInferenceRouter(a.inference, rules, () => ({ online: store.get().signal === 'back', privateMode: store.get().privateMode }), prompts);
+  const router = createInferenceRouter(a.inference, rules, () => ({ online: store.get().signal === 'back', privateMode: store.get().privateMode }), prompts,
+    src => store.set(s => { const day = new Date(a.clock.now()).toDateString(), c = s.counts?.day === day ? s.counts : { day, device: 0, cloud: 0 }; return { ...s, counts: { ...c, [src]: c[src] + 1 } }; }));
   const d: Deps = { store, router, rules, sync: a.sync, connectivity: a.connectivity, clock: a.clock };
 
   let announcements: ReturnType<typeof createAnnouncements>;
@@ -49,7 +50,10 @@ export function createFeatures(a: Adapters, rules: Rules = defaults, prompts: Re
       const ann = s.announcements.find(x => x.id === annId) ?? s.announcements[0];
       return reachList(s.people.filter(p => p.confirmedBy).map(p => ({ id: p.id, age: p.age, flags: p.flags })), ann?.told ?? [], rules);
     },
-    counts: () => router.counts(),
+    counts: () => {
+      const s = store.get(), c = s.counts?.day === new Date(a.clock.now()).toDateString() ? s.counts : { device: 0, cloud: 0 };
+      return { device: c.device, cloud: c.cloud, waiting: s.jobs.filter(j => j.state !== 'sent').length };
+    },
   };
 
   const settings = {

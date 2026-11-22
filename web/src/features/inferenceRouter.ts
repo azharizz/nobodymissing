@@ -21,7 +21,7 @@ const withTimeout = <T,>(p: Promise<T>, ms: number) =>
 export type InferenceRouter = ReturnType<typeof createInferenceRouter>;
 
 /** InferenceRouterFactory: builds the router from the Remote Config policy table. */
-export function createInferenceRouter(inference: InferencePort, rules: RouterRules, ctx: Ctx, prompts: Record<string, string> = pack.tasks) {
+export function createInferenceRouter(inference: InferencePort, rules: RouterRules, ctx: Ctx, prompts: Record<string, string> = pack.tasks, onAnswer?: (source: 'device' | 'cloud') => void) {
   const counts = { device: 0, cloud: 0 };
 
   async function call(task: string, policy: TaskPolicy, mode: Mode, input: Input): Promise<InferenceResult> {
@@ -66,7 +66,7 @@ export function createInferenceRouter(inference: InferencePort, rules: RouterRul
     }
     // Privacy guard post-check (SDK#10635): an on-device-only request must never be answered by the cloud.
     if (d.mode === 'only_on_device' && res.source !== 'device') return { status: 'blocked', errors: ['cloud answered an on-device-only request'] };
-    counts[res.source]++;
+    counts[res.source]++; onAnswer?.(res.source);
     const v = parseAndValidate<T>(res.raw, SCHEMAS[policy.schema]);
     if (!v.valid) return { status: 'invalid', source: res.source, errors: v.errors };
     return { status: d.action === 'device_draft' ? 'draft' : 'ok', data: v.value, source: res.source, places: res.places };

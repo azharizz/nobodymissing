@@ -46,6 +46,8 @@ export type State = {
   warning: (import('../domain/firstHours').Warning & { text: string; at: number; sources: { title?: string; uri?: string }[] }) | null;
   myPos: { lat: number; lng: number } | null;
   myPickup: (import('../domain/firstHours').PickupRecord & { jobId: string }) | null;
+  /** Live hybrid counter, saved; it says "Today", so a new day starts at 0. */
+  counts: { day: string; device: number; cloud: number };
   familyGroup: { fam: string; fams: string[]; me: import('../domain/family').Member; members: import('../domain/family').Member[]; via: Record<string, 'qr' | 'online'> } | null;
 };
 
@@ -53,7 +55,7 @@ export type State = {
 export function initialState(): State {
   return {
     shelter: { id: 'shelter-1', name: 'Shelter' }, people: [], cards: [], round: {}, announcements: [], field: [], jobs: [], help: [], batch: [],
-    privateMode: false, signal: 'no_signal', scoutRun: 0, scoutAlert: false, lastSignalAt: null, lang: 'en', volunteerPos: null, open: null, familyGroup: null, warning: null, myPos: null, myPickup: null,
+    privateMode: false, signal: 'no_signal', scoutRun: 0, scoutAlert: false, lastSignalAt: null, lang: 'en', volunteerPos: null, open: null, familyGroup: null, warning: null, myPos: null, myPickup: null, counts: { day: '', device: 0, cloud: 0 },
   };
 }
 

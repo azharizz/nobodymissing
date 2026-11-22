@@ -473,3 +473,11 @@ body.flash .app { animation: flash 1s 2; } @keyframes flash { 50% { background: 
 .dup { background: var(--honey); color: var(--honey-ink); border-radius: 16px; padding: 12px 14px; display: grid; gap: 8px; }
 .dup b { display: flex; align-items: center; gap: 8px; font-family: var(--h); }
 .dup-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 700; }
+/* Printable daily lists: plain tables that survive a black-and-white printer. */
+.print-lists h1 { display: flex; align-items: center; gap: 12px; font-family: var(--h); font-size: 26px; margin: 0; }
+.print-lists h2 { font-family: var(--h); font-size: 20px; margin: 18px 0 6px; break-after: avoid; }
+.print-lists table { width: 100%; border-collapse: collapse; background: #fff; color: #000; font-size: 15px; }
+.print-lists th, .print-lists td { border: 1.5px solid #000; padding: 6px 8px; text-align: left; vertical-align: top; }
+.print-lists th { background: #eee; } .print-lists tr { break-inside: avoid; }
+.tick { display: inline-block; width: 18px; height: 18px; border: 2px solid #000; }
+@media print { .screen-top { display: none !important; } .print-lists { padding: 0; } .print-lists .muted { color: #000; } }
