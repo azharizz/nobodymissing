@@ -16,7 +16,7 @@ data class Rules(
             cantMiss = o["cantMiss"]!!.jsonObject.mapValues { it.value.jsonPrimitive.content },
             slotTimes = o["slotTimes"]!!.jsonObject.entries.associate { it.key.toInt() to it.value.jsonArray.map { t -> t.jsonPrimitive.content } },
             queuePriority = o["queuePriority"]!!.jsonObject.mapValues { it.value.jsonPrimitive.int },
-            routerPolicy = o["routerPolicy"]!!.jsonObject.mapValues { (_, v) -> v.jsonObject.let { p -> TaskPolicy(p.b("sensitive")!!, p.b("cloudOnly")!!, p.s("schema")!!, p.s("model")!!, p.d("deviceAccuracy"), p.d("cloudAccuracy")) } },
+            routerPolicy = o["routerPolicy"]!!.jsonObject.mapValues { (_, v) -> v.jsonObject.let { p -> TaskPolicy(p.b("sensitive")!!, p.b("cloudOnly")!!, p.s("schema")!!, p.s("model")!!, p.d("deviceAccuracy"), p.d("cloudAccuracy"), p.s("grounding")) } },
             fieldPriority = o["fieldPriority"]!!.jsonObject.mapValues { it.value.jsonPrimitive.double },
             scoutSuccessesNeeded = o["scout"]!!.jsonObject.i("successesNeeded")!!, currentEvent = o.s("currentEvent")!!,
             scoutIntervalSec = o["scout"]!!.jsonObject.i("intervalSec")!!.toLong(),

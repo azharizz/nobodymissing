@@ -166,4 +166,33 @@ class FixturesTest {
                 nearestHigher(pack, i.d("lat")!!, i.d("lng")!!, i.s("event")!!, load("rules/defaults.json").d("higherMinGainM")!!))
         }
     }
+
+    @Test fun hybridContracts() {
+        val fx = load("fixtures/hybrid.json")
+        for (c in fx["medCheckInput"]!!.jsonArray.map { it.jsonObject }) {
+            val meds = c["input"]!!.jsonObject["meds"]!!.jsonArray.map { it.jsonObject }.map { Triple(it.s("nameAsWritten")!!, it.s("strength"), it.s("generic")) }
+            val out = medCheckInput(meds)
+            assertEquals(c.name(), c["expected"]!!.jsonObject["meds"]!!.jsonArray.map { it.jsonObject.let { e -> MedLine(e.s("name")!!, e.s("strength")) } }, out)
+            assertEquals(false, out.toString().contains("Hasan") || out.toString().contains("Bed 4") || out.toString().contains("base64"))
+        }
+        for (c in fx["coarseLocation"]!!.jsonArray.map { it.jsonObject }) {
+            val i = c["input"]!!.jsonObject; val e = c["expected"]!!.jsonObject
+            assertEquals(e.d("lat")!! to e.d("lng")!!, coarseLocation(i.d("lat")!!, i.d("lng")!!, i.i("decimals")!!))
+        }
+        for (c in fx["crossCheck"]!!.jsonArray.map { it.jsonObject }) {
+            val items = c["input"]!!.jsonObject["items"]!!.jsonArray.map { it.jsonObject.let { x -> x.s("name")!! to x.s("generic") } }
+            assertEquals(c.name(), c["expected"]!!.jsonArray.map { it.jsonObject.let { e -> Cross(e.s("name")!!, e.s("offline"), e.s("status")!!) } }, crossCheck(items, drugs))
+        }
+        for (c in fx["groundedPlaces"]!!.jsonArray.map { it.jsonObject }) {
+            val i = c["input"]!!.jsonObject
+            val names = i["places"]!!.jsonArray.map { it.jsonObject.s("name")!! }
+            val chunks = i["chunks"]!!.jsonArray.map { it.jsonObject.let { x -> GroundedChunk(x.s("title"), x.s("uri"), x.s("placeId")) } }
+            assertEquals(c.name(), c["expected"]!!.jsonArray.map { it.jsonObject.let { e -> e.s("name")!! to e.s("uri") } }, groundedPlaces(names, chunks).map { (k, ch) -> names[k] to ch.uri })
+        }
+        for (c in fx["askKit"]!!.jsonArray.map { it.jsonObject }) {
+            val i = c["input"]!!.jsonObject; val r = i["result"]!!.jsonObject
+            val e = c["expected"] as? JsonObject
+            assertEquals(c.name(), e?.let { it.s("answer")!! to it.s("cardId")!! }, askKitAnswer(r.s("cardId"), r.s("answer")!!, i.strings("cardIds")))
+        }
+    }
 }

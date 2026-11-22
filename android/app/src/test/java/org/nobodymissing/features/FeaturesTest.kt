@@ -48,6 +48,39 @@ class FeaturesTest {
         assertEquals("field_report", f.jobs.single().type)
     }
 
+    @Test fun medicineCheckSendsDrugNamesOnlyAndWaitsOffline() = runBlocking {
+        val inf = FakeInference("unavailable") { InferenceResult("""{"items":[{"name":"insulin glargine","generic":"insulin glargine","cantMiss":true}],"interactions":[]}""", "cloud") }
+        val f = features(inf).also { it.loadDemo() }
+        val pid = f.meds.first().personId
+        assertEquals("queued", f.checkMeds(pid))
+        assertTrue(inf.calls.isEmpty())
+        f.signal.value = "back"
+        assertEquals("done", f.checkMeds(pid))
+        val req = inf.calls.single()
+        assertEquals("only_in_cloud", req.mode)
+        assertEquals(null, req.image)
+        assertFalse(req.text!!.contains(f.people.first { it.id == pid }.name))
+        assertEquals("agree", f.medChecks[pid]!!.cross.first().status)
+    }
+
+    @Test fun findOpenUsesMapsGroundingAndDropsInventedPlaces() = runBlocking {
+        val inf = FakeInference("unavailable") { InferenceResult("""{"places":[{"name":"Apotek Real","openNow":true},{"name":"Made Up Clinic"}]}""", "cloud", listOf(org.nobodymissing.ports.GroundingPlace("Apotek Real", "https://maps.google.com/?cid=9", null))) }
+        val f = features(inf).also { it.loadDemo(); it.signal.value = "back" }
+        assertEquals("done", f.findOpen("pharmacy"))
+        assertEquals("maps", inf.calls.single().grounding)
+        inf.calls.single().lat!!.let { assertEquals(Math.round(it * 100) / 100.0, it, 1e-12) } // rounded, about 1 km
+        assertEquals(listOf("Apotek Real"), f.open.value!!.places.map { it.name })
+    }
+
+    @Test fun askKitNeedsARealCard() = runBlocking {
+        var id = ""
+        val f = features(FakeInference("available") { InferenceResult("""{"cardId":"$id","answer":"Lunch is at 12:00."}""", "device") })
+        val a = f.announce("Lunch 12.00 in the hall", "en"); f.approve(a.id); id = a.id
+        assertEquals("Lunch is at 12:00.", f.askKit("When is lunch?")!!.answer)
+        id = "nope"
+        assertEquals(null, f.askKit("When is lunch?"))
+    }
+
     @Test fun familySearchLocalMinimalFields() {
         val f = features(FakeInference("unavailable")).also { it.loadDemo() }
         assertEquals("80-89", f.familySearch("Hasan").single().ageBand)

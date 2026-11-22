@@ -21,16 +21,36 @@ import org.nobodymissing.domain.d
 import org.nobodymissing.domain.s
 import org.nobodymissing.features.Shared
 
-// Design tokens: the same values as web/src/ui/styles.css :root.
+// Design tokens: the same values as web/src/ui/styles.css :root ("calm authority": navy anchor, Kit's amber lantern, warm ivory, no gradients).
 object NM {
-    val Ink = Color(0xFF14213D); val Ink2 = Color(0xFF3A4A66); val Muted = Color(0xFF5F6B80)
-    val Bg = Color(0xFFF6F3EE); val Surface = Color.White; val Surface2 = Color(0xFFFBF9F6); val Line = Color(0xFFE4DED5)
-    val Accent = Color(0xFFFF6B2C); val Accent2 = Color(0xFFF2542D); val AccentSoft = Color(0xFFFFE8DC)
-    val Danger = Color(0xFFD7263D); val DangerSoft = Color(0xFFFCE4E7)
-    val Device = Color(0xFF1F9D63); val DeviceSoft = Color(0xFFDDF5E9)
-    val Cloud = Color(0xFF2D6CDF); val CloudSoft = Color(0xFFE1EBFC)
-    val Review = Color(0xFFB7791F); val ReviewSoft = Color(0xFFFFF4DB)
+    val Navy = Color(0xFF1C2F4A); val Ink = Color(0xFF14161A); val Ink2 = Color(0xFF5A6170); val Line = Color(0xFFE7E2D9); val Ivory = Color(0xFFFAF7F2)
+    val Card = Color.White; val Quiet = Color(0xFFF1EEE8); val Border = Color(0xFFCFC8BC); val OnNavy2 = Color(0xFFC9D3E0)
+    val Amber = Color(0xFFF2A93B); val AmberInk = Color(0xFF8A5A00); val AmberSoft = Color(0xFFFFF7E3); val AmberLine = Color(0xFFE8C77A)
+    val Honey = Color(0xFFFCE7B2); val HoneyInk = Color(0xFF4A3300); val HoneyAcc = Color(0xFFC98A14)
+    val Sky = Color(0xFFDCE8F5); val SkyInk = Color(0xFF17324F); val SkyAcc = Color(0xFF2C5A8C)
+    val Rose = Color(0xFFF8DCD5); val RoseInk = Color(0xFF7E2214); val RoseAcc = Color(0xFFC4402B)
+    val Sage = Color(0xFFD8ECDF); val SageInk = Color(0xFF1E5236); val SageAcc = Color(0xFF2F7A52)
+    val Lav = Color(0xFFE9E1F4); val LavInk = Color(0xFF4B2A6B)
+    val Local = Color(0xFFEEF2E8); val LocalInk = Color(0xFF3B5A26); val LocalLine = Color(0xFFA9C08F)
+    val Urgent = Color(0xFFC4402B); val Done = Color(0xFF2F7A52)
+    /** Soft fill + dark text of the same family (never white text on colour for evacuees). */
+    data class Tone(val bg: Color, val fg: Color, val acc: Color)
+    val SKY = Tone(Sky, SkyInk, SkyAcc); val ROSE = Tone(Rose, RoseInk, RoseAcc); val SAGE = Tone(Sage, SageInk, SageAcc)
+    val LAV = Tone(Lav, LavInk, LavInk); val HONEY = Tone(Honey, HoneyInk, HoneyAcc)
 }
+
+/** Headings: Manrope ExtraBold. Body: Atkinson Hyperlegible (made for low vision). Bundled (offline). */
+@OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
+val Manrope = androidx.compose.ui.text.font.FontFamily(
+    androidx.compose.ui.text.font.Font(org.nobodymissing.R.font.manrope, androidx.compose.ui.text.font.FontWeight.ExtraBold,
+        variationSettings = androidx.compose.ui.text.font.FontVariation.Settings(androidx.compose.ui.text.font.FontVariation.weight(800))),
+    androidx.compose.ui.text.font.Font(org.nobodymissing.R.font.manrope, androidx.compose.ui.text.font.FontWeight.Bold,
+        variationSettings = androidx.compose.ui.text.font.FontVariation.Settings(androidx.compose.ui.text.font.FontVariation.weight(700))),
+)
+val Atkinson = androidx.compose.ui.text.font.FontFamily(
+    androidx.compose.ui.text.font.Font(org.nobodymissing.R.font.atkinson_regular, androidx.compose.ui.text.font.FontWeight.Normal),
+    androidx.compose.ui.text.font.Font(org.nobodymissing.R.font.atkinson_bold, androidx.compose.ui.text.font.FontWeight.Bold),
+)
 
 private fun hex(s: String) = Color(android.graphics.Color.parseColor(s))
 
@@ -46,10 +66,10 @@ class Icons(shared: Shared) {
 }
 
 @Composable
-fun Ic(icons: Icons, name: String, size: Dp = 22.dp, tint: Color = NM.Ink, label: String? = null) =
-    M3Icon(icons[name], contentDescription = label, modifier = Modifier.size(size), tint = tint)
+fun Ic(icons: Icons, name: String, size: Dp = 22.dp, tint: Color = androidx.compose.ui.graphics.Color.Unspecified, label: String? = null) =
+    M3Icon(icons[name], contentDescription = label, modifier = Modifier.size(size), tint = if (tint == Color.Unspecified) androidx.compose.material3.LocalContentColor.current else tint)
 
-enum class Mood { IDLE, DEVICE, CLOUD, ALERT, SLEEP }
+enum class Mood { IDLE, DEVICE, CLOUD, ALERT, SLEEP, THINK }
 
 internal class Part(val g: String, val path: Path, val fill: Color?, val stroke: Color?, val sw: Float, val alpha: Float)
 
@@ -74,7 +94,7 @@ fun Kit(mascot: Mascot, mood: Mood = Mood.IDLE, size: Dp = 56.dp) {
     val bob by t.animateFloat(0f, 1f, infiniteRepeatable(tween(when (mood) { Mood.ALERT -> 700; Mood.CLOUD -> 600; else -> 3600 }, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "bob")
     val blink by t.animateFloat(0f, 1f, infiniteRepeatable(tween(5000, easing = LinearEasing)), label = "blink")
     val sway by t.animateFloat(0f, -9f, infiniteRepeatable(tween(when (mood) { Mood.ALERT -> 700; Mood.CLOUD -> 1200; Mood.SLEEP -> 6000; else -> 2800 }, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "sway")
-    val glow by t.animateFloat(0f, 1f, infiniteRepeatable(tween(when (mood) { Mood.ALERT -> 500; Mood.CLOUD -> 1200; else -> 2600 }), RepeatMode.Reverse), label = "glow")
+    val glow by t.animateFloat(0f, 1f, infiniteRepeatable(tween(when (mood) { Mood.ALERT -> 500; Mood.CLOUD -> 1200; Mood.THINK -> 900; else -> 2600 }), RepeatMode.Reverse), label = "glow")
     val siren by t.animateFloat(0f, 1f, infiniteRepeatable(tween(500, easing = LinearEasing)), label = "siren")
     val lanternColor = when (mood) {
         Mood.CLOUD -> mascot.beacon.getValue("cloud")

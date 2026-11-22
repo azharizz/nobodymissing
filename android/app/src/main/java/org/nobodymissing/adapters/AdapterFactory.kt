@@ -16,7 +16,8 @@ data class Adapters(val env: String, val inference: InferencePort, val sync: Syn
 /** AdapterFactory: prod (Firebase) / emulator (Emulator Suite) / test (fakes). The only place adapters are built. */
 object AdapterFactory {
     fun create(context: Context, env: String = defaultEnv(context), shelterId: String = "SD3", role: String = "volunteer"): Adapters = when (env) {
-        "test" -> Adapters(env, FakeInference("unavailable"), MemorySync(), FakeConnectivity(false))
+        // No Firebase project: demo replies (demo/ folder) and a real connectivity check so the Scout flow still works.
+        "test" -> Adapters(env, FakeInference("unavailable") { org.nobodymissing.demo.DemoReply.reply(it) }, MemorySync(), HttpConnectivity())
         else -> {
             // App Check is required for AI Logic: debug provider in debug builds (register the token), Play Integrity in release.
             Firebase.appCheck.installAppCheckProviderFactory(

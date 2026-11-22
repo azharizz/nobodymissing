@@ -1,3 +1,23 @@
+# PROGRESS: update, Sun Nov 22 2026 (hybrid AI + new design)
+
+## Status in one line
+Hybrid AI now does real cloud work, not just fallback: **Medicine check** (drug names only), **Find it open** (Grounding with Google Maps, rounded location) and **Ask Kit** (evacuees, device first, answers only from today's notices). Both apps are rebuilt to the new design. Commits are local on `main`; nothing has been pushed.
+
+## Done
+- Shared: 3 router policies, 3 schemas, 3 prompts (pack 2026-11-22.1), `fixtures/hybrid.json`, 137 new UI strings (en + id), 4 icons.
+- Web: `domain/hybrid.ts` + `features/hybrid.ts`; Maps grounding in the AI Logic adapter (`tools: [{ googleMaps: {} }]` + `retrievalConfig.latLng`, places from `groundingMetadata`); new UI (evacuee + staff + Big Screen; live camera viewfinder, speech input, read aloud).
+  - Tests: **148 unit tests pass**; **8/8 Playwright flows pass** (incl. offline-then-signal medicine check, find open, Ask Kit).
+- Android: the same domain contracts + features + Maps grounding (`Tool.googleMaps()`, `RetrievalConfig.builder()`); demo replies in `demo/DemoReply.kt`; new Compose UI (staff + evacuee mode); fonts bundled (OFL).
+  - **34 JUnit tests pass**; `assembleDebug` builds. **Not checked on a device or emulator yet.**
+
+## PENDING HUMAN
+- Install the debug APK on a phone and look at every screen (no emulator space on this Mac).
+- Live check of Maps grounding on the free tier (`find_open` with real Firebase): quota, and that `gemini-3.8-flash` returns grounding chunks.
+- Republish the Remote Config template with the new `rules` / `promptPack` (the app merges key by key, so the old template doesn't break it).
+- Earlier items still open: device eval in a foreground tab, App Check debug token on the phone, hosting deploy, optional delete of `nobody-missing-hk26`.
+
+---
+
 # PROGRESS: update, Sat Nov 21 2026 (second autonomous run)
 
 ## Status in one line

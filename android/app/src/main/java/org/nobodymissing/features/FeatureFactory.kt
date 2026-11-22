@@ -12,9 +12,13 @@ import org.nobodymissing.domain.*
 class Shared(private val read: (String) -> String, remoteRules: String? = null) {
     fun json(p: String) = Json.parseToJsonElement(read(p)).jsonObject
     /** Remote Config "rules" (last activated, available offline) wins over the bundled defaults, key by key. */
-    val defaults = json("rules/defaults.json").let { d -> remoteRules?.let { runCatching { JsonObject(d + Json.parseToJsonElement(it).jsonObject) }.getOrNull() } ?: d }
+    val defaults = json("rules/defaults.json").let { d -> remoteRules?.let { runCatching {
+        // Key-by-key merge: an older published template must not drop tasks added since.
+        val r = Json.parseToJsonElement(it).jsonObject
+        JsonObject(d + r + ("routerPolicy" to JsonObject(d["routerPolicy"]!!.jsonObject + (r["routerPolicy"] as? JsonObject ?: JsonObject(emptyMap())))))
+    }.getOrNull() } ?: d }
     val rules = Rules.from(defaults)
-    val schemas = listOf("roster", "careCard", "announcementCard", "fieldReport", "request", "translation").associateWith { json("schemas/$it.json") }
+    val schemas = listOf("roster", "careCard", "announcementCard", "fieldReport", "request", "translation", "medCheck", "findOpen", "askKit").associateWith { json("schemas/$it.json") }
     val prompts = json("prompts/pack.json")["tasks"]!!.jsonObject.mapValues { it.value.jsonPrimitive.content }
     // ponytail: only the synthetic demo drug list and region pack exist today; swap in real region packs when tools/region-pack ships them.
     val drugs = Drug.listFrom(json("demo/drugs.json"))
@@ -33,6 +37,13 @@ data class UiMed(val personId: String, val nameAsWritten: String, val match: Dru
 data class UiCard(val icon: String, val title: String, val time: String?, val place: String?)
 data class UiAnnouncement(val id: String, val text: String, val icons: List<String>, val cards: List<UiCard>, val source: String, val draft: Boolean, val shown: Boolean = false, val told: Set<String> = emptySet())
 data class UiField(val id: String, val name: String, val lat: Double?, val lng: Double?, val hoursSinceContact: Double?, val person: PriorityInput, val needsReview: Boolean = false, val status: String = "unchecked")
+data class UiHelp(val id: String, val kind: String, val spot: String, val text: String?, val done: Boolean = false)
+data class MedCheckItem(val name: String, val generic: String?, val alsoKnownAs: List<String>, val swaps: List<String>, val cantMiss: Boolean, val note: String?)
+data class Interaction(val a: String, val b: String, val severity: String, val note: String?)
+data class MedCheckUi(val items: List<MedCheckItem>, val interactions: List<Interaction>, val cross: List<Cross>, val pending: Boolean)
+data class OpenPlace(val name: String, val kind: String?, val distanceKm: Double?, val openNow: Boolean?, val hours: String?, val uri: String?)
+data class OpenUi(val need: String, val places: List<OpenPlace>, val pending: Boolean)
+data class AskAnswer(val answer: String, val card: UiAnnouncement, val source: String)
 data class UiJob(val id: String, val type: String, val path: String, val payload: Map<String, Any?>, val createdAt: Long, var status: JobStatus = JobStatus("waiting", 0))
 
 /** FeatureFactory: wires every feature to its ports. Features never construct adapters. */
@@ -69,6 +80,8 @@ class Features(val adapters: Adapters, val shared: Shared) {
             .forEach { people += UiPerson(java.util.UUID.randomUUID().toString(), it.nameAsWritten, it.age, it.suggestedFlags, false, it.needsReview || r.status == "draft", it.inferredBy) }
         return r
     }
+    /** Staff fix a misread name or age before confirming. */
+    fun editPerson(id: String, name: String, age: Int?) { val i = people.indexOfFirst { it.id == id }; if (i >= 0) people[i] = people[i].copy(name = name.ifBlank { people[i].name }, age = age) }
     /** Staff confirm name + flags; then the minimal public record and the roster go to the outbox. */
     fun confirmPerson(id: String, flags: List<String>? = null) {
         val i = people.indexOfFirst { it.id == id }; if (i < 0) return
@@ -145,6 +158,67 @@ class Features(val adapters: Adapters, val shared: Shared) {
         enqueue("other", "shelters/${shelterId.value}/announcements", mapOf("text" to a.text, "icons" to a.icons, "cards" to a.cards.map { mapOf("icon" to it.icon, "title" to it.title, "time" to it.time, "place" to it.place) }))
     }
 
+    // ---- Hybrid: the cloud makes it better, the person stays on the phone (same as web features/hybrid.ts) ----
+    val medChecks = androidx.compose.runtime.mutableStateMapOf<String, MedCheckUi>()
+    val open = mutableStateOf<OpenUi?>(null)
+    private val pendingChecks = mutableSetOf<String>()
+    private var pendingOpen: String? = null
+
+    /** 1 · Medicine check: drug names + strengths only (built by code, never names or photos); for a pharmacist, cross-checked offline. */
+    suspend fun checkMeds(personId: String): String {
+        val ms = meds.filter { it.personId == personId }.ifEmpty { return "failed" }
+        val input = medCheckInput(ms.map { Triple(it.nameAsWritten, it.strength, it.generic) })
+        val text = buildJsonObject { put("meds", JsonArray(input.map { m -> buildJsonObject { put("name", m.name); put("strength", m.strength) } })) }.toString()
+        val r = router.run("med_check", text = text)
+        if (r.status == "ok") {
+            val o = r.data!!.jsonObject
+            val items = o["items"]!!.jsonArray.map { it.jsonObject }.map { MedCheckItem(it.s("name")!!, it.s("generic"), it.strings("alsoKnownAs"), it.strings("swaps"), it.b("cantMiss") ?: false, it.s("note")) }
+            val inter = o["interactions"]!!.jsonArray.map { it.jsonObject }.map { Interaction(it.s("a")!!, it.s("b")!!, it.s("severity")!!, it.s("note")) }
+            medChecks[personId] = MedCheckUi(items, inter, crossCheck(items.map { it.name to it.generic }, shared.drugs), false)
+            pendingChecks -= personId
+            return "done"
+        }
+        if (r.status == "queued") { medChecks[personId] = MedCheckUi(emptyList(), emptyList(), emptyList(), true); pendingChecks += personId; return "queued" }
+        return "failed"
+    }
+
+    /** 2 · Find it open: Grounding with Google Maps near a rounded shelter location; only places Google Maps returned. */
+    suspend fun findOpen(need: String): String {
+        val sh = shared.pack.shelters.firstOrNull { it.id == shelterId.value } ?: return "no_location"
+        val (lat, lng) = coarseLocation(sh.lat, sh.lng, shared.defaults["findOpen"]!!.jsonObject.i("precisionDecimals")!!)
+        val r = router.run("find_open", extra = Extra(mapOf("need" to need.replace('_', ' ')), lat, lng))
+        if (r.status == "ok") {
+            val ps = r.data!!.jsonObject["places"]!!.jsonArray.map { it.jsonObject }
+            val kept = groundedPlaces(ps.map { it.s("name")!! }, r.places.map { GroundedChunk(it.title, it.uri, it.placeId) })
+            open.value = OpenUi(need, kept.map { (i, c) -> ps[i].let { OpenPlace(it.s("name")!!, it.s("kind"), it.d("distanceKm"), it.b("openNow"), it.s("hours"), c.uri) } }, false)
+            pendingOpen = null
+            return "done"
+        }
+        if (r.status == "queued") { open.value = OpenUi(need, emptyList(), true); pendingOpen = need; return "queued" }
+        return "failed"
+    }
+    fun needs() = shared.defaults["findOpen"]!!.jsonObject.strings("needs")
+
+    /** 5 · Ask Kit: answers only from today's shown notices (device first). The question is never stored or synced. */
+    suspend fun askKit(question: String): AskAnswer? {
+        val cards = announcements.filter { it.shown }.take(8)
+        if (cards.isEmpty() || question.isBlank()) return null
+        val list = cards.joinToString("\n") { a -> val c = a.cards.firstOrNull(); "id=${a.id} text=${listOfNotNull(c?.title, c?.time, c?.place).joinToString(" · ")} (said: ${a.text})" }
+        val r = router.run("ask_kit", text = question.trim(), extra = Extra(mapOf("cards" to list, "lang" to if (lang.value == "id") "Indonesian" else "English")))
+        if (r.status != "ok" && r.status != "draft") return null
+        val o = r.data!!.jsonObject
+        val ok = askKitAnswer(o.s("cardId"), o.s("answer") ?: "", cards.map { it.id }) ?: return null
+        return AskAnswer(ok.first, cards.first { it.id == ok.second }, r.source!!)
+    }
+
+    /** Queued cloud questions run again when the signal returns. */
+    private suspend fun rerunPending() { pendingChecks.toList().forEach { checkMeds(it) }; pendingOpen?.let { findOpen(it) } }
+
+    // Evacuee requests ("I need help"), shown on the staff Now list.
+    val help = mutableStateListOf<UiHelp>()
+    fun askHelp(kind: String, spot: String, text: String? = null) { help += UiHelp(java.util.UUID.randomUUID().toString(), kind, spot.ifBlank { "?" }, text) }
+    fun helpDone(id: String) = help.replaceAll { if (it.id == id) it.copy(done = true) else it }
+
     // F3 family search: this shelter only (minimal fields, D6)
     fun familySearch(q: String) = familySearch(q, people.filter { it.confirmed }.map { PublicRec(it.id, it.name, it.age, shelterId.value, "safe") })
 
@@ -158,7 +232,7 @@ class Features(val adapters: Adapters, val shared: Shared) {
         scoutRun = s.run; signal.value = s.state
         if (s.state != "no_signal") lastSignalAt.value = System.currentTimeMillis()
         if (s.alert) scoutAlert.value = true
-        if (s.state == "back") flush()
+        if (s.state == "back") { flush(); rerunPending() }
     }
     // QR courier (6.10 level 2): small structured JSON only, never photos.
     fun exportChunks(size: Int = 700): List<String> = chunk(JsonArray(jobs.filter { it.status.state != "sent" }.map { j ->

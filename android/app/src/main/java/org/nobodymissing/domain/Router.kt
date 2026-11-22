@@ -1,7 +1,7 @@
 package org.nobodymissing.domain
 
 // InferenceRouter policy (6.3). Same table + logic as web router.ts.
-data class TaskPolicy(val sensitive: Boolean, val cloudOnly: Boolean, val schema: String, val model: String, val deviceAccuracy: Double? = null, val cloudAccuracy: Double? = null)
+data class TaskPolicy(val sensitive: Boolean, val cloudOnly: Boolean, val schema: String, val model: String, val deviceAccuracy: Double? = null, val cloudAccuracy: Double? = null, val grounding: String? = null)
 data class RouterCtx(val onDeviceAvailable: Boolean, val online: Boolean, val privateMode: Boolean, val staffApprovedCloud: Boolean)
 data class Decision(val action: String, val mode: String?)
 
