@@ -39,11 +39,15 @@
 > [!IMPORTANT]
 > Every AI call goes through **Firebase AI Logic** (`firebase/ai` on web, `firebase-ai` + `firebase-ai-ondevice` on Android), with **App Check enforced**. Each feature has its own inference mode, chosen per task by a policy table in Remote Config. All demo data is **synthetic**; the demo drug list is **not for clinical use**.
 
+> [!TIP]
+> **In 30 seconds.** **Who:** shelter staff and volunteers, and the evacuees disasters leave behind (deaf, hard-of-hearing and elderly people, often with no phone). **Problem:** after a flood the signal is gone for days, lists are handwritten and duplicated, and spoken announcements never reach the people who can't hear them. **How Firebase AI Logic makes it work:** Gemini Nano does the private, everyday shelter work on the staff device with no signal; Gemini in the cloud, with Maps and Search grounding, joins in when signal returns for the few jobs that need it. Kit, our router on top of the SDK, picks one of **all four inference modes per task**, for a reason staff can read, and shows exactly what left the shelter.
+
 <details>
 <summary><kbd>Contents</kbd></summary>
 
 - [At a glance](#-at-a-glance)
 - [The problem](#the-problem)
+- [For judges: criteria → evidence](#for-judges-criteria--evidence)
 - [How Kit decides](#-how-kit-decides)
 - [See it work](#-see-it-work)
 - [Every feature, and where its AI runs](#every-feature-and-where-its-ai-runs)
@@ -52,6 +56,8 @@
 - [Architecture](#architecture)
 - [Run it](#-run-it)
 - [Notes for judges](#notes-for-judges)
+- [Design for people who can't use the app](#design-for-people-who-cant-use-the-app)
+- [Tests](#tests)
 - [Privacy](#privacy)
 - [Honest limits](#-honest-limits)
 - [Repository map](#repository-map)
@@ -77,15 +83,29 @@
 
 ## The problem
 
-After floods and earthquakes, many people are lost **after** the event, in the shelters. Elderly, deaf and hard-of-hearing evacuees miss spoken announcements and medicine. Shelter lists are handwritten and full of duplicates. And the signal is often gone for days:
+**The people we lose first are not always lost in the water. They are lost in the shelter.**
 
-| | |
-| --- | --- |
-| **975,079** | people displaced by the Sumatra floods, Dec 2025 (BNPB) |
-| **4 days** | Aceh went without a single bar of signal, Nov 2025 |
-| **179,000 → 60,426** | evacuee records that BPS found were really 60,426 households: the same people written down again and again |
+| | Evidence | What it tells us |
+| --- | --- | --- |
+| **975,079** | people displaced by the Sumatra floods, Dec 2025 (BNPB); in Aceh Utara, **4 days with no signal on any operator** | The cloud isn't there when the shelter needs it most |
+| **179,000 → 60,426** | evacuee records that BPS found were really 60,426 households | Handwritten lists at different doors multiply the same people |
+| **397 > 228** | Noto 2024: disaster-related deaths afterwards exceeded direct deaths; officials **photographed handwritten lists and emailed them**, and checked patients one phone call at a time | The deadly gap comes *after* the event |
+| **4×** | Kobe 1995: the deaf death rate was over 4× that of hearing people (Kobe Deaf Association); Tohoku 2011: 56.1% of deaths were aged 65+ | Spoken announcements don't reach everyone |
+| **53%** | of people in their 70s in Japan use a smartphone (MIC 2025) | The most vulnerable evacuee can't be asked to install an app |
+| **2019** | Google Person Finder shut down; warnings *before* a disaster already work (cell broadcast, BMKG in 2–3 min) | Build for the days after, not another warning app |
+
+Our story is one synthetic shelter in Aceh: **Pak Hasan, 82**, hard of hearing, insulin every night; **Ibu Rina, 45**, deaf; and Pak Hasan's daughter, two shelters away, searching for a name written down three different ways.
 
 A cloud-only AI app is useless in that shelter. A device-only one can't check medicines against a big model, find which pharmacy is open, or join up families across shelters. **Nobody Missing does both, and decides per task.** Evacuees don't need a phone at all: they get information from the hall's Big Screen, printouts, staff, and public pages on the shelter's local Wi-Fi.
+
+## For judges: criteria → evidence
+
+| Criterion | Where to look |
+| --- | --- |
+| **Technological implementation** | All four inference modes chosen per task by a [router with reasons](#-how-kit-decides) ([truth table](#kits-decision-exactly-as-coded)); privacy guard against SDK#10635; Remote Config policy; outbox + Signal Scout; Maps + Search grounding; [measured routing](#-measured-not-claimed); [243 tests](#tests) over one shared domain on web + Android |
+| **Design** | A complete shelter workflow from the door to the Big Screen; [no phone needed for evacuees](#design-for-people-who-cant-use-the-app); badges, *Where Kit ran* and *Kit today* make the hybrid visible; axe accessibility checks |
+| **Potential impact** | [Real evidence](#the-problem) from Sumatra 2025, Noto 2024, Kobe and Tohoku; a specific audience (shelter staff, deaf and elderly evacuees); a real offline flood map for Aceh |
+| **Quality of the idea** | Hybrid because of the user's situation (no signal for days, medical privacy, live places), not because of the tech; built for the gap *after* the warning, where no app was working |
 
 ## 🔀 How Kit decides
 
@@ -100,19 +120,35 @@ flowchart LR
   T[Shelter task] --> P{Policy table<br/>Remote Config}
   P -->|private: names, health, photos| D[ONLY_ON_DEVICE<br/>Gemini Nano]
   P -->|measured: device as good| PD[PREFER_ON_DEVICE<br/>Nano, cloud if no model]
+  P -->|measured: device weaker than the bar| PC[PREFER_IN_CLOUD<br/>offline: device draft, needs review]
   P -->|needs live data or a bigger model| C{Signal?}
   C -->|yes| CL[ONLY_IN_CLOUD<br/>Gemini + Maps / Search grounding]
   C -->|no| Q[Outbox<br/>waits, then sends by priority]
   P -->|private mode on| B[Cloud blocked]
   D --> G[Privacy guard<br/>discards any cloud answer]
-  D & PD & CL --> V[Schema validation<br/>then staff confirm]
+  D & PD & PC & CL --> V[Schema validation<br/>then staff confirm]
 ```
 
 1. **Policy table** (`shared/rules/defaults.json → routerPolicy`, served by Remote Config) decides per task: the device, a device draft, the cloud, ask staff, queue, or block.
 2. **Privacy guard** feature-detects the on-device model *before* calling, and **discards any cloud answer** to an on-device-only request (guards against firebase-js-sdk#10635, where `ONLY_ON_DEVICE` could silently use the cloud).
 3. **Timeouts**: a slow device falls back to the cloud for non-private tasks. Private tasks never fall back silently; staff are asked.
 4. **Schema validation** of every answer (`shared/schemas/*`) before it touches the domain. Small models wrap JSON in prose; we handle that.
-5. **Where Kit ran**: every answer is logged with its real `inferenceSource`, the reason, the time, and **exactly what left the shelter**. Staff see it on the *Kit today* card.
+5. **Accuracy bar**: if a task's measured device accuracy is more than `accuracyBarPoints` (3) below the cloud's, the router uses `PREFER_IN_CLOUD` online, and offline makes a device **draft marked “needs review”** with a cloud re-check queued.
+6. **Where Kit ran**: every answer is logged with its real `inferenceSource`, the reason, the time, and **exactly what left the shelter**. Staff see it on the *Kit today* card.
+
+### Kit's decision, exactly as coded
+
+`web/src/domain/router.ts` (mirrored in `android/.../domain/Router.kt`, both checked by the same fixtures):
+
+| Task type | Private mode on | Online | Offline |
+| --- | --- | --- | --- |
+| **Cloud-only** (live data, bigger model) | 🛑 block | ☁️ `ONLY_IN_CLOUD` | ⏳ queue in the outbox |
+| **Sensitive**, model on the device | 🏮 `ONLY_ON_DEVICE` | 🏮 `ONLY_ON_DEVICE` | 🏮 `ONLY_ON_DEVICE` |
+| **Sensitive**, no model on the device | 🛑 block | 🙋 ask staff (cloud only after approval) | 🙋 ask staff, then queue |
+| **Public**, device measurably weaker | 🏮 draft (block if no model) | ☁️ `PREFER_IN_CLOUD` | 🏮 draft + “needs review”, cloud re-check queued |
+| **Public**, device as good (model ready) | 🏮 `ONLY_ON_DEVICE` | 🏮 `PREFER_ON_DEVICE` | 🏮 `PREFER_ON_DEVICE` |
+
+Six outcomes (device, device draft, cloud, ask staff, queue, block), all four SDK modes, and every reason maps to a known hybrid pattern: keep sensitive data on the device; offline capture, online enrichment; triage on the device and escalate when measured; local understanding, cloud reasoning on the minimum.
 
 ## 🎬 See it work
 
@@ -180,6 +216,7 @@ Seventeen AI tasks, each with its own mode. Sensitive input never leaves the pho
 | `field_report` | Volunteer notes from a house visit | `ONLY_ON_DEVICE` | private notes | nothing |
 | `warning_plain` | Evacuee: official warning → plain words | `PREFER_ON_DEVICE` | no signal during evacuation | nothing |
 | `announcement` / `_id` | Staff → Big Screen cards (EN / ID) | `PREFER_ON_DEVICE` | **measured**: device 83% vs cloud 67% / 83% | nothing |
+| any public task below the accuracy bar | — | `PREFER_IN_CLOUD` | measured: device more than 3 points weaker | the task text |
 | `ask_kit` | Evacuee questions, from today's notices | `PREFER_ON_DEVICE` | answers only from shown notices | nothing |
 | `translate` | Notices for foreign-language evacuees | `PREFER_ON_DEVICE` | free, offline | nothing |
 | `med_check` | Staff: drug names vs interactions | `ONLY_IN_CLOUD` | bigger model | **drug names + strengths only** |
@@ -319,14 +356,36 @@ npx firebase-tools emulators:start --only firestore,auth   # then VITE_USE_EMULA
 - **Try offline:** in Chrome DevTools → Network → Offline, then announce, read a photo, or ask Kit. Tap the signal button on staff Now to watch Scout, the outbox and *Where Kit ran*.
 - A real shelter starts **empty**. Demo mode and Settings → “Load demo shelter” load the **synthetic** Aceh shelter (`shared/demo/`).
 
+## Design for people who can't use the app
+
+- **No phone needed for evacuees.** Big Screen picture cards in the hall, black-and-white printouts (roster, medicine round with tick boxes, tell-in-person list), and public pages over the shelter's Wi-Fi.
+- **Deaf-first announcements.** Every notice becomes big pictures with time and place, plus a reach list of who must be told in person: deaf, hard of hearing, living alone, 75+.
+- **Readable under stress.** Atkinson Hyperlegible type, few pages, no login, English and Indonesian.
+- **Hybrid you can see.** A badge on every answer, the original photo or text beside every AI result, and Kit, a calm lantern-cat whose mood shows on the phone, in the cloud, or waiting.
+
+## Tests
+
+| Suite | Count | What it proves |
+| --- | --- | --- |
+| Web unit (Vitest) | **175** | Shared golden fixtures, router, privacy guard, features |
+| Web end-to-end (Playwright) | **14** | Offline → signal flows, medicine check + Find it open waiting for signal, family search, first hours, printouts, **axe accessibility (WCAG 2 A/AA)** |
+| Firestore rules (emulator) | **10** | Non-members can't read the roster; members can't promote devices; alerts carry counts only; supply requests reject names |
+| Android (JUnit) | **44** | The same golden fixtures, router, features, Remote Config override; the log never claims the device did cloud work |
+
 ## Privacy
 
 Medical data stays local by default. Only counts by generic name leave the device for supply requests; drug names alone for the medicine check; a rounded location for live places; the name alone for spelling variants. Public search returns name, age band, shelter and status only, and a person can ask staff to hide their entry. Laws we design for: Indonesia UU PDP (Law 27/2022), Japan APPI.
 
 ## ⚖️ Honest limits
 
-- **Not medical advice.** No dose decisions, no pill identification by appearance, no diagnosis. Look-alike drug names go through a deterministic matcher and human confirmation; strengths not on the list are flagged.
-- **Hazard maps are scenarios**, so the app never says “safe”, only “higher”.
+| What AI can't do here | How we guard it |
+| --- | --- |
+| Look-alike drug names, strengths (mg/mcg, 0.5/5) | Deterministic matcher with look-alike warnings; unlisted strengths flagged; **never auto-accepted** |
+| Dosing, diagnosis, pills by appearance | Not offered. Drafts only |
+| A weak small model on hard fields (ages, needs) | Measured; staff confirm every row; cloud read only with approval |
+| A wrong announcement summary | Original text always shown; staff approve before the Big Screen |
+| Hazard maps are scenarios | Source and date shown; “higher”, never “safe” |
+
 - **Android on-device** is wired (`firebase-ai-ondevice`) but our recordings use the emulator, which has no Gemini Nano; there it falls back to keyword rules or queues for the cloud. The airplane mode in the film is real.
 - **Grounding quota.** Maps and Search grounding are implemented end to end; the free-tier grounding quota was exhausted while we recorded, so the film shows the request and what leaves the phone, not a live list of places.
 - **Indonesian on the device** is officially unsupported by the model, so we measured it (83%) instead of assuming.
